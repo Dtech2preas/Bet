@@ -1,0 +1,20 @@
+# Project Context: D-TECH Cloud Subdomain System
+
+**Goal:** Build a hybrid hosting platform that offers two features via a single API:
+1.  **Smart Redirects:** (Like Bit.ly) Maps a subdomain to a messy external URL.
+2.  **Static Hosting:** (Like Netlify) Allows users to upload raw HTML code via API, which is hosted on our VPS and served via the subdomain.
+
+**Current Architecture:**
+* **Router:** Cloudflare Worker (intercepts `*.account-login.co.za`).
+* **Database:** Cloudflare KV (stores subdomain -> target mappings).
+* **Storage Node:** Google Cloud VM (Ubuntu) running Python/Flask.
+* **Direct Link:** The Worker connects **directly** to the VM's IP (`35.209.78.254`) on Port 80, bypassing Nginx to avoid conflict with an existing Pterodactyl panel.
+
+**Current Status & Config:**
+* **Nginx:** DISABLED (`systemctl stop nginx`) to free up Port 80.
+* **Firewall:** Port 80 is open.
+* **Python App:** Running as Root on Port 80 via Gunicorn systemd service.
+* **The Issue:** We were fighting Cloudflare Error 1003 (Direct IP Access) because we were sending a `Host` header to the IP. The current code attempts to fix this by removing the Host header and connecting via raw IP.
+
+**Your Task:**
+Review the code below. We need to ensure the Cloudflare Worker can successfully upload HTML files to the VM (via the `/api/create` endpoint) and serve them to users without hitting 403/404 errors or Cloudflare loops.
