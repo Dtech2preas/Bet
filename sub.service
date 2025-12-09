@@ -1,0 +1,14 @@
+[Unit]
+Description=Gunicorn for D-TECH (Port 80)
+After=network.target
+
+[Service]
+User=root
+Group=root
+WorkingDirectory=/var/www/sub
+Environment="PATH=/var/www/sub/venv/bin"
+# Executing Gunicorn binding to all IPs on Port 80
+ExecStart=/var/www/sub/venv/bin/gunicorn --workers 3 --bind 0.0.0.0:80 app:app
+
+[Install]
+WantedBy=multi-user.target
