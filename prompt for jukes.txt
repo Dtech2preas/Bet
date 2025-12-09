@@ -17,4 +17,27 @@
 * **The Issue:** We were fighting Cloudflare Error 1003 (Direct IP Access) because we were sending a `Host` header to the IP. The current code attempts to fix this by removing the Host header and connecting via raw IP.
 
 **Your Task:**
-Review the code below. We need to ensure the Cloudflare Worker can successfully upload HTML files to the VM (via the `/api/create` endpoint) and serve them to users without hitting 403/404 errors or Cloudflare loops.
+Review the code below. We need to ensure the Cloudflare Worker can successfully upload HTML files to the VM (via the `/api/create` endpoint) and serve them to users without hitting 403/404 errors or Cloudflare loops
+
+
+​📂 File 1: PROMPT_FOR_JULES.md
+​Description: Copy and paste this text into the chat with Jules. It explains the entire architecture, the current server state, and the goal.
+
+
+📂 File 2: worker.js
+​Location: Cloudflare Dashboard -> Workers -> calm-bread-1d99 (or dtech-router).
+Description: The Edge Router. It handles traffic logic and acts as the API gateway.
+
+
+📂 File 3: app.py
+​Location: Google Cloud VM (/var/www/sub/app.py).
+Description: The Flask Backend that stores files and serves them.
+
+
+📂 File 4: sub.service
+​Location: Google Cloud VM (/etc/systemd/system/sub.service).
+Description: Systemd configuration to run Python on Port 80 as Root.
+
+📂 File 5: in.py
+​Location: Local Device (Laptop/Mobile).
+Description: The testing script used to send commands to the Cloudflare Worker.
