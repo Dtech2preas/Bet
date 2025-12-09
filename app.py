@@ -1,10 +1,11 @@
 from flask import Flask, request, jsonify, send_from_directory
+from werkzeug.utils import secure_filename
 import os
 
 app = Flask(__name__)
 
 # CONFIG
-STORAGE_FOLDER = '/var/www/sub/storage'
+STORAGE_FOLDER = os.environ.get('STORAGE_FOLDER', '/var/www/sub/storage')
 RAPID_API_SECRET = "dtech_super_secret_key_2025" 
 
 # Ensure storage folder exists
@@ -34,8 +35,17 @@ def create_site():
     subdomain = data.get('subdomain')
     html_content = data.get('html')
 
+    if not subdomain or not html_content:
+         return jsonify({"error": "Missing subdomain or html"}), 400
+
+    # Sanitize subdomain to prevent path traversal
+    safe_subdomain = secure_filename(subdomain)
+
+    if not safe_subdomain:
+        return jsonify({"error": "Invalid subdomain"}), 400
+
     try:
-        with open(f"{STORAGE_FOLDER}/{subdomain}.html", "w") as f:
+        with open(f"{STORAGE_FOLDER}/{safe_subdomain}.html", "w") as f:
             f.write(html_content)
         return jsonify({"status": "success", "message": "File saved on VM."})
     except Exception as e:

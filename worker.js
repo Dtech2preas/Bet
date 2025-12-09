@@ -10,8 +10,16 @@ export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
     const domain = url.hostname; 
-    const parts = domain.split('.');
-    const subdomain = parts.length > 2 ? parts[0] : null;
+
+    // Parse Subdomain (Correctly handling .co.za)
+    const ROOT_DOMAIN = "account-login.co.za";
+    let subdomain = null;
+
+    // If it's NOT the root domain, but ends with it, extract subdomain
+    if (domain !== ROOT_DOMAIN && domain.endsWith("." + ROOT_DOMAIN)) {
+        // Remove .account-login.co.za from the end
+        subdomain = domain.slice(0, - (ROOT_DOMAIN.length + 1));
+    }
 
     // 1. INTERNAL API: MANAGE USERS
     if (url.pathname === '/api/worker/manage' && request.method === 'POST') {
@@ -33,10 +41,22 @@ export default {
     if (data.type === 'REDIRECT') return Response.redirect(data.target, 301);
 
     if (data.type === 'HTML') {
-      // Fetch directly from IP (No Host Header to avoid Error 1003)
-      const vmResponse = await fetch(`${VM_BASE_URL}/storage/${subdomain}`);
-      if (vmResponse.status !== 200) return new Response("<h1>Error: Hosting Node Offline</h1>", { status: 404, headers: {'Content-Type': 'text/html'} });
-      return new Response(vmResponse.body, { headers: { 'Content-Type': 'text/html' } });
+      try {
+        // Fetch directly from IP (No Host Header to avoid Error 1003)
+        const vmResponse = await fetch(`${VM_BASE_URL}/storage/${subdomain}`);
+
+        if (vmResponse.status === 404) {
+             return new Response("<h1>Site Not Found</h1>", { status: 404, headers: {'Content-Type': 'text/html'} });
+        }
+
+        if (vmResponse.status !== 200) {
+             return new Response("<h1>Error: Hosting Node Offline</h1>", { status: 502, headers: {'Content-Type': 'text/html'} });
+        }
+
+        return new Response(vmResponse.body, { headers: { 'Content-Type': 'text/html' } });
+      } catch (err) {
+        return new Response("<h1>Error: Hosting Node Offline</h1>", { status: 503, headers: {'Content-Type': 'text/html'} });
+      }
     }
 
     if (data.type === 'PROXY') {
