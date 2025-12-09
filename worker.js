@@ -28,7 +28,10 @@ export default {
 
     // 2. ROUTING LOGIC (User Traffic)
     if (!subdomain || subdomain === 'www') {
-       return fetch(VM_BASE_URL); // Fetch VM Home directly
+       // Fetch VM Home directly, explicitly setting Host header to IP to avoid 1003
+       return fetch(VM_BASE_URL, {
+         headers: { 'Host': '35.209.78.254' }
+       });
     }
 
     // Lookup User in KV (Requires 'SUBDOMAINS' binding to KV 'DTECH_DB')
@@ -42,8 +45,10 @@ export default {
 
     if (data.type === 'HTML') {
       try {
-        // Fetch directly from IP (No Host Header to avoid Error 1003)
-        const vmResponse = await fetch(`${VM_BASE_URL}/storage/${subdomain}`);
+        // Fetch directly from IP, explicit Host header
+        const vmResponse = await fetch(`${VM_BASE_URL}/storage/${subdomain}`, {
+            headers: { 'Host': '35.209.78.254' }
+        });
 
         if (vmResponse.status === 404) {
              return new Response("<h1>Site Not Found</h1>", { status: 404, headers: {'Content-Type': 'text/html'} });
@@ -93,6 +98,7 @@ async function handleApiRequest(request, env) {
         const vmResponse = await fetch(`${VM_BASE_URL}/api/create`, {
           method: "POST",
           headers: {
+            "Host": "35.209.78.254", // Explicit Host Header
             "Content-Type": "application/json",
             "X-DTECH-SECRET": HARDCODED_SECRET,
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" // Fake UA
