@@ -86,56 +86,114 @@ const licensesManager = {
         container.innerHTML = html + `</tbody></table></div>`;
     },
 
-    async openModal() {
+    async openModal(license = null) {
         if (!this.clients || this.clients.length === 0 || !this.products || this.products.length === 0) {
             return Swal.fire('Error', 'Please add clients and products first.', 'error');
         }
 
-        let clientOptions = this.clients.map(c => `<option value="${c.id}">${c.companyName}</option>`).join('');
-        let productOptions = this.products.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+        const l = license || {};
+        const isEdit = !!license;
+        const title = isEdit ? 'Edit License' : 'Issue License';
+
+        let clientOptions = this.clients.map(c => `<option value="${c.id}" ${l.clientId === c.id ? 'selected' : ''}>${c.companyName}</option>`).join('');
+        let productOptions = this.products.map(p => `<option value="${p.id}" ${l.productId === p.id ? 'selected' : ''}>${p.name}</option>`).join('');
+
+        const d = new Date();
+        const startStr = isEdit && l.startDate ? l.startDate.split('T')[0] : d.toISOString().split('T')[0];
+
+        d.setMonth(d.getMonth() + 12);
+        const expStr = isEdit && l.expiryDate ? l.expiryDate.split('T')[0] : d.toISOString().split('T')[0];
 
         const { value: formValues } = await Swal.fire({
-            title: 'Issue License',
+            title: title,
             html: `
-                <select id="swal-l-client" class="swal2-input"><option value="" disabled selected>Select Client</option>${clientOptions}</select>
-                <select id="swal-l-product" class="swal2-input"><option value="" disabled selected>Select Product</option>${productOptions}</select>
-                <select id="swal-l-duration" class="swal2-input">
-                    <option value="1">1 Month</option>
-                    <option value="12">1 Year</option>
-                </select>
+                <div class="text-left text-sm space-y-3">
+                    <div class="grid grid-cols-2 gap-2">
+                        <div><label class="font-medium">Client *</label><select id="swal-l-client" class="swal2-input mt-1 w-full m-0"><option value="" disabled ${!isEdit?'selected':''}>Select Client</option>${clientOptions}</select></div>
+                        <div><label class="font-medium">Product *</label><select id="swal-l-product" class="swal2-input mt-1 w-full m-0"><option value="" disabled ${!isEdit?'selected':''}>Select Product</option>${productOptions}</select></div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div><label class="font-medium">License Type</label><select id="swal-l-type" class="swal2-input mt-1 w-full m-0">
+                            <option value="Trial" ${l.licenseType==='Trial'?'selected':''}>Trial</option>
+                            <option value="Monthly" ${l.licenseType==='Monthly'?'selected':''}>Monthly</option>
+                            <option value="Annual" ${l.licenseType==='Annual'?'selected':''}>Annual</option>
+                            <option value="Lifetime" ${l.licenseType==='Lifetime'?'selected':''}>Lifetime</option>
+                        </select></div>
+                        <div><label class="font-medium">Status</label><select id="swal-l-status" class="swal2-input mt-1 w-full m-0"><option value="Active" ${l.status==='Active'?'selected':''}>Active</option><option value="Expired" ${l.status==='Expired'?'selected':''}>Expired</option><option value="Revoked" ${l.status==='Revoked'?'selected':''}>Revoked</option></select></div>
+                    </div>
+                    <div><label class="font-medium">License Key (Auto-generated if empty)</label><input id="swal-l-key" class="swal2-input mt-1 w-full m-0" value="${l.licenseKey || ''}" placeholder="Leave blank to auto-generate"></div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div><label class="font-medium">Start Date</label><input type="date" id="swal-l-start" class="swal2-input mt-1 w-full m-0" value="${startStr}"></div>
+                        <div><label class="font-medium">Expiry Date</label><input type="date" id="swal-l-exp" class="swal2-input mt-1 w-full m-0" value="${expStr}"></div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div><label class="font-medium">Max Activations</label><input type="number" id="swal-l-max" class="swal2-input mt-1 w-full m-0" value="${l.maxActivations || 1}"></div>
+                        <div><label class="font-medium">Auto Renewal</label><select id="swal-l-autorenew" class="swal2-input mt-1 w-full m-0"><option value="No" ${l.autoRenewal==='No'?'selected':''}>No</option><option value="Yes" ${l.autoRenewal==='Yes'?'selected':''}>Yes</option></select></div>
+                        <div><label class="font-medium">Renewal Price</label><input id="swal-l-renewprice" class="swal2-input mt-1 w-full m-0" value="${l.renewalPrice||''}"></div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div><label class="font-medium">Domain / Website URL</label><input id="swal-l-domain" class="swal2-input mt-1 w-full m-0" value="${l.domain || ''}" placeholder="https://..."></div>
+                        <div><label class="font-medium">Device ID / Installation ID</label><input id="swal-l-device" class="swal2-input mt-1 w-full m-0" value="${l.deviceId || ''}" placeholder="..."></div>
+                    </div>
+                    <div><label class="font-medium">Internal Notes</label><input id="swal-l-notes" class="swal2-input mt-1 w-full m-0" value="${l.notes || ''}" placeholder="..."></div>
+                </div>
             `,
             focusConfirm: false,
             showCancelButton: true,
+            width: '600px',
             preConfirm: () => {
+                const cid = document.getElementById('swal-l-client').value;
+                const pid = document.getElementById('swal-l-product').value;
+                if (!cid || !pid) {
+                    Swal.showValidationMessage('Client and Product are required');
+                    return false;
+                }
+
+                let key = document.getElementById('swal-l-key').value;
+                if (!key) key = 'DTECH-' + Math.random().toString(36).substring(2, 10).toUpperCase();
+
+                // To correctly store ISO date from input date, we add time (UTC)
+                const sDate = document.getElementById('swal-l-start').value;
+                const eDate = document.getElementById('swal-l-exp').value;
+
                 return {
-                    clientId: document.getElementById('swal-l-client').value,
-                    productId: document.getElementById('swal-l-product').value,
-                    duration: parseInt(document.getElementById('swal-l-duration').value)
+                    clientId: cid,
+                    productId: pid,
+                    licenseType: document.getElementById('swal-l-type').value,
+                    status: document.getElementById('swal-l-status').value,
+                    licenseKey: key,
+                    startDate: sDate ? new Date(sDate).toISOString() : new Date().toISOString(),
+                    expiryDate: eDate ? new Date(eDate).toISOString() : new Date().toISOString(),
+                    maxActivations: parseInt(document.getElementById('swal-l-max').value) || 1,
+                    autoRenewal: document.getElementById('swal-l-autorenew').value,
+                    renewalPrice: document.getElementById('swal-l-renewprice').value,
+                    domain: document.getElementById('swal-l-domain').value,
+                    deviceId: document.getElementById('swal-l-device').value,
+                    notes: document.getElementById('swal-l-notes').value
                 }
             }
         });
 
-        if (formValues && formValues.clientId && formValues.productId) {
+        if (formValues) {
             try {
-                const expiry = new Date();
-                expiry.setMonth(expiry.getMonth() + formValues.duration);
-
-                const data = {
-                    ...formValues,
-                    licenseKey: 'DTECH-' + Math.random().toString(36).substring(2, 10).toUpperCase(),
-                    status: 'Active',
-                    startDate: new Date().toISOString(),
-                    expiryDate: expiry.toISOString()
-                };
-
-                await API.request('/api/licenses', { method: 'POST', body: JSON.stringify(data) });
-                Swal.fire('Success', 'License issued', 'success');
+                if (isEdit) {
+                    await API.request(`/api/licenses/${l.id}`, { method: 'PUT', body: JSON.stringify(formValues) });
+                    Swal.fire('Success', 'License updated', 'success');
+                } else {
+                    await API.request('/api/licenses', { method: 'POST', body: JSON.stringify(formValues) });
+                    Swal.fire('Success', 'License issued', 'success');
+                }
                 this.loadLicenses();
                 app.loadDashboardData();
             } catch (e) {
                 Swal.fire('Error', e.message, 'error');
             }
         }
+    },
+
+    editLicense(id) {
+        const l = this.licenses.find(x => x.id === id);
+        if (l) this.openModal(l);
     },
 
     async renewLicense(id) {

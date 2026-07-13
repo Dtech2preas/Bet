@@ -89,6 +89,9 @@ const clientsManager = {
                     <td class="px-0 md:px-6 py-2 md:py-4 flex md:table-cell justify-between items-center whitespace-nowrap text-right text-sm font-medium">
                         <div class="md:hidden font-bold text-xs uppercase text-gray-500 mr-2">Actions:</div>
                         <div>
+                            <button onclick="clientsManager.viewDetails('${client.id}')" class="text-green-600 hover:text-green-900 dark:hover:text-green-400 mr-3" title="View Details">
+                                <i class="fas fa-eye"></i>
+                            </button>
                             <button onclick="clientsManager.editClient('${client.id}')" class="text-blue-600 hover:text-blue-900 dark:hover:text-blue-400 mr-3" title="Edit">
                                 <i class="fas fa-edit"></i>
                             </button>
@@ -124,6 +127,16 @@ const clientsManager = {
             document.getElementById('clientEmail').value = client.email || '';
             document.getElementById('clientPhone').value = client.phone || '';
             document.getElementById('clientStatus').value = client.status || 'Active';
+            document.getElementById('clientRegNum').value = client.regNum || '';
+            document.getElementById('clientVatNum').value = client.vatNum || '';
+            document.getElementById('clientIndustry').value = client.industry || '';
+            document.getElementById('clientWebsite').value = client.website || '';
+            document.getElementById('clientLinkedin').value = client.linkedin || '';
+            document.getElementById('clientPhysicalAddress').value = client.physicalAddress || '';
+            document.getElementById('clientPostalAddress').value = client.postalAddress || '';
+            document.getElementById('clientPreferredContact').value = client.preferredContact || 'Email';
+            document.getElementById('clientBillingContact').value = client.billingContact || '';
+            document.getElementById('clientTechContact').value = client.techContact || '';
             document.getElementById('clientNotes').value = client.notes || '';
         }
 
@@ -157,6 +170,16 @@ const clientsManager = {
             email: document.getElementById('clientEmail').value,
             phone: document.getElementById('clientPhone').value,
             status: document.getElementById('clientStatus').value,
+            regNum: document.getElementById('clientRegNum').value,
+            vatNum: document.getElementById('clientVatNum').value,
+            industry: document.getElementById('clientIndustry').value,
+            website: document.getElementById('clientWebsite').value,
+            linkedin: document.getElementById('clientLinkedin').value,
+            physicalAddress: document.getElementById('clientPhysicalAddress').value,
+            postalAddress: document.getElementById('clientPostalAddress').value,
+            preferredContact: document.getElementById('clientPreferredContact').value,
+            billingContact: document.getElementById('clientBillingContact').value,
+            techContact: document.getElementById('clientTechContact').value,
             notes: document.getElementById('clientNotes').value
         };
 
@@ -210,6 +233,132 @@ const clientsManager = {
                 Swal.fire({ icon: 'error', title: 'Error', text: error.message });
             }
         }
+    },
+
+    async viewDetails(id) {
+        const client = this.clients.find(c => c.id === id);
+        if (!client) return;
+
+        const modal = document.getElementById('clientDetailsModal');
+        const panel = document.getElementById('clientDetailsPanel');
+        const content = document.getElementById('clientDetailsContent');
+
+        document.getElementById('detailsCompanyName').innerText = client.companyName + ' Details';
+
+        content.innerHTML = '<div class="text-center py-10"><i class="fas fa-spinner fa-spin text-3xl text-dtech-500"></i><p class="mt-2">Loading related records...</p></div>';
+
+        // Open modal and slide panel in
+        modal.classList.remove('hidden');
+        // small timeout to allow display:block to apply before transition
+        setTimeout(() => {
+            panel.classList.remove('translate-x-full');
+        }, 10);
+
+        try {
+            const [licRes, quoRes, invRes, payRes, conRes] = await Promise.all([
+                API.request('/api/licenses'),
+                API.request('/api/quotations'),
+                API.request('/api/invoices'),
+                API.request('/api/payments'),
+                API.request('/api/contracts')
+            ]);
+
+            const cLicenses = (licRes.licenses || []).filter(l => l.clientId === id);
+            const cQuotations = (quoRes.quotations || []).filter(q => q.clientId === id);
+            const cInvoices = (invRes.invoices || []).filter(i => i.clientId === id);
+            // Link payments through invoices
+            const cInvoiceIds = cInvoices.map(i => i.id);
+            const cPayments = (payRes.payments || []).filter(p => cInvoiceIds.includes(p.invoiceId));
+            const cContracts = (conRes.contracts || []).filter(c => c.clientId === id);
+
+            let html = `
+                <div class="mb-8 bg-gray-50 dark:bg-gray-800 p-4 rounded-lg shadow-sm">
+                    <h3 class="text-lg font-semibold mb-4 border-b pb-2">Client Profile</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                        <div><strong>Company:</strong> ${client.companyName}</div>
+                        <div><strong>Contact:</strong> ${client.contactPerson || '-'}</div>
+                        <div><strong>Email:</strong> <a href="mailto:${client.email}" class="text-blue-600">${client.email}</a></div>
+                        <div><strong>Phone:</strong> ${client.phone || '-'}</div>
+                        <div><strong>Status:</strong> <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${client.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}">${client.status || 'Active'}</span></div>
+                        <div><strong>Industry:</strong> ${client.industry || '-'}</div>
+                        <div><strong>Reg No:</strong> ${client.regNum || '-'}</div>
+                        <div><strong>VAT No:</strong> ${client.vatNum || '-'}</div>
+                        <div class="md:col-span-2"><strong>Website:</strong> ${client.website ? `<a href="${client.website}" target="_blank" class="text-blue-600">${client.website}</a>` : '-'}</div>
+                    </div>
+                </div>
+            `;
+
+            // Helper to render lists
+            const renderList = (title, items, renderItem) => {
+                let listHtml = `<div class="mb-8"><h3 class="text-lg font-semibold mb-3 border-b pb-1">${title} <span class="text-sm font-normal text-gray-500 bg-gray-200 dark:bg-gray-700 px-2 py-0.5 rounded-full ml-2">${items.length}</span></h3>`;
+                if (items.length === 0) {
+                    listHtml += `<p class="text-sm text-gray-500 italic">No ${title.toLowerCase()} found.</p>`;
+                } else {
+                    listHtml += `<div class="space-y-3">`;
+                    items.forEach(item => {
+                        listHtml += `<div class="p-3 border dark:border-dark-border rounded-md shadow-sm bg-white dark:bg-dark-card flex justify-between items-center text-sm">${renderItem(item)}</div>`;
+                    });
+                    listHtml += `</div>`;
+                }
+                listHtml += `</div>`;
+                return listHtml;
+            };
+
+            html += renderList('Licenses', cLicenses, l => `
+                <div>
+                    <div class="font-mono font-medium">${l.licenseKey}</div>
+                    <div class="text-xs text-gray-500">Exp: ${new Date(l.expiryDate).toLocaleDateString()}</div>
+                </div>
+                <span class="px-2 py-1 text-xs rounded-full ${l.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">${l.status}</span>
+            `);
+
+            html += renderList('Quotations', cQuotations, q => `
+                <div>
+                    <div class="font-medium">${q.reference || 'No Number'}</div>
+                    <div class="text-xs text-gray-500">${new Date(q.date).toLocaleDateString()} - ${q.currency || 'R'} ${q.total}</div>
+                </div>
+                <span class="px-2 py-1 text-xs rounded-full ${q.status === 'Accepted' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}">${q.status || 'Draft'}</span>
+            `);
+
+            html += renderList('Invoices', cInvoices, i => `
+                <div>
+                    <div class="font-medium">${i.reference || 'No Number'}</div>
+                    <div class="text-xs text-gray-500">${new Date(i.date).toLocaleDateString()} - R ${i.total}</div>
+                </div>
+                <span class="px-2 py-1 text-xs rounded-full ${i.status === 'Paid' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">${i.status || 'Unpaid'}</span>
+            `);
+
+            html += renderList('Payments', cPayments, p => `
+                <div>
+                    <div class="font-medium">${p.currency || 'ZAR'} ${p.amount}</div>
+                    <div class="text-xs text-gray-500">${new Date(p.date || p.paymentDate).toLocaleDateString()} - Ref: ${p.transactionReference || p.reference || 'N/A'}</div>
+                </div>
+                <span class="px-2 py-1 text-xs rounded-full ${p.status === 'Confirmed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}">${p.status || p.paymentStatus || 'Completed'}</span>
+            `);
+
+            html += renderList('Contracts', cContracts, c => `
+                <div>
+                    <div class="font-medium">${c.contractType || 'Contract'}</div>
+                    <div class="text-xs text-gray-500">${new Date(c.startDate || c.dateAdded).toLocaleDateString()} to ${new Date(c.endDate || c.expiryDate || new Date()).toLocaleDateString()}</div>
+                </div>
+                <span class="px-2 py-1 text-xs rounded-full ${c.signingStatus === 'Signed' || c.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}">${c.signingStatus || c.status || 'Draft'}</span>
+            `);
+
+            content.innerHTML = html;
+
+        } catch (error) {
+            content.innerHTML = `<div class="text-center py-10 text-red-500">Failed to load details: ${error.message}</div>`;
+        }
+    },
+
+    closeDetails() {
+        const modal = document.getElementById('clientDetailsModal');
+        const panel = document.getElementById('clientDetailsPanel');
+
+        panel.classList.add('translate-x-full');
+        setTimeout(() => {
+            modal.classList.add('hidden');
+        }, 300); // match transition duration
     }
 };
 
