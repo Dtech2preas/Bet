@@ -1,0 +1,424 @@
+Build D-TECH Business Portal (Internal CRM)
+
+You are a senior full-stack software engineer and UI/UX designer.
+
+Build a production-ready internal Business Management Portal for D-TECH. This system is only used by D-TECH staff to manage software licensing clients, quotations, invoices, contracts, payments and subscriptions.
+
+General Requirements
+
+- Modern, premium UI
+- Responsive (Desktop, Tablet and Mobile)
+- Fast and lightweight
+- Professional blue/white theme matching D-TECH branding
+- Dashboard with beautiful statistics
+- Dark Mode
+- Search everywhere
+- Filters
+- Pagination
+- Toast notifications
+- Loading animations
+- Confirmation dialogs
+- Offline-friendly where practical
+- Modular architecture for future expansion
+
+---
+
+Authentication
+
+Implement secure authentication.
+
+Roles:
+
+- Super Admin
+- Admin
+- Staff
+
+Permissions should control which pages each role can access.
+
+---
+
+Dashboard
+
+Display cards showing:
+
+- Total Clients
+- Active Licenses
+- Expired Licenses
+- Licenses Expiring Soon
+- Monthly Revenue
+- Total Revenue
+- Outstanding Payments
+- Pending Quotations
+
+Charts:
+
+- Monthly Revenue
+- New Clients
+- License Growth
+- Payment Status
+
+Recent Activity feed.
+
+---
+
+Client Management
+
+Create complete client management.
+
+Each client should have:
+
+- Client ID
+- Company Name
+- Contact Person
+- Position
+- Email
+- Phone
+- WhatsApp
+- Physical Address
+- Website
+- Tax/VAT Number (optional)
+- Notes
+- Status
+- Date Added
+
+Ability to:
+
+- Add
+- Edit
+- Delete
+- Archive
+- Search
+- Export
+
+Each client has their own profile page.
+
+---
+
+Products
+
+Allow D-TECH products to be managed.
+
+Examples:
+
+- ConnectuExact
+- Student Marketplace
+- Quiz Platform
+- School Management
+- Any future products
+
+Each product stores:
+
+- Name
+- Description
+- Version
+- Setup Fee
+- Monthly Fee
+- Annual Fee
+- Features
+- Logo
+
+---
+
+Quotations
+
+Generate professional quotations.
+
+Automatically assign quotation numbers.
+
+Select:
+
+- Client
+- Product
+- Custom Items
+- Discounts
+- VAT
+- Notes
+
+Automatically calculate totals.
+
+Allow:
+
+- Save Draft
+- Edit
+- Duplicate
+- Send
+- Download PDF
+- Print
+
+Status:
+
+- Draft
+- Sent
+- Accepted
+- Declined
+- Expired
+
+---
+
+Invoice Management
+
+Generate professional invoices.
+
+Invoice numbers generated automatically.
+
+Support:
+
+- Deposit invoices
+- Final invoices
+- Subscription invoices
+
+Track:
+
+- Paid
+- Partially Paid
+- Outstanding
+- Overdue
+
+Generate PDF.
+
+---
+
+License Agreement Generator
+
+Automatically generate contracts.
+
+Populate fields using client information.
+
+Include:
+
+- Parties
+- Software Licensed
+- License Type
+- Subscription Period
+- Ownership Clause
+- Intellectual Property
+- Support Terms
+- Payment Terms
+- Confidentiality
+- Termination
+- Renewal
+- Signature Section
+
+Allow editing before generating.
+
+Export to PDF.
+
+---
+
+Payment Management
+
+Record:
+
+- Amount
+- Date
+- Method
+- Reference
+- Notes
+
+Payment methods:
+
+- EFT
+- Cash
+- Card
+- Other
+
+Automatically update invoice status.
+
+Generate payment receipt.
+
+---
+
+Receipt Generator
+
+Professional receipt with:
+
+- Receipt Number
+- Client
+- Amount
+- Payment Method
+- Invoice Linked
+- Date
+- D-TECH Branding
+
+Download PDF.
+
+---
+
+Subscription & License Management
+
+Each client has licenses.
+
+Store:
+
+- License Number
+- Product
+- Plan
+- Setup Fee
+- Monthly Fee
+- Start Date
+- Expiry Date
+- Renewal Date
+- Status
+
+Status:
+
+- Active
+- Suspended
+- Expired
+- Cancelled
+
+Show remaining days.
+
+Highlight expiring licenses.
+
+One-click Renew.
+
+Renewal should automatically update expiry dates.
+
+---
+
+Revenue Dashboard
+
+Display:
+
+- Monthly Revenue
+- Annual Revenue
+- Expected Revenue
+- Outstanding Revenue
+- Product Performance
+- Top Paying Clients
+
+Charts and downloadable reports.
+
+---
+
+Document Storage
+
+Store:
+
+- Signed Contracts
+- Quotations
+- Receipts
+- Invoices
+- Other Files
+
+Each document belongs to a client.
+
+Allow:
+
+- Upload
+- Preview
+- Rename
+- Delete
+- Download
+
+---
+
+Communication
+
+Allow sending documents via:
+
+- Email
+- WhatsApp
+
+Generate ready-to-send WhatsApp messages with attached document links.
+
+Keep communication history.
+
+---
+
+PDF Engine
+
+All generated documents must use a consistent premium design.
+
+Include:
+
+- D-TECH Logo
+- Company Details
+- Footer
+- Page Numbers
+- QR Code for document verification
+- Signature Area
+
+Documents:
+
+- Quotation
+- Invoice
+- Receipt
+- License Agreement
+
+---
+
+Search
+
+Global search across:
+
+- Clients
+- Products
+- Quotations
+- Licenses
+- Invoices
+- Payments
+
+---
+
+Notifications
+
+Notify when:
+
+- License expires in 30 days
+- Invoice overdue
+- Payment received
+- New client added
+- Contract unsigned
+
+---
+
+Settings
+
+Business information:
+
+- Company Name
+- Logo
+- Banking Details
+- VAT Number
+- Contact Details
+- Email Templates
+- WhatsApp Templates
+- PDF Branding
+
+---
+
+Audit Logs
+
+Track:
+
+- User
+- Action
+- Time
+- Object Changed
+
+---
+
+Future-Proof Architecture
+
+Design the codebase so future modules can easily be added, including:
+
+- Client Portal
+- Online Payments
+- Digital Signatures
+- API Integrations
+- Accounting Integrations
+- SMS Notifications
+- Inventory
+- HR
+- Helpdesk
+- Multi-company support
+
+The application should feel like a professional SaaS CRM similar to HubSpot or Zoho CRM, but tailored specifically for D-TECH's software licensing business. Prioritize clean architecture, maintainability, security, scalability, and an excellent user experience.
+
+
+
+we will use a Cloudflare worker as the link and the database with be a Cloudflare kv which the namespace is DTECH_KV 
+N the name is also DTECH_KV 
+THE WORKER URL IS https://lively-limit-786e.testd1x24.workers.dev/
