@@ -30,8 +30,8 @@ const contractsManager = {
 
         let html = `
             <div class="bg-white dark:bg-dark-card rounded-lg shadow-sm border border-gray-100 dark:border-dark-border overflow-hidden">
-                <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                    <thead class="bg-gray-50 dark:bg-gray-800">
+                <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 block md:table">
+                    <thead class="bg-gray-50 dark:bg-gray-800 hidden md:table-header-group">
                         <tr>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Contract Ref</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Client</th>
@@ -39,21 +39,33 @@ const contractsManager = {
                             <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Actions</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+                    <tbody class="divide-y divide-gray-200 dark:divide-gray-700 block md:table-row-group">
         `;
         this.contracts.forEach(con => {
             const client = this.clients.find(c => c.id === con.clientId);
             const statusColor = con.status === 'Signed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800';
 
             html += `
-                <tr>
-                    <td class="px-6 py-4 text-sm font-medium text-gray-900 dark:text-white">${con.reference}</td>
-                    <td class="px-6 py-4 text-sm text-gray-500">${client ? client.companyName : 'Unknown'}</td>
-                    <td class="px-6 py-4"><span class="px-2 py-1 text-xs rounded-full ${statusColor}">${con.status}</span></td>
-                    <td class="px-6 py-4 text-right text-sm">
-                        <button onclick="contractsManager.toggleStatus('${con.id}')" class="text-blue-600 hover:text-blue-900 mr-2" title="Mark Signed/Unsigned"><i class="fas fa-check-circle"></i></button>
-                        <button onclick="contractsManager.preview('${con.id}')" class="text-gray-600 hover:text-gray-900 mr-2" title="Preview PDF"><i class="fas fa-file-pdf"></i></button>
-                        <button onclick="contractsManager.deleteContract('${con.id}')" class="text-red-600 hover:text-red-900"><i class="fas fa-trash"></i></button>
+                <tr class="block md:table-row mb-4 md:mb-0 border-b md:border-0 p-4 md:p-0">
+                    <td class="px-0 md:px-6 py-2 md:py-4 flex md:table-cell justify-between items-center text-sm font-medium text-gray-900 dark:text-white">
+                        <div class="md:hidden font-bold text-xs uppercase text-gray-500 mr-2">Contract Ref:</div>
+                        <div class="text-right md:text-left">${con.reference}</div>
+                    </td>
+                    <td class="px-0 md:px-6 py-2 md:py-4 flex md:table-cell justify-between items-center text-sm text-gray-500">
+                        <div class="md:hidden font-bold text-xs uppercase text-gray-500 mr-2">Client:</div>
+                        <div class="text-right md:text-left">${client ? client.companyName : 'Unknown'}</div>
+                    </td>
+                    <td class="px-0 md:px-6 py-2 md:py-4 flex md:table-cell justify-between items-center">
+                        <div class="md:hidden font-bold text-xs uppercase text-gray-500 mr-2">Status:</div>
+                        <div class="text-right md:text-left"><span class="px-2 py-1 text-xs rounded-full ${statusColor}">${con.status}</span></div>
+                    </td>
+                    <td class="px-0 md:px-6 py-2 md:py-4 flex md:table-cell justify-between items-center text-right text-sm">
+                        <div class="md:hidden font-bold text-xs uppercase text-gray-500 mr-2">Actions:</div>
+                        <div>
+                            <button onclick="contractsManager.toggleStatus('${con.id}')" class="text-blue-600 hover:text-blue-900 mr-2" title="Mark Signed/Unsigned"><i class="fas fa-check-circle"></i></button>
+                            <button onclick="contractsManager.preview('${con.id}')" class="text-gray-600 hover:text-gray-900 mr-2" title="Preview PDF"><i class="fas fa-file-pdf"></i></button>
+                            <button onclick="contractsManager.deleteContract('${con.id}')" class="text-red-600 hover:text-red-900"><i class="fas fa-trash"></i></button>
+                        </div>
                     </td>
                 </tr>
             `;

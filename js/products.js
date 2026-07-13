@@ -26,23 +26,32 @@ const productsManager = {
 
         let html = `
             <div class="bg-white dark:bg-dark-card rounded-lg shadow-sm border border-gray-100 dark:border-dark-border overflow-hidden">
-                <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                    <thead class="bg-gray-50 dark:bg-gray-800">
+                <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 block md:table">
+                    <thead class="bg-gray-50 dark:bg-gray-800 hidden md:table-header-group">
                         <tr>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Product Name</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Pricing</th>
                             <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Actions</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+                    <tbody class="divide-y divide-gray-200 dark:divide-gray-700 block md:table-row-group">
         `;
         this.products.forEach(p => {
             html += `
-                <tr>
-                    <td class="px-6 py-4 font-medium text-gray-900 dark:text-white">${p.name} <div class="text-xs text-gray-500 font-normal">${p.description}</div></td>
-                    <td class="px-6 py-4 text-sm text-gray-500">Setup: R${p.setupFee} | Monthly: R${p.monthlyFee}</td>
-                    <td class="px-6 py-4 text-right text-sm">
-                        <button onclick="productsManager.deleteProduct('${p.id}')" class="text-red-600 hover:text-red-900"><i class="fas fa-trash"></i></button>
+                <tr class="block md:table-row mb-4 md:mb-0 border-b md:border-0 p-4 md:p-0">
+                    <td class="px-0 md:px-6 py-2 md:py-4 flex md:table-cell justify-between items-center font-medium text-gray-900 dark:text-white">
+                        <div class="md:hidden font-bold text-xs uppercase text-gray-500 mr-2">Product:</div>
+                        <div class="text-right md:text-left">${p.name} <div class="text-xs text-gray-500 font-normal">${p.description}</div></div>
+                    </td>
+                    <td class="px-0 md:px-6 py-2 md:py-4 flex md:table-cell justify-between items-center text-sm text-gray-500">
+                        <div class="md:hidden font-bold text-xs uppercase text-gray-500 mr-2">Pricing:</div>
+                        <div class="text-right md:text-left">Setup: R${p.setupFee} | Monthly: R${p.monthlyFee}</div>
+                    </td>
+                    <td class="px-0 md:px-6 py-2 md:py-4 flex md:table-cell justify-between items-center text-right text-sm">
+                        <div class="md:hidden font-bold text-xs uppercase text-gray-500 mr-2">Actions:</div>
+                        <div>
+                            <button onclick="productsManager.deleteProduct('${p.id}')" class="text-red-600 hover:text-red-900"><i class="fas fa-trash"></i></button>
+                        </div>
                     </td>
                 </tr>
             `;
