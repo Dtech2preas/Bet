@@ -22,11 +22,13 @@ const app = {
 
     showSection(sectionId) {
         // Hide all sections
-        const sections = ['dashboard', 'clients', 'products'];
+        const sections = ['dashboard', 'clients', 'products', 'licenses', 'quotations', 'invoices', 'payments', 'contracts'];
         sections.forEach(sec => {
             document.getElementById(`section-${sec}`).classList.add('hidden');
             document.getElementById(`nav-${sec}`).classList.remove('active', 'bg-dtech-700', 'text-white');
             document.getElementById(`nav-${sec}`).classList.add('text-gray-700', 'dark:text-gray-300');
+            document.getElementById(`nav-${sec}`).style.backgroundColor = '';
+            document.getElementById(`nav-${sec}`).style.color = '';
         });
 
         // Show target section
@@ -38,11 +40,14 @@ const app = {
         navItem.style.color = 'white';
 
         // Load specific data if needed
-        if (sectionId === 'clients') {
-            clientsManager.loadClients();
-        } else if (sectionId === 'dashboard') {
-            this.loadDashboardData();
-        }
+        if (sectionId === 'clients') clientsManager.loadClients();
+        if (sectionId === 'products') productsManager.loadProducts();
+        if (sectionId === 'licenses') licensesManager.loadLicenses();
+        if (sectionId === 'quotations') quotationsManager.loadQuotations();
+        if (sectionId === 'invoices') invoicesManager.loadInvoices();
+        if (sectionId === 'payments') paymentsManager.loadPayments();
+        if (sectionId === 'contracts') contractsManager.loadContracts();
+        if (sectionId === 'dashboard') this.loadDashboardData();
     },
 
     initDarkMode() {
