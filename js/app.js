@@ -16,7 +16,7 @@ const app = {
         }
 
         this.initDarkMode();
-        this.initCharts();
+        // Load dashboard data (which also initializes charts)
         this.loadDashboardData();
     },
 
@@ -98,17 +98,25 @@ const app = {
         }
     },
 
-    initCharts() {
+    initCharts(chartData) {
         const ctx = document.getElementById('revenueChart');
         if (!ctx) return;
 
-        new Chart(ctx, {
+        // Destroy existing chart if it exists
+        if (this.revenueChartInstance) {
+            this.revenueChartInstance.destroy();
+        }
+
+        const labels = chartData ? chartData.labels : ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
+        const data = chartData ? chartData.data : [0, 0, 0, 0, 0, 0];
+
+        this.revenueChartInstance = new Chart(ctx, {
             type: 'line',
             data: {
-                labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+                labels: labels,
                 datasets: [{
                     label: 'Revenue (ZAR)',
-                    data: [12000, 19000, 15000, 22000, 18000, 25000],
+                    data: data,
                     borderColor: '#3b82f6',
                     backgroundColor: 'rgba(59, 130, 246, 0.1)',
                     tension: 0.4,
@@ -137,9 +145,16 @@ const app = {
                 // Formatting currency
                 document.getElementById('stat-monthly-rev').innerText = 'R ' + data.stats.monthlyRevenue.toLocaleString();
                 document.getElementById('stat-total-rev').innerText = 'R ' + data.stats.totalRevenue.toLocaleString();
+
+                if (data.chartData) {
+                    this.initCharts(data.chartData);
+                } else {
+                    this.initCharts();
+                }
             }
         } catch (error) {
             console.error('Failed to load dashboard stats', error);
+            this.initCharts();
         }
     }
 };

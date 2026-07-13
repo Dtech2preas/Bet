@@ -42,13 +42,13 @@
         .nav-item.active { background-color: #1e3a8a; color: white; border-radius: 0.375rem; }
     </style>
 </head>
-<body class="bg-gray-100 dark:bg-dark-bg text-gray-900 dark:text-gray-100 min-h-screen flex transition-colors duration-200 relative overflow-hidden md:overflow-visible">
+<body class="bg-gray-100 dark:bg-dark-bg text-gray-900 dark:text-gray-100 min-h-screen flex transition-colors duration-200 relative md:overflow-visible">
 
     <!-- Mobile Sidebar Overlay -->
-    <div id="sidebarOverlay" onclick="app.toggleSidebar()" class="fixed inset-0 bg-black bg-opacity-50 z-20 hidden md:hidden"></div>
+    <div id="sidebarOverlay" onclick="app.toggleSidebar()" class="fixed inset-0 bg-black bg-opacity-50 z-30 hidden md:hidden"></div>
 
     <!-- Sidebar -->
-    <aside id="sidebar" class="w-64 bg-white dark:bg-dark-card border-r dark:border-dark-border h-screen fixed md:sticky top-0 left-0 z-30 transform -translate-x-full md:translate-x-0 flex flex-col transition-transform duration-300">
+    <aside id="sidebar" class="w-64 bg-white dark:bg-dark-card border-r dark:border-dark-border h-screen fixed md:sticky top-0 left-0 z-40 transform -translate-x-full md:translate-x-0 flex flex-col transition-transform duration-300">
         <div class="p-6 flex justify-between items-center">
             <div>
                 <h2 class="text-2xl font-bold text-dtech-700 dark:text-dtech-500">D-TECH</h2>
@@ -105,11 +105,11 @@
     </aside>
 
     <!-- Main Content -->
-    <main class="flex-1 flex flex-col min-w-0 md:pl-0 h-screen overflow-y-auto">
+    <main class="flex-1 flex flex-col min-w-0 md:pl-0 min-h-screen">
         <!-- Topbar -->
         <header class="bg-white dark:bg-dark-card border-b dark:border-dark-border h-16 flex items-center justify-between px-4 sm:px-6 sticky top-0 z-10 transition-colors duration-200">
             <div class="flex items-center flex-1">
-                <button onclick="app.toggleSidebar()" class="mr-4 md:hidden text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                <button type="button" onclick="app.toggleSidebar()" class="mr-4 md:hidden text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 z-50 relative pointer-events-auto">
                     <i class="fas fa-bars text-xl"></i>
                 </button>
                 <!-- Search -->
@@ -132,7 +132,7 @@
         </header>
 
         <!-- Dynamic Content Area -->
-        <div class="p-6 flex-1 overflow-auto" id="main-content">
+        <div class="p-6 flex-1" id="main-content">
             <!-- Dashboard Section -->
             <section id="section-dashboard">
                 <h1 class="text-2xl font-semibold mb-6">Dashboard</h1>
