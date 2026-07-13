@@ -166,6 +166,28 @@ export default {
             return i.status === 'Paid' && d.getMonth() === currentMonth && d.getFullYear() === currentYear;
         }).reduce((sum, inv) => sum + (Number(inv.total) || 0), 0);
 
+        // Calculate revenue for the last 6 months for the chart
+        const chartData = {
+          labels: [],
+          data: []
+        };
+
+        for (let i = 5; i >= 0; i--) {
+          const d = new Date();
+          d.setDate(1); // Prevent date wrapping edge case on 31st of months
+          d.setMonth(d.getMonth() - i);
+          const month = d.toLocaleString('default', { month: 'short' });
+          const year = d.getFullYear();
+          chartData.labels.push(`${month} ${year}`);
+
+          const monthRev = invoices.filter(inv => {
+            const invDate = new Date(inv.dateAdded);
+            return inv.status === 'Paid' && invDate.getMonth() === d.getMonth() && invDate.getFullYear() === year;
+          }).reduce((sum, inv) => sum + (Number(inv.total) || 0), 0);
+
+          chartData.data.push(monthRev);
+        }
+
         return jsonResponse({
           success: true,
           stats: {
@@ -173,7 +195,8 @@ export default {
             activeLicenses: activeLicenses,
             monthlyRevenue: monthlyRevenue,
             totalRevenue: totalRevenue
-          }
+          },
+          chartData: chartData
         });
       } catch (e) {
         return jsonResponse({ success: false, message: 'Failed to fetch dashboard' }, 500);
