@@ -76,50 +76,140 @@ const quotationsManager = {
         container.innerHTML = html + `</tbody></table></div>`;
     },
 
-    async openModal() {
+    async openModal(quotation = null) {
         if (!this.clients || this.clients.length === 0) return Swal.fire('Error', 'Add a client first', 'error');
 
-        const clientOptions = this.clients.map(c => `<option value="${c.id}">${c.companyName}</option>`).join('');
+        const q = quotation || {};
+        const isEdit = !!quotation;
+        const title = isEdit ? 'Edit Quotation' : 'Create Quotation';
+
+        const clientOptions = this.clients.map(c => `<option value="${c.id}" ${q.clientId === c.id ? 'selected' : ''}>${c.companyName}</option>`).join('');
+
+        // Extract single item if it exists for simpler editing in this modal style
+        const itemDesc = q.items && q.items.length > 0 ? q.items[0].description : '';
+        const itemPrice = q.items && q.items.length > 0 ? q.items[0].price : '';
+        const itemQty = q.items && q.items.length > 0 ? q.items[0].quantity : 1;
+
+        const d = new Date();
+        d.setDate(d.getDate() + 30); // Valid until default 30 days
+        const validStr = isEdit && q.validUntil ? q.validUntil.split('T')[0] : d.toISOString().split('T')[0];
+        const projStartStr = isEdit && q.expectedStartDate ? q.expectedStartDate.split('T')[0] : '';
 
         const { value: formValues } = await Swal.fire({
-            title: 'Create Quotation',
+            title: title,
             html: `
-                <select id="swal-q-client" class="swal2-input"><option value="" disabled selected>Select Client</option>${clientOptions}</select>
-                <input id="swal-q-desc" class="swal2-input" placeholder="Item Description">
-                <input id="swal-q-price" type="number" class="swal2-input" placeholder="Unit Price (ZAR)">
-                <input id="swal-q-qty" type="number" class="swal2-input" placeholder="Quantity" value="1">
+                <div class="text-left text-sm space-y-3 h-96 overflow-y-auto pr-2">
+                    <div class="grid grid-cols-2 gap-2">
+                        <div><label class="font-medium">Client *</label><select id="swal-q-client" class="swal2-input mt-1 w-full m-0"><option value="" disabled ${!isEdit?'selected':''}>Select Client</option>${clientOptions}</select></div>
+                        <div><label class="font-medium">Quotation Title</label><input id="swal-q-title" class="swal2-input mt-1 w-full m-0" value="${q.title || ''}" placeholder="e.g. Website Redesign"></div>
+                    </div>
+
+                    <h4 class="font-semibold border-b pb-1 mt-4">Item Details (Single item for now)</h4>
+                    <div><label class="font-medium">Item Description *</label><input id="swal-q-desc" class="swal2-input mt-1 w-full m-0" value="${itemDesc}" placeholder="Item Description"></div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div><label class="font-medium">Unit Price</label><input id="swal-q-price" type="number" class="swal2-input mt-1 w-full m-0" value="${itemPrice}" placeholder="0.00"></div>
+                        <div><label class="font-medium">Quantity</label><input id="swal-q-qty" type="number" class="swal2-input mt-1 w-full m-0" value="${itemQty}" placeholder="1"></div>
+                    </div>
+
+                    <h4 class="font-semibold border-b pb-1 mt-4">Financials & Terms</h4>
+                    <div class="grid grid-cols-3 gap-2">
+                        <div><label class="font-medium">Currency</label><input id="swal-q-currency" class="swal2-input mt-1 w-full m-0" value="${q.currency || 'ZAR'}" placeholder="ZAR"></div>
+                        <div><label class="font-medium">Discount (%)</label><input id="swal-q-discount" type="number" class="swal2-input mt-1 w-full m-0" value="${q.discount || 0}" placeholder="0"></div>
+                        <div><label class="font-medium">VAT (%)</label><input id="swal-q-vat" type="number" class="swal2-input mt-1 w-full m-0" value="${q.vat || 15}" placeholder="15"></div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div><label class="font-medium">Valid Until</label><input type="date" id="swal-q-valid" class="swal2-input mt-1 w-full m-0" value="${validStr}"></div>
+                        <div><label class="font-medium">Payment Terms</label><select id="swal-q-terms" class="swal2-input mt-1 w-full m-0">
+                            <option value="Due on Receipt" ${q.paymentTerms==='Due on Receipt'?'selected':''}>Due on Receipt</option>
+                            <option value="7 Days" ${q.paymentTerms==='7 Days'?'selected':''}>7 Days</option>
+                            <option value="14 Days" ${q.paymentTerms==='14 Days'?'selected':''}>14 Days</option>
+                            <option value="30 Days" ${q.paymentTerms==='30 Days'?'selected':''}>30 Days</option>
+                        </select></div>
+                    </div>
+
+                    <h4 class="font-semibold border-b pb-1 mt-4">Logistics & Notes</h4>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div><label class="font-medium">Expected Project Start</label><input type="date" id="swal-q-start" class="swal2-input mt-1 w-full m-0" value="${projStartStr}"></div>
+                        <div><label class="font-medium">Delivery Time</label><input id="swal-q-delivery" class="swal2-input mt-1 w-full m-0" value="${q.deliveryTime || ''}" placeholder="e.g. 2 weeks"></div>
+                    </div>
+                    <div><label class="font-medium">Customer Notes</label><textarea id="swal-q-cnotes" class="swal2-input mt-1 w-full m-0 p-2 text-sm" rows="2" placeholder="Visible on PDF">${q.customerNotes || ''}</textarea></div>
+                    <div><label class="font-medium">Internal Notes</label><textarea id="swal-q-inotes" class="swal2-input mt-1 w-full m-0 p-2 text-sm" rows="2" placeholder="Internal only">${q.internalNotes || ''}</textarea></div>
+                    <div><label class="font-medium">Attachments (URL)</label><input id="swal-q-attach" class="swal2-input mt-1 w-full m-0" value="${q.attachments || ''}" placeholder="Link to Google Drive / Dropbox"></div>
+                </div>
             `,
             focusConfirm: false,
             showCancelButton: true,
+            width: '700px',
             preConfirm: () => {
+                const cid = document.getElementById('swal-q-client').value;
+                const desc = document.getElementById('swal-q-desc').value;
+                if (!cid || !desc) {
+                    Swal.showValidationMessage('Client and Item Description are required');
+                    return false;
+                }
+
                 const price = parseFloat(document.getElementById('swal-q-price').value || 0);
                 const qty = parseFloat(document.getElementById('swal-q-qty').value || 1);
+                const discountPct = parseFloat(document.getElementById('swal-q-discount').value || 0);
+                const vatPct = parseFloat(document.getElementById('swal-q-vat').value || 0);
+
+                const subtotal = price * qty;
+                const discountAmt = subtotal * (discountPct / 100);
+                const afterDiscount = subtotal - discountAmt;
+                const vatAmt = afterDiscount * (vatPct / 100);
+                const total = afterDiscount + vatAmt;
+
+                const validDate = document.getElementById('swal-q-valid').value;
+                const startDate = document.getElementById('swal-q-start').value;
+
                 return {
-                    clientId: document.getElementById('swal-q-client').value,
+                    clientId: cid,
+                    title: document.getElementById('swal-q-title').value,
                     items: [{
-                        description: document.getElementById('swal-q-desc').value,
+                        description: desc,
                         price: price,
                         quantity: qty
                     }],
-                    subtotal: price * qty,
-                    total: price * qty,
+                    subtotal: subtotal.toFixed(2),
+                    discountPct: discountPct,
+                    discountAmt: discountAmt.toFixed(2),
+                    vatPct: vatPct,
+                    vatAmt: vatAmt.toFixed(2),
+                    total: total.toFixed(2),
+                    currency: document.getElementById('swal-q-currency').value,
+                    validUntil: validDate ? new Date(validDate).toISOString() : null,
+                    paymentTerms: document.getElementById('swal-q-terms').value,
+                    expectedStartDate: startDate ? new Date(startDate).toISOString() : null,
+                    deliveryTime: document.getElementById('swal-q-delivery').value,
+                    customerNotes: document.getElementById('swal-q-cnotes').value,
+                    internalNotes: document.getElementById('swal-q-inotes').value,
+                    attachments: document.getElementById('swal-q-attach').value,
                 }
             }
         });
 
-        if (formValues && formValues.clientId) {
-            formValues.reference = 'QT-' + Math.floor(1000 + Math.random() * 9000);
-            formValues.status = 'Draft';
-            formValues.date = new Date().toISOString();
-
+        if (formValues) {
             try {
-                await API.request('/api/quotations', { method: 'POST', body: JSON.stringify(formValues) });
-                Swal.fire('Success', 'Quotation created', 'success');
+                if (isEdit) {
+                    await API.request(`/api/quotations/${q.id}`, { method: 'PUT', body: JSON.stringify(formValues) });
+                    Swal.fire('Success', 'Quotation updated', 'success');
+                } else {
+                    formValues.reference = 'QT-' + Math.floor(1000 + Math.random() * 9000);
+                    formValues.status = 'Draft';
+                    formValues.date = new Date().toISOString();
+                    await API.request('/api/quotations', { method: 'POST', body: JSON.stringify(formValues) });
+                    Swal.fire('Success', 'Quotation created', 'success');
+                }
                 this.loadQuotations();
             } catch (e) {
                 Swal.fire('Error', e.message, 'error');
             }
         }
+    },
+
+    editQuote(id) {
+        const q = this.quotations.find(x => x.id === id);
+        if (q) this.openModal(q);
     },
 
     async preview(id) {

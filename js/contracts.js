@@ -73,12 +73,32 @@ const contractsManager = {
         container.innerHTML = html + `</tbody></table></div>`;
     },
 
-    async openModal() {
+    async openModal(contract = null) {
         if (!this.clients || this.clients.length === 0) return Swal.fire('Error', 'Add a client first', 'error');
 
-        const clientOptions = this.clients.map(c => `<option value="${c.id}">${c.companyName}</option>`).join('');
+        const con = contract || {};
+        const isEdit = !!contract;
+        const title = isEdit ? 'Edit Contract' : 'Generate Contract';
 
-        const template = `This Software License Agreement ("Agreement") is entered into by and between D-TECH ("Licensor") and the Client ("Licensee").
+        const clientOptions = this.clients.map(c => `<option value="${c.id}" ${con.clientId === c.id ? 'selected' : ''}>${c.companyName}</option>`).join('');
+
+        let licenseOptions = '<option value="">No License Linked</option>';
+        try {
+            const lRes = await API.request('/api/licenses');
+            if (lRes.success && lRes.licenses) {
+                licenseOptions += lRes.licenses.map(l => `<option value="${l.id}" ${con.licenseId === l.id ? 'selected' : ''}>${l.licenseKey}</option>`).join('');
+            }
+        } catch(e) {}
+
+        let invoiceOptions = '<option value="">No Invoice Linked</option>';
+        try {
+            const iRes = await API.request('/api/invoices');
+            if (iRes.success && iRes.invoices) {
+                invoiceOptions += iRes.invoices.map(i => `<option value="${i.id}" ${con.invoiceId === i.id ? 'selected' : ''}>${i.reference}</option>`).join('');
+            }
+        } catch(e) {}
+
+        const defaultTemplate = `This Software License Agreement ("Agreement") is entered into by and between D-TECH ("Licensor") and the Client ("Licensee").
 
 1. Grant of License:
 Licensor grants Licensee a non-exclusive, non-transferable license to use the Software.
@@ -95,36 +115,112 @@ Either party may terminate this Agreement with 30 days written notice.
 5. Confidentiality:
 Both parties agree to maintain the confidentiality of proprietary information.`;
 
+        const sDate = isEdit && con.startDate ? con.startDate.split('T')[0] : new Date().toISOString().split('T')[0];
+
+        const d = new Date();
+        d.setMonth(d.getMonth() + 12);
+        const eDate = isEdit && con.endDate ? con.endDate.split('T')[0] : d.toISOString().split('T')[0];
+
         const { value: formValues } = await Swal.fire({
-            title: 'Generate Contract',
+            title: title,
             html: `
-                <select id="swal-c-client" class="swal2-input mb-4"><option value="" disabled selected>Select Client</option>${clientOptions}</select>
-                <textarea id="swal-c-content" class="w-full p-2 border rounded-md" rows="10" style="font-size: 14px;">${template}</textarea>
+                <div class="text-left text-sm space-y-3 h-96 overflow-y-auto pr-2">
+                    <div class="grid grid-cols-2 gap-2">
+                        <div><label class="font-medium">Client *</label><select id="swal-c-client" class="swal2-input mt-1 w-full m-0"><option value="" disabled ${!isEdit?'selected':''}>Select Client</option>${clientOptions}</select></div>
+                        <div><label class="font-medium">Contract Type</label><select id="swal-c-type" class="swal2-input mt-1 w-full m-0">
+                            <option value="SLA" ${con.contractType==='SLA'?'selected':''}>SLA (Service Level Agreement)</option>
+                            <option value="NDA" ${con.contractType==='NDA'?'selected':''}>NDA (Non-Disclosure Agreement)</option>
+                            <option value="Maintenance" ${con.contractType==='Maintenance'?'selected':''}>Maintenance</option>
+                            <option value="License" ${con.contractType==='License'?'selected':''}>License Agreement</option>
+                            <option value="General" ${con.contractType==='General'?'selected':''}>General Contract</option>
+                        </select></div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-2">
+                        <div><label class="font-medium">Start Date</label><input type="date" id="swal-c-start" class="swal2-input mt-1 w-full m-0" value="${sDate}"></div>
+                        <div><label class="font-medium">End Date</label><input type="date" id="swal-c-end" class="swal2-input mt-1 w-full m-0" value="${eDate}"></div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-2">
+                        <div><label class="font-medium">Renewal Option</label><select id="swal-c-renew" class="swal2-input mt-1 w-full m-0">
+                            <option value="Yes" ${con.renewalOption==='Yes'?'selected':''}>Yes</option>
+                            <option value="No" ${con.renewalOption==='No'?'selected':''}>No</option>
+                        </select></div>
+                        <div><label class="font-medium">Signing Status</label><select id="swal-c-status" class="swal2-input mt-1 w-full m-0">
+                            <option value="Draft" ${con.signingStatus==='Draft'?'selected':''}>Draft</option>
+                            <option value="Sent" ${con.signingStatus==='Sent'?'selected':''}>Sent</option>
+                            <option value="Signed" ${con.signingStatus==='Signed'?'selected':''}>Signed</option>
+                        </select></div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-2">
+                        <div><label class="font-medium">Client Sign Date</label><input type="date" id="swal-c-csign" class="swal2-input mt-1 w-full m-0" value="${con.clientSignDate ? con.clientSignDate.split('T')[0] : ''}"></div>
+                        <div><label class="font-medium">D-TECH Sign Date</label><input type="date" id="swal-c-dsign" class="swal2-input mt-1 w-full m-0" value="${con.dtechSignDate ? con.dtechSignDate.split('T')[0] : ''}"></div>
+                    </div>
+
+                    <h4 class="font-semibold border-b pb-1 mt-4">Linked Records</h4>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div><label class="font-medium">Related License</label><select id="swal-c-license" class="swal2-input mt-1 w-full m-0">${licenseOptions}</select></div>
+                        <div><label class="font-medium">Related Invoice</label><select id="swal-c-invoice" class="swal2-input mt-1 w-full m-0">${invoiceOptions}</select></div>
+                    </div>
+
+                    <div><label class="font-medium">Contract Terms / Content</label><textarea id="swal-c-content" class="w-full mt-1 p-2 border border-gray-300 dark:border-gray-600 rounded-md" rows="8" style="font-size: 14px;">${con.content || defaultTemplate}</textarea></div>
+                </div>
             `,
-            width: '600px',
+            width: '700px',
             focusConfirm: false,
             showCancelButton: true,
             preConfirm: () => {
+                const cid = document.getElementById('swal-c-client').value;
+                if (!cid) {
+                    Swal.showValidationMessage('Client is required');
+                    return false;
+                }
+
+                const cSign = document.getElementById('swal-c-csign').value;
+                const dSign = document.getElementById('swal-c-dsign').value;
+                const startD = document.getElementById('swal-c-start').value;
+                const endD = document.getElementById('swal-c-end').value;
+                const sigStatus = document.getElementById('swal-c-status').value;
+
                 return {
-                    clientId: document.getElementById('swal-c-client').value,
+                    clientId: cid,
+                    contractType: document.getElementById('swal-c-type').value,
+                    startDate: startD ? new Date(startD).toISOString() : new Date().toISOString(),
+                    endDate: endD ? new Date(endD).toISOString() : new Date().toISOString(),
+                    renewalOption: document.getElementById('swal-c-renew').value,
+                    signingStatus: sigStatus,
+                    status: sigStatus === 'Signed' ? 'Signed' : 'Unsigned', // fallback mapping for renderTable compatibility
+                    clientSignDate: cSign ? new Date(cSign).toISOString() : null,
+                    dtechSignDate: dSign ? new Date(dSign).toISOString() : null,
+                    licenseId: document.getElementById('swal-c-license').value,
+                    invoiceId: document.getElementById('swal-c-invoice').value,
                     content: document.getElementById('swal-c-content').value,
                 }
             }
         });
 
-        if (formValues && formValues.clientId) {
-            formValues.reference = 'AGR-' + Math.floor(1000 + Math.random() * 9000);
-            formValues.status = 'Unsigned';
-            formValues.date = new Date().toISOString();
-
+        if (formValues) {
             try {
-                await API.request('/api/contracts', { method: 'POST', body: JSON.stringify(formValues) });
-                Swal.fire('Success', 'Contract generated', 'success');
+                if (isEdit) {
+                    await API.request(`/api/contracts/${con.id}`, { method: 'PUT', body: JSON.stringify(formValues) });
+                    Swal.fire('Success', 'Contract updated', 'success');
+                } else {
+                    formValues.reference = 'AGR-' + Math.floor(1000 + Math.random() * 9000);
+                    formValues.date = new Date().toISOString();
+                    await API.request('/api/contracts', { method: 'POST', body: JSON.stringify(formValues) });
+                    Swal.fire('Success', 'Contract generated', 'success');
+                }
                 this.loadContracts();
             } catch (e) {
                 Swal.fire('Error', e.message, 'error');
             }
         }
+    },
+
+    editContract(id) {
+        const con = this.contracts.find(x => x.id === id);
+        if (con) this.openModal(con);
     },
 
     async toggleStatus(id) {

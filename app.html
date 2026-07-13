@@ -41,6 +41,17 @@
         body { font-family: 'Inter', sans-serif; }
         .nav-item.active { background-color: #1e3a8a; color: white; border-radius: 0.375rem; }
     </style>
+    <style>
+        .swal2-container { z-index: 100000 !important; }
+        .swal2-popup { max-width: 90vw !important; }
+        .swal2-html-container .swal2-input, .swal2-html-container select.swal2-input, .swal2-html-container textarea.swal2-input {
+            margin: 0 !important;
+            margin-top: 0.25rem !important;
+            width: 100% !important;
+            box-sizing: border-box !important;
+        }
+        .swal2-html-container { margin: 1em 1.6em 0.3em; }
+    </style>
 </head>
 <body class="bg-gray-100 dark:bg-dark-bg text-gray-900 dark:text-gray-100 min-h-screen flex transition-colors duration-200 relative md:overflow-visible">
 
@@ -304,9 +315,9 @@
     </main>
 
     <!-- Client Modal (Hidden) -->
-    <div id="clientModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
-        <div class="bg-white dark:bg-dark-card rounded-lg shadow-xl w-full max-w-2xl mx-4 overflow-hidden">
-            <div class="px-6 py-4 border-b dark:border-dark-border flex justify-between items-center">
+    <div id="clientModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 overflow-y-auto">
+        <div class="bg-white dark:bg-dark-card rounded-lg shadow-xl w-full max-w-4xl mx-4 my-8 overflow-hidden">
+            <div class="px-6 py-4 border-b dark:border-dark-border flex justify-between items-center sticky top-0 bg-white dark:bg-dark-card z-10">
                 <h3 class="text-lg font-medium" id="clientModalTitle">Add New Client</h3>
                 <button onclick="clientsManager.closeModal()" class="text-gray-400 hover:text-gray-500">
                     <i class="fas fa-times"></i>
@@ -314,22 +325,33 @@
             </div>
             <form id="clientForm" class="p-6">
                 <input type="hidden" id="clientId">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+                <!-- Basic Info -->
+                <h4 class="text-md font-semibold mb-4 border-b pb-2">Basic Info</h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Company Name *</label>
                         <input type="text" id="clientCompany" required class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm focus:border-dtech-500 focus:ring-dtech-500 sm:text-sm px-3 py-2 border">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Contact Person</label>
-                        <input type="text" id="clientContact" class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm focus:border-dtech-500 focus:ring-dtech-500 sm:text-sm px-3 py-2 border">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Company Reg Number</label>
+                        <input type="text" id="clientRegNum" class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm focus:border-dtech-500 focus:ring-dtech-500 sm:text-sm px-3 py-2 border">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Email *</label>
-                        <input type="email" id="clientEmail" required class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm focus:border-dtech-500 focus:ring-dtech-500 sm:text-sm px-3 py-2 border">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">VAT Number</label>
+                        <input type="text" id="clientVatNum" class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm focus:border-dtech-500 focus:ring-dtech-500 sm:text-sm px-3 py-2 border">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Phone</label>
-                        <input type="text" id="clientPhone" class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm focus:border-dtech-500 focus:ring-dtech-500 sm:text-sm px-3 py-2 border">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Industry</label>
+                        <input type="text" id="clientIndustry" class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm focus:border-dtech-500 focus:ring-dtech-500 sm:text-sm px-3 py-2 border">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Website</label>
+                        <input type="url" id="clientWebsite" class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm focus:border-dtech-500 focus:ring-dtech-500 sm:text-sm px-3 py-2 border">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">LinkedIn</label>
+                        <input type="url" id="clientLinkedin" class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm focus:border-dtech-500 focus:ring-dtech-500 sm:text-sm px-3 py-2 border">
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Status</label>
@@ -339,16 +361,80 @@
                             <option value="Archived">Archived</option>
                         </select>
                     </div>
+                </div>
+
+                <!-- Addresses -->
+                <h4 class="text-md font-semibold mb-4 border-b pb-2">Addresses</h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Physical Address</label>
+                        <textarea id="clientPhysicalAddress" rows="2" class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm focus:border-dtech-500 focus:ring-dtech-500 sm:text-sm px-3 py-2 border"></textarea>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Postal Address</label>
+                        <textarea id="clientPostalAddress" rows="2" class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm focus:border-dtech-500 focus:ring-dtech-500 sm:text-sm px-3 py-2 border"></textarea>
+                    </div>
+                </div>
+
+                <!-- Contacts -->
+                <h4 class="text-md font-semibold mb-4 border-b pb-2">Contacts</h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Primary Contact Person</label>
+                        <input type="text" id="clientContact" class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm focus:border-dtech-500 focus:ring-dtech-500 sm:text-sm px-3 py-2 border">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Primary Email *</label>
+                        <input type="email" id="clientEmail" required class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm focus:border-dtech-500 focus:ring-dtech-500 sm:text-sm px-3 py-2 border">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Primary Phone</label>
+                        <input type="text" id="clientPhone" class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm focus:border-dtech-500 focus:ring-dtech-500 sm:text-sm px-3 py-2 border">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Preferred Contact Method</label>
+                        <select id="clientPreferredContact" class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm focus:border-dtech-500 focus:ring-dtech-500 sm:text-sm px-3 py-2 border">
+                            <option value="Email">Email</option>
+                            <option value="Phone">Phone</option>
+                            <option value="WhatsApp">WhatsApp</option>
+                        </select>
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Billing Contact (Name/Email/Phone)</label>
+                        <input type="text" id="clientBillingContact" class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm focus:border-dtech-500 focus:ring-dtech-500 sm:text-sm px-3 py-2 border" placeholder="e.g. Jane Doe, jane@example.com, +123456789">
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Technical Contact (Name/Email/Phone)</label>
+                        <input type="text" id="clientTechContact" class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm focus:border-dtech-500 focus:ring-dtech-500 sm:text-sm px-3 py-2 border" placeholder="e.g. John Smith, john@example.com, +123456789">
+                    </div>
                     <div class="md:col-span-2">
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Notes</label>
                         <textarea id="clientNotes" rows="3" class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm focus:border-dtech-500 focus:ring-dtech-500 sm:text-sm px-3 py-2 border"></textarea>
                     </div>
                 </div>
-                <div class="mt-6 flex justify-end space-x-3">
+
+                <div class="mt-6 flex justify-end space-x-3 border-t dark:border-dark-border pt-4">
                     <button type="button" onclick="clientsManager.closeModal()" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700">Cancel</button>
                     <button type="submit" id="saveClientBtn" class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-dtech-600 hover:bg-dtech-700">Save Client</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- Client Details Overlay / Slide-in (Hidden) -->
+    <div id="clientDetailsModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 overflow-hidden">
+        <div class="absolute inset-y-0 right-0 max-w-full flex">
+            <div class="w-screen max-w-3xl bg-white dark:bg-dark-card shadow-xl h-full flex flex-col transform transition-transform translate-x-full" id="clientDetailsPanel">
+                <div class="px-6 py-4 border-b dark:border-dark-border flex justify-between items-center bg-gray-50 dark:bg-gray-800">
+                    <h2 class="text-xl font-semibold" id="detailsCompanyName">Client Details</h2>
+                    <button onclick="clientsManager.closeDetails()" class="text-gray-400 hover:text-gray-500">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+                <div class="p-6 overflow-y-auto flex-grow" id="clientDetailsContent">
+                    <!-- Dynamic details inserted here -->
+                </div>
+            </div>
         </div>
     </div>
 
