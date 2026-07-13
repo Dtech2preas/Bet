@@ -20,6 +20,25 @@ const app = {
         this.loadDashboardData();
     },
 
+    toggleSidebar() {
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('sidebarOverlay');
+
+        if (sidebar.classList.contains('-translate-x-full')) {
+            // Open sidebar
+            sidebar.classList.remove('-translate-x-full');
+            overlay.classList.remove('hidden');
+            // Prevent body scroll
+            document.body.classList.add('overflow-hidden');
+        } else {
+            // Close sidebar
+            sidebar.classList.add('-translate-x-full');
+            overlay.classList.add('hidden');
+            // Restore body scroll
+            document.body.classList.remove('overflow-hidden');
+        }
+    },
+
     showSection(sectionId) {
         // Hide all sections
         const sections = ['dashboard', 'clients', 'products', 'licenses', 'quotations', 'invoices', 'payments', 'contracts'];
@@ -48,6 +67,14 @@ const app = {
         if (sectionId === 'payments') paymentsManager.loadPayments();
         if (sectionId === 'contracts') contractsManager.loadContracts();
         if (sectionId === 'dashboard') this.loadDashboardData();
+
+        // Close sidebar on mobile after navigating
+        if (window.innerWidth < 768) {
+            const sidebar = document.getElementById('sidebar');
+            if (sidebar && !sidebar.classList.contains('-translate-x-full')) {
+                this.toggleSidebar();
+            }
+        }
     },
 
     initDarkMode() {

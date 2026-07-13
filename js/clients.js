@@ -36,8 +36,8 @@ const clientsManager = {
         let tableHtml = `
             <div class="bg-white dark:bg-dark-card rounded-lg shadow-sm border border-gray-100 dark:border-dark-border overflow-hidden">
                 <div class="overflow-x-auto">
-                    <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                        <thead class="bg-gray-50 dark:bg-gray-800">
+                    <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 block md:table">
+                        <thead class="bg-gray-50 dark:bg-gray-800 hidden md:table-header-group">
                             <tr>
                                 <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Company Name</th>
                                 <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Contact</th>
@@ -46,7 +46,7 @@ const clientsManager = {
                                 <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
                             </tr>
                         </thead>
-                        <tbody class="bg-white dark:bg-dark-card divide-y divide-gray-200 dark:divide-gray-700">
+                        <tbody class="bg-white dark:bg-dark-card divide-y divide-gray-200 dark:divide-gray-700 block md:table-row-group">
         `;
 
         this.clients.forEach(client => {
@@ -56,37 +56,46 @@ const clientsManager = {
             const dateStr = new Date(client.dateAdded).toLocaleDateString();
 
             tableHtml += `
-                <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
-                    <td class="px-6 py-4 whitespace-nowrap">
-                        <div class="flex items-center">
-                            <div class="h-10 w-10 flex-shrink-0 rounded-full bg-dtech-100 text-dtech-600 flex items-center justify-center font-bold">
+                <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors block md:table-row mb-4 md:mb-0 border-b md:border-0 p-4 md:p-0">
+                    <td class="px-0 md:px-6 py-2 md:py-4 flex md:table-cell justify-between items-center whitespace-nowrap">
+                        <div class="md:hidden font-bold text-xs uppercase text-gray-500 mr-2">Company:</div>
+                        <div class="flex items-center text-right md:text-left">
+                            <div class="hidden md:flex h-10 w-10 flex-shrink-0 rounded-full bg-dtech-100 text-dtech-600 items-center justify-center font-bold">
                                 ${client.companyName.charAt(0).toUpperCase()}
                             </div>
-                            <div class="ml-4">
+                            <div class="md:ml-4">
                                 <div class="text-sm font-medium text-gray-900 dark:text-white">${client.companyName}</div>
                                 <div class="text-sm text-gray-500">${client.email}</div>
                             </div>
                         </div>
                     </td>
-                    <td class="px-6 py-4 whitespace-nowrap">
-                        <div class="text-sm text-gray-900 dark:text-white">${client.contactPerson || '-'}</div>
-                        <div class="text-sm text-gray-500">${client.phone || '-'}</div>
+                    <td class="px-0 md:px-6 py-2 md:py-4 flex md:table-cell justify-between items-center whitespace-nowrap">
+                        <div class="md:hidden font-bold text-xs uppercase text-gray-500 mr-2">Contact:</div>
+                        <div class="text-right md:text-left">
+                            <div class="text-sm text-gray-900 dark:text-white">${client.contactPerson || '-'}</div>
+                            <div class="text-sm text-gray-500">${client.phone || '-'}</div>
+                        </div>
                     </td>
-                    <td class="px-6 py-4 whitespace-nowrap">
+                    <td class="px-0 md:px-6 py-2 md:py-4 flex md:table-cell justify-between items-center whitespace-nowrap">
+                        <div class="md:hidden font-bold text-xs uppercase text-gray-500 mr-2">Status:</div>
                         <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${statusColor}">
                             ${client.status || 'Active'}
                         </span>
                     </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td class="px-0 md:px-6 py-2 md:py-4 flex md:table-cell justify-between items-center whitespace-nowrap text-sm text-gray-500">
+                        <div class="md:hidden font-bold text-xs uppercase text-gray-500 mr-2">Added:</div>
                         ${dateStr}
                     </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <button onclick="clientsManager.editClient('${client.id}')" class="text-blue-600 hover:text-blue-900 dark:hover:text-blue-400 mr-3" title="Edit">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                        <button onclick="clientsManager.deleteClient('${client.id}')" class="text-red-600 hover:text-red-900 dark:hover:text-red-400" title="Delete">
-                            <i class="fas fa-trash"></i>
-                        </button>
+                    <td class="px-0 md:px-6 py-2 md:py-4 flex md:table-cell justify-between items-center whitespace-nowrap text-right text-sm font-medium">
+                        <div class="md:hidden font-bold text-xs uppercase text-gray-500 mr-2">Actions:</div>
+                        <div>
+                            <button onclick="clientsManager.editClient('${client.id}')" class="text-blue-600 hover:text-blue-900 dark:hover:text-blue-400 mr-3" title="Edit">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button onclick="clientsManager.deleteClient('${client.id}')" class="text-red-600 hover:text-red-900 dark:hover:text-red-400" title="Delete">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
                     </td>
                 </tr>
             `;
