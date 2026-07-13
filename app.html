@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>D-TECH Business Portal - Dashboard</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        dtech: {
+                            50: '#eff6ff',
+                            100: '#dbeafe',
+                            500: '#3b82f6',
+                            600: '#2563eb',
+                            700: '#1d4ed8',
+                            900: '#1e3a8a',
+                        },
+                        dark: {
+                            bg: '#121212',
+                            card: '#1e1e1e',
+                            border: '#333333'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .nav-item.active { background-color: #1e3a8a; color: white; border-radius: 0.375rem; }
+    </style>
+</head>
+<body class="bg-gray-100 dark:bg-dark-bg text-gray-900 dark:text-gray-100 min-h-screen flex transition-colors duration-200">
+
+    <!-- Sidebar -->
+    <aside class="w-64 bg-white dark:bg-dark-card border-r dark:border-dark-border h-screen sticky top-0 flex flex-col transition-colors duration-200">
+        <div class="p-6">
+            <h2 class="text-2xl font-bold text-dtech-700 dark:text-dtech-500">D-TECH</h2>
+            <p class="text-xs text-gray-500 dark:text-gray-400">Business Management</p>
+        </div>
+        <nav class="flex-1 px-4 space-y-2">
+            <a href="#" onclick="app.showSection('dashboard')" id="nav-dashboard" class="nav-item active flex items-center px-4 py-2.5 text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors">
+                <i class="fas fa-home w-6"></i> Dashboard
+            </a>
+            <a href="#" onclick="app.showSection('clients')" id="nav-clients" class="nav-item flex items-center px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors">
+                <i class="fas fa-users w-6"></i> Clients
+            </a>
+            <a href="#" onclick="app.showSection('products')" id="nav-products" class="nav-item flex items-center px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors">
+                <i class="fas fa-box w-6"></i> Products
+            </a>
+            <!-- Placeholder for future modules -->
+            <div class="text-xs font-semibold text-gray-400 uppercase tracking-wider mt-4 mb-2 pl-4">Sales</div>
+            <a href="#" class="flex items-center px-4 py-2.5 text-sm font-medium text-gray-400 cursor-not-allowed">
+                <i class="fas fa-file-invoice-dollar w-6"></i> Quotations (Coming)
+            </a>
+        </nav>
+        <div class="p-4 border-t dark:border-dark-border">
+            <div class="flex items-center mb-4">
+                <div class="w-8 h-8 rounded-full bg-dtech-100 text-dtech-700 flex items-center justify-center font-bold mr-3">
+                    <i class="fas fa-user"></i>
+                </div>
+                <div>
+                    <p class="text-sm font-medium" id="userNameDisplay">Admin</p>
+                    <p class="text-xs text-gray-500">Role: Super Admin</p>
+                </div>
+            </div>
+            <button id="logoutBtn" class="w-full flex items-center justify-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                <i class="fas fa-sign-out-alt mr-2"></i> Logout
+            </button>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 flex flex-col min-w-0">
+        <!-- Topbar -->
+        <header class="bg-white dark:bg-dark-card border-b dark:border-dark-border h-16 flex items-center justify-between px-6 sticky top-0 z-10 transition-colors duration-200">
+            <div class="flex-1">
+                <!-- Search -->
+                <div class="max-w-md relative text-gray-400 focus-within:text-gray-600 dark:focus-within:text-gray-300">
+                    <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                        <i class="fas fa-search"></i>
+                    </div>
+                    <input type="text" placeholder="Global Search..." class="block w-full h-10 pl-10 pr-3 rounded-md bg-gray-100 dark:bg-gray-800 border-transparent focus:border-dtech-500 focus:bg-white dark:focus:bg-gray-700 focus:ring-0 sm:text-sm text-gray-900 dark:text-gray-100 transition-colors">
+                </div>
+            </div>
+            <div class="flex items-center space-x-4">
+                <button onclick="app.toggleDarkMode()" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                    <i id="theme-icon" class="fas fa-moon text-xl"></i>
+                </button>
+                <button class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 relative">
+                    <i class="fas fa-bell text-xl"></i>
+                    <span class="absolute top-0 right-0 block h-2 w-2 rounded-full bg-red-500 ring-2 ring-white dark:ring-dark-card"></span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Dynamic Content Area -->
+        <div class="p-6 flex-1 overflow-auto" id="main-content">
+            <!-- Dashboard Section -->
+            <section id="section-dashboard">
+                <h1 class="text-2xl font-semibold mb-6">Dashboard</h1>
+
+                <!-- Stats Grid -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+                    <div class="bg-white dark:bg-dark-card p-6 rounded-lg shadow-sm border border-gray-100 dark:border-dark-border">
+                        <div class="flex items-center">
+                            <div class="p-3 rounded-full bg-blue-100 text-blue-600">
+                                <i class="fas fa-users text-xl"></i>
+                            </div>
+                            <div class="ml-4">
+                                <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Total Clients</p>
+                                <p class="text-2xl font-semibold text-gray-900 dark:text-white" id="stat-clients">-</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-white dark:bg-dark-card p-6 rounded-lg shadow-sm border border-gray-100 dark:border-dark-border">
+                        <div class="flex items-center">
+                            <div class="p-3 rounded-full bg-green-100 text-green-600">
+                                <i class="fas fa-key text-xl"></i>
+                            </div>
+                            <div class="ml-4">
+                                <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Active Licenses</p>
+                                <p class="text-2xl font-semibold text-gray-900 dark:text-white" id="stat-licenses">-</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-white dark:bg-dark-card p-6 rounded-lg shadow-sm border border-gray-100 dark:border-dark-border">
+                        <div class="flex items-center">
+                            <div class="p-3 rounded-full bg-purple-100 text-purple-600">
+                                <i class="fas fa-coins text-xl"></i>
+                            </div>
+                            <div class="ml-4">
+                                <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Monthly Revenue</p>
+                                <p class="text-2xl font-semibold text-gray-900 dark:text-white" id="stat-monthly-rev">-</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-white dark:bg-dark-card p-6 rounded-lg shadow-sm border border-gray-100 dark:border-dark-border">
+                        <div class="flex items-center">
+                            <div class="p-3 rounded-full bg-yellow-100 text-yellow-600">
+                                <i class="fas fa-chart-line text-xl"></i>
+                            </div>
+                            <div class="ml-4">
+                                <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Total Revenue</p>
+                                <p class="text-2xl font-semibold text-gray-900 dark:text-white" id="stat-total-rev">-</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Charts -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="bg-white dark:bg-dark-card p-6 rounded-lg shadow-sm border border-gray-100 dark:border-dark-border">
+                        <h3 class="text-lg font-medium mb-4">Revenue Growth</h3>
+                        <canvas id="revenueChart" height="250"></canvas>
+                    </div>
+                    <div class="bg-white dark:bg-dark-card p-6 rounded-lg shadow-sm border border-gray-100 dark:border-dark-border">
+                        <h3 class="text-lg font-medium mb-4">Recent Activity</h3>
+                        <div class="space-y-4">
+                            <div class="flex">
+                                <div class="flex-shrink-0">
+                                    <span class="h-8 w-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center"><i class="fas fa-user-plus"></i></span>
+                                </div>
+                                <div class="ml-3">
+                                    <p class="text-sm font-medium">New client added: Tech Solutions</p>
+                                    <p class="text-xs text-gray-500">2 hours ago</p>
+                                </div>
+                            </div>
+                            <!-- Mock Data for now -->
+                            <div class="flex">
+                                <div class="flex-shrink-0">
+                                    <span class="h-8 w-8 rounded-full bg-green-100 text-green-600 flex items-center justify-center"><i class="fas fa-file-invoice-dollar"></i></span>
+                                </div>
+                                <div class="ml-3">
+                                    <p class="text-sm font-medium">Invoice #INV-2023 paid</p>
+                                    <p class="text-xs text-gray-500">5 hours ago</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Clients Section (Hidden by default) -->
+            <section id="section-clients" class="hidden">
+                <div class="flex justify-between items-center mb-6">
+                    <h1 class="text-2xl font-semibold">Clients</h1>
+                    <button onclick="clientsManager.openModal()" class="bg-dtech-600 hover:bg-dtech-700 text-white px-4 py-2 rounded-md shadow-sm text-sm font-medium transition-colors">
+                        <i class="fas fa-plus mr-2"></i> Add Client
+                    </button>
+                </div>
+
+                <!-- Client Content injected here via JS -->
+                <div id="clients-container">
+                    <div class="text-center py-10">
+                        <i class="fas fa-spinner fa-spin text-3xl text-dtech-500"></i>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Products Section (Placeholder) -->
+            <section id="section-products" class="hidden">
+                <h1 class="text-2xl font-semibold mb-6">Products</h1>
+                <div class="bg-white dark:bg-dark-card p-6 rounded-lg shadow-sm border border-gray-100 dark:border-dark-border text-center text-gray-500">
+                    Product Management Module (Coming Soon)
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- Client Modal (Hidden) -->
+    <div id="clientModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+        <div class="bg-white dark:bg-dark-card rounded-lg shadow-xl w-full max-w-2xl mx-4 overflow-hidden">
+            <div class="px-6 py-4 border-b dark:border-dark-border flex justify-between items-center">
+                <h3 class="text-lg font-medium" id="clientModalTitle">Add New Client</h3>
+                <button onclick="clientsManager.closeModal()" class="text-gray-400 hover:text-gray-500">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form id="clientForm" class="p-6">
+                <input type="hidden" id="clientId">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Company Name *</label>
+                        <input type="text" id="clientCompany" required class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm focus:border-dtech-500 focus:ring-dtech-500 sm:text-sm px-3 py-2 border">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Contact Person</label>
+                        <input type="text" id="clientContact" class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm focus:border-dtech-500 focus:ring-dtech-500 sm:text-sm px-3 py-2 border">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Email *</label>
+                        <input type="email" id="clientEmail" required class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm focus:border-dtech-500 focus:ring-dtech-500 sm:text-sm px-3 py-2 border">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Phone</label>
+                        <input type="text" id="clientPhone" class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm focus:border-dtech-500 focus:ring-dtech-500 sm:text-sm px-3 py-2 border">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Status</label>
+                        <select id="clientStatus" class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm focus:border-dtech-500 focus:ring-dtech-500 sm:text-sm px-3 py-2 border">
+                            <option value="Active">Active</option>
+                            <option value="Inactive">Inactive</option>
+                            <option value="Archived">Archived</option>
+                        </select>
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Notes</label>
+                        <textarea id="clientNotes" rows="3" class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm focus:border-dtech-500 focus:ring-dtech-500 sm:text-sm px-3 py-2 border"></textarea>
+                    </div>
+                </div>
+                <div class="mt-6 flex justify-end space-x-3">
+                    <button type="button" onclick="clientsManager.closeModal()" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700">Cancel</button>
+                    <button type="submit" id="saveClientBtn" class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-dtech-600 hover:bg-dtech-700">Save Client</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/app.js"></script>
+    <script src="js/clients.js"></script>
+</body>
+</html>
