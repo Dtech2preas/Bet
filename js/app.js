@@ -4,7 +4,7 @@ const app = {
     init() {
         // Protect route
         if (!localStorage.getItem('dtech_token') && window.location.pathname.endsWith('app.html')) {
-            window.location.href = 'index.html';
+            window.location.href = 'admin.html';
             return;
         }
 

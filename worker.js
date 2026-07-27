@@ -19,28 +19,51 @@ function generateId() {
   return crypto.randomUUID();
 }
 
-async function verifyAuth(request) {
+// Helper to verify a token against stored sessions for public users
+async function verifyAuth(request, env) {
   const authHeader = request.headers.get('Authorization');
-  if (!authHeader || authHeader !== 'Bearer dtech_token_secret') {
-    return false;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return null;
   }
-  return true;
+
+  const token = authHeader.substring(7);
+
+  if (token === 'dtech_token_secret') {
+      return { username: 'dtech_admin', business_id: 'dtech' };
+  }
+
+  try {
+    const sessionsData = await env.DTECH_KV.get('sessions');
+    const sessions = sessionsData ? JSON.parse(sessionsData) : {};
+
+    if (sessions[token]) {
+        // Optionally add expiration logic here
+        return sessions[token];
+    }
+  } catch (e) {
+    return null;
+  }
+  return null;
 }
 
 // Generic KV handler
-async function handleKVCollection(request, env, collectionName) {
+async function handleKVCollection(request, env, collectionName, business_id) {
   if (request.method === 'GET') {
     const data = await env.DTECH_KV.get(collectionName);
     const items = data ? JSON.parse(data) : [];
+    // Filter by business_id
+    const filteredItems = items.filter(item => item.business_id === business_id);
+
     // Always sort by some date if possible, else just return
-    items.sort((a,b) => new Date(b.dateAdded || 0) - new Date(a.dateAdded || 0));
-    return jsonResponse({ success: true, [collectionName]: items });
+    filteredItems.sort((a,b) => new Date(b.dateAdded || 0) - new Date(a.dateAdded || 0));
+    return jsonResponse({ success: true, [collectionName]: filteredItems });
   }
 
   if (request.method === 'POST') {
     try {
       const body = await request.json();
       body.id = generateId();
+      body.business_id = business_id;
       body.dateAdded = new Date().toISOString();
 
       let data = await env.DTECH_KV.get(collectionName);
@@ -55,20 +78,20 @@ async function handleKVCollection(request, env, collectionName) {
   }
 }
 
-async function handleKVSingle(request, env, collectionName, id) {
+async function handleKVSingle(request, env, collectionName, id, business_id) {
   if (request.method === 'PUT') {
     try {
       const body = await request.json();
       let data = await env.DTECH_KV.get(collectionName);
       let items = data ? JSON.parse(data) : [];
 
-      const index = items.findIndex(c => c.id === id);
+      const index = items.findIndex(c => c.id === id && c.business_id === business_id);
       if (index === -1) {
         return jsonResponse({ success: false, message: 'Item not found' }, 404);
       }
 
       const originalDate = items[index].dateAdded;
-      items[index] = { ...items[index], ...body, id: id, dateAdded: originalDate };
+      items[index] = { ...items[index], ...body, id: id, business_id: business_id, dateAdded: originalDate };
       await env.DTECH_KV.put(collectionName, JSON.stringify(items));
 
       return jsonResponse({ success: true, item: items[index] });
@@ -82,7 +105,7 @@ async function handleKVSingle(request, env, collectionName, id) {
       let data = await env.DTECH_KV.get(collectionName);
       let items = data ? JSON.parse(data) : [];
 
-      const newItems = items.filter(c => c.id !== id);
+      const newItems = items.filter(c => !(c.id === id && c.business_id === business_id));
       if (items.length === newItems.length) {
         return jsonResponse({ success: false, message: 'Item not found' }, 404);
       }
@@ -104,6 +127,54 @@ export default {
     const url = new URL(request.url);
     const path = url.pathname;
 
+    // /api/register (public users)
+    if (path === '/api/register' && request.method === 'POST') {
+      try {
+        const body = await request.json();
+        const { username, password, businessName } = body;
+
+        if (!username || !password || !businessName) {
+           return jsonResponse({ success: false, message: 'Missing required fields' }, 400);
+        }
+
+        let accountsData = await env.DTECH_KV.get('accounts');
+        let accounts = accountsData ? JSON.parse(accountsData) : [];
+
+        if (accounts.some(acc => acc.username === username)) {
+           return jsonResponse({ success: false, message: 'Username already exists' }, 409);
+        }
+
+        const newAccount = {
+            id: generateId(),
+            username,
+            password, // Storing in plain text as per context constraints for simple app
+            businessName,
+            business_id: generateId(), // Unique identifier for their tenant data
+            dateAdded: new Date().toISOString()
+        };
+
+        accounts.push(newAccount);
+        await env.DTECH_KV.put('accounts', JSON.stringify(accounts));
+
+        // Generate secure random token
+        const token = crypto.randomUUID() + crypto.randomUUID();
+
+        // Store session
+        let sessionsData = await env.DTECH_KV.get('sessions');
+        let sessions = sessionsData ? JSON.parse(sessionsData) : {};
+        sessions[token] = { username: newAccount.username, business_id: newAccount.business_id, role: 'Admin' };
+        await env.DTECH_KV.put('sessions', JSON.stringify(sessions));
+
+        return jsonResponse({
+            success: true,
+            token: token,
+            user: { role: 'Admin', username: newAccount.username, businessName: newAccount.businessName }
+        }, 201);
+      } catch (e) {
+        return jsonResponse({ success: false, message: 'Bad request' }, 400);
+      }
+    }
+
     // /api/login
     if (path === '/api/login' && request.method === 'POST') {
       try {
@@ -118,6 +189,27 @@ export default {
           });
         }
 
+        // Check accounts for public users
+        let accountsData = await env.DTECH_KV.get('accounts');
+        let accounts = accountsData ? JSON.parse(accountsData) : [];
+        const account = accounts.find(acc => acc.username === username && acc.password === password);
+
+        if (account) {
+            const token = crypto.randomUUID() + crypto.randomUUID();
+
+            // Store session
+            let sessionsData = await env.DTECH_KV.get('sessions');
+            let sessions = sessionsData ? JSON.parse(sessionsData) : {};
+            sessions[token] = { username: account.username, business_id: account.business_id, role: 'Admin' };
+            await env.DTECH_KV.put('sessions', JSON.stringify(sessions));
+
+            return jsonResponse({
+                success: true,
+                token: token,
+                user: { role: 'Admin', username: account.username, businessName: account.businessName }
+            });
+        }
+
         return jsonResponse({ success: false, message: 'Invalid credentials' }, 401);
       } catch (e) {
         return jsonResponse({ success: false, message: 'Bad request' }, 400);
@@ -125,9 +217,39 @@ export default {
     }
 
     // Require Auth for all other routes
-    const isAuthorized = await verifyAuth(request);
-    if (!isAuthorized) {
+    const authPayload = await verifyAuth(request, env);
+    if (!authPayload) {
       return jsonResponse({ success: false, message: 'Unauthorized' }, 401);
+    }
+    const business_id = authPayload.business_id;
+
+    // /api/settings (for public user business settings)
+    if (path === '/api/settings') {
+       if (request.method === 'GET') {
+           const settingsData = await env.DTECH_KV.get('settings');
+           const settings = settingsData ? JSON.parse(settingsData) : [];
+           const mySettings = settings.find(s => s.business_id === business_id) || {};
+           return jsonResponse({ success: true, settings: mySettings });
+       }
+       if (request.method === 'PUT') {
+           try {
+             const body = await request.json();
+             let settingsData = await env.DTECH_KV.get('settings');
+             let settings = settingsData ? JSON.parse(settingsData) : [];
+
+             const index = settings.findIndex(s => s.business_id === business_id);
+             if (index === -1) {
+                 settings.push({ ...body, business_id });
+             } else {
+                 settings[index] = { ...settings[index], ...body, business_id };
+             }
+
+             await env.DTECH_KV.put('settings', JSON.stringify(settings));
+             return jsonResponse({ success: true, message: 'Settings saved' });
+           } catch (e) {
+             return jsonResponse({ success: false, message: 'Failed to update settings' }, 500);
+           }
+       }
     }
 
     const collections = ['clients', 'products', 'quotations', 'invoices', 'licenses', 'payments', 'contracts'];
@@ -136,11 +258,11 @@ export default {
     for (const collection of collections) {
       const basePath = `/api/${collection}`;
       if (path === basePath) {
-        return handleKVCollection(request, env, collection);
+        return handleKVCollection(request, env, collection, business_id);
       }
       if (path.startsWith(`${basePath}/`) && path.split('/').length === 4) {
         const id = path.split('/')[3];
-        return handleKVSingle(request, env, collection, id);
+        return handleKVSingle(request, env, collection, id, business_id);
       }
     }
 
@@ -148,14 +270,17 @@ export default {
     if (path === '/api/dashboard' && request.method === 'GET') {
       try {
         const clientsData = await env.DTECH_KV.get('clients');
-        const clients = clientsData ? JSON.parse(clientsData) : [];
+        const allClients = clientsData ? JSON.parse(clientsData) : [];
+        const clients = allClients.filter(c => c.business_id === business_id);
 
         const licensesData = await env.DTECH_KV.get('licenses');
-        const licenses = licensesData ? JSON.parse(licensesData) : [];
+        const allLicenses = licensesData ? JSON.parse(licensesData) : [];
+        const licenses = allLicenses.filter(l => l.business_id === business_id);
         const activeLicenses = licenses.filter(l => l.status === 'Active').length;
 
         const invoicesData = await env.DTECH_KV.get('invoices');
-        const invoices = invoicesData ? JSON.parse(invoicesData) : [];
+        const allInvoices = invoicesData ? JSON.parse(invoicesData) : [];
+        const invoices = allInvoices.filter(i => i.business_id === business_id);
         const totalRevenue = invoices.filter(i => i.status === 'Paid').reduce((sum, inv) => sum + (Number(inv.total) || 0), 0);
 
         // Very basic monthly revenue estimation (current month)

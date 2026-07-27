@@ -31,7 +31,7 @@ const API = {
                     // Unauthorized, clear token and redirect to login
                     localStorage.removeItem('dtech_token');
                     localStorage.removeItem('dtech_user');
-                    window.location.href = 'index.html';
+                    window.location.href = window.location.pathname.endsWith('public_app.html') ? 'index.html' : 'admin.html';
                 }
                 throw new Error(data.message || 'API request failed');
             }
