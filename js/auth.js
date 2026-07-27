@@ -2,7 +2,7 @@
 
 document.addEventListener('DOMContentLoaded', () => {
     // If already logged in on login page, redirect to app
-    if (localStorage.getItem('dtech_token') && window.location.pathname.endsWith('index.html')) {
+    if (localStorage.getItem('dtech_token') && (window.location.pathname.includes('admin') || window.location.pathname === '/')) {
         window.location.href = 'app.html';
     }
 
@@ -58,7 +58,7 @@ document.addEventListener('DOMContentLoaded', () => {
             e.preventDefault();
             localStorage.removeItem('dtech_token');
             localStorage.removeItem('dtech_user');
-            window.location.href = 'index.html';
+            window.location.href = 'admin.html';
         });
     }
 });
