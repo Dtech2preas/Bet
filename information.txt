@@ -1,0 +1,140 @@
+# D-TECH Business Portal - Comprehensive Technical Documentation
+
+## 1. Project Overview
+The D-TECH Business Portal is a full-stack, serverless Customer Relationship Management (CRM) and business management application. Originally conceptualized as strictly an internal tool for "D-TECH staff" to manage software licensing clients, quotations, invoices, contracts, and payments, the application's architecture was significantly expanded to support a multi-tenant Public SaaS mode. This allows independent public businesses to register, log in, and manage their own isolated data using the exact same underlying architecture.
+
+## 2. Architectural Paradigm
+The system is built entirely on serverless and client-side rendering principles:
+*   **Frontend**: Pure HTML, CSS (via Tailwind CDN), and Vanilla JavaScript. No node-based build steps, bundlers (Webpack, Vite), or frameworks (React, Vue) are used.
+*   **Backend**: A single Cloudflare Worker script (`worker.js`).
+*   **Database/Storage**: Cloudflare KV (Key-Value) store (`DTECH_KV`). The system utilizes KV not just for caching, but as its primary transactional database by reading arrays of JSON objects, modifying them, and writing them back.
+*   **Authentication**: Custom Bearer token implementation using `localStorage` on the frontend and session validation in the Cloudflare Worker.
+*   **Document Generation**: Entirely client-side using `jsPDF` and `jsPDF-AutoTable`. No server-side document rendering exists.
+
+## 3. Deviations and Changes from Original Requirements ("What Changed")
+When cross-referencing the original instructions (`prompts for Jules.txt`) with the final implemented codebase, several major changes, omissions, and expansions occurred during development:
+
+1.  **Multi-Tenancy Added (Public SaaS Expansion)**
+    *   *Original Request:* Build an internal tool ONLY for D-TECH staff.
+    *   *Current Reality:* The application now supports multiple independent companies. Files like `index.html`, `public_app.html`, `public_app.js`, and `public_auth.js` were created so anyone can sign up. The backend API handles this via a `business_id` assigned to every record to ensure data isolation.
+2.  **Authentication Simplification**
+    *   *Original Request:* Role-based access control (Super Admin, Admin, Staff).
+    *   *Current Reality:* Hardcoded Super Admin (`dtech_admin` / `all_mighty_push`) bypasses standard KV lookup. Public users register and get a generic "Admin" role. Granular permissions based on roles do not actively gate frontend sections.
+3.  **WhatsApp Integration Methodology**
+    *   *Original Request:* Generate ready-to-send WhatsApp messages with attached document links.
+    *   *Current Reality:* Since documents are generated *client-side* (in memory) and not saved as physical files on a server, providing a direct hyperlink in WhatsApp is impossible. Instead, the implementation opens WhatsApp Web (`wa.me`) with a pre-filled, plain-text summary of the quotation or invoice.
+4.  **Document Storage Omitted**
+    *   *Original Request:* Allow uploading, previewing, and storing of external files (Signed Contracts, other files).
+    *   *Current Reality:* Because the backend relies exclusively on Cloudflare KV (which is designed for small strings, not large binaries), physical document/file upload storage was not implemented. The application only generates PDFs dynamically.
+5.  **Receipt Generator Merged**
+    *   *Original Request:* Separate Receipt Generator module.
+    *   *Current Reality:* Integrated into the Payments module. Recording a payment allows for immediate generation of a receipt PDF via the same `pdfEngine.js`.
+6.  **Audit Logs & Notifications**
+    *   *Original Request:* Extensive audit logs and proactive notifications (e.g., license expiring in 30 days).
+    *   *Current Reality:* Currently omitted. There is no automated Cron trigger in the Cloudflare Worker to send emails/alerts for expiring licenses, and audit trails of user actions are not actively recorded in KV.
+7.  **Data Structure Flattening**
+    *   *Original Request:* Highly relational databases for products, features, etc.
+    *   *Current Reality:* Collections are flat arrays of JSON objects stored under a single KV key (e.g., key `clients` stores an array of all clients).
+
+## 4. Frontend File Architecture
+
+*   **`admin.html` & `app.html`**: The UI for the internal D-TECH staff. `admin.html` is the login screen, `app.html` is the dashboard and main application wrapper containing the sidebar and empty sections for dynamic content injection.
+*   **`index.html` & `public_app.html`**: The UI for the public SaaS users. Allows businesses to register and get their own isolated CRM instance.
+*   **`js/api.js`**: Core HTTP client wrapper around the native `fetch` API. Automatically attaches the `Bearer` token from `localStorage` to all requests pointing to the Cloudflare Worker URL. Handles 401 Unauthorized redirects.
+*   **`js/app.js` & `js/public_app.js`**: The core UI controllers. They handle routing (hiding/showing `<section>` tags based on sidebar clicks), Dark/Light mode toggling, sidebar mobile menu states, and rendering the Chart.js revenue graphs.
+*   **`js/auth.js` & `js/public_auth.js`**: Handle form submissions for login and registration, store JWT/tokens in `localStorage`, and redirect users upon success.
+*   **Domain Managers (`clients.js`, `products.js`, `quotations.js`, `invoices.js`, `payments.js`, `licenses.js`, `contracts.js`)**: These files follow a similar Singleton pattern. They:
+    *   Maintain local state arrays of their respective data.
+    *   Handle DOM manipulation to render tables.
+    *   Handle opening/closing SweetAlert2 modals for Create/Update operations.
+    *   Talk to `api.js` to execute CRUD operations against the backend.
+*   **`js/pdfEngine.js`**: A centralized utility that uses `jsPDF`. It accepts structured JSON data and a `type` string (e.g., 'Invoice', 'Quotation', 'License Agreement') and procedurally draws lines, text, tables, and the `logo.png` onto an HTML5 canvas to produce a downloadable PDF blob.
+
+## 5. Backend Architecture (Cloudflare Worker)
+
+The entire backend is housed within `worker.js`.
+
+### 5.1 Routing and Endpoints
+The worker uses standard `if/else` path matching on `request.url`.
+*   `OPTIONS *`: Handles CORS preflight requests.
+*   `POST /api/register`: Creates a new tenant (Public SaaS mode), assigns a unique `business_id`, stores the account, and returns a session token.
+*   `POST /api/login`: Validates credentials. Has a hardcoded bypass for `dtech_admin`. Returns a session token.
+*   `GET/PUT /api/settings`: Handles saving specific business configuration (like VAT numbers, addresses used for PDF generation).
+*   `GET /api/dashboard`: Aggregates statistics specifically for the calling user's `business_id` (Total clients, Active licenses, Revenue).
+*   **Dynamic CRUD Router**: For paths starting with `/api/clients`, `/api/products`, etc., the worker automatically routes to helper functions:
+    *   `handleKVCollection`: Handles `GET` (list all, filtered by `business_id`) and `POST` (create new).
+    *   `handleKVSingle`: Handles `PUT` (update by ID) and `DELETE` (delete by ID).
+
+### 5.2 Database Implementation (Cloudflare KV)
+The system uses the namespace `DTECH_KV`. It does *not* use a relational SQL database.
+Keys used in KV:
+*   `sessions`: A dictionary mapping generated session tokens to user payloads (username, business_id).
+*   `accounts`: An array of registered public users and their passwords. (Note: Passwords are currently stored in plain text per simple app constraints).
+*   `clients`, `products`, `quotations`, `invoices`, `licenses`, `payments`, `contracts`: Arrays of JSON objects.
+
+**How data is saved:**
+To add a new client, the worker:
+1. Does a `KV.get('clients')`.
+2. Parses the JSON string into an array.
+3. Pushes the new client object into the array.
+4. Does a `KV.put('clients', JSON.stringify(array))`.
+
+## 6. Detailed Data Models
+
+Every standard record contains:
+*   `id`: UUID generated by the backend on creation.
+*   `business_id`: UUID defining which tenant owns this record.
+*   `dateAdded`: ISO Timestamp.
+
+### Clients
+*   `companyName`, `companyRegNum`, `vatNum`, `industry`, `website`, `linkedin`
+*   `status`: Active, Inactive, Archived.
+*   `physicalAddress`, `postalAddress`
+*   `contactPerson`, `email`, `phone`, `preferredContact`
+*   `billingContact`, `techContact`, `notes`
+
+### Products
+*   `name`, `version`, `description`, `features`
+*   `setupFee`, `monthlyFee`, `annualFee`, `status`
+
+### Quotations / Invoices
+*   `clientId`: Foreign key linking to a Client.
+*   `reference`: Automatically/Manually generated reference number.
+*   `date`, `expiryDate` (for quotes), `dueDate` (for invoices)
+*   `status`: Draft, Sent, Accepted, Declined (Quotes) | Unpaid, Partially Paid, Paid, Overdue (Invoices)
+*   `subtotal`, `discount`, `vat`, `total`, `notes`
+*   `items`: Array of objects {description, quantity, price, total}
+
+### Payments
+*   `clientId`, `invoiceId` (Optional link)
+*   `amount`, `date`, `method` (EFT, Cash, Card, Other), `reference`, `notes`
+
+### Licenses
+*   `clientId`, `productId`
+*   `licenseKey`: Often manually assigned or generated.
+*   `planType`, `status`, `startDate`, `expiryDate`, `notes`
+
+### Contracts
+*   `clientId`, `type` (e.g., Software License, Service Level Agreement)
+*   `title`, `date`, `status` (Draft, Pending Signature, Active, Expired)
+*   `content`: Full HTML/Text body of the contract terms.
+
+## 7. Security and Authentication Flow
+1. User provides credentials to `/api/login`.
+2. Backend verifies against `accounts` array in KV (or hardcoded Super Admin).
+3. Backend generates a token: `crypto.randomUUID() + crypto.randomUUID()`.
+4. Token is saved in the `sessions` KV key, mapped to the user's `business_id`.
+5. Frontend receives token and saves to `localStorage.getItem('dtech_token')`.
+6. For every subsequent request, `api.js` appends `Authorization: Bearer <token>`.
+7. The worker's `verifyAuth()` function intercepts the request, looks up the token in the `sessions` KV key, extracts the `business_id`, and passes it to the CRUD handlers to ensure the user can only see and modify their own company's data.
+
+## 8. Client-side Document Lifecycle
+To bypass the need for a server-side storage bucket (like S3) and complex backend PDF rendering:
+1. User clicks "Download PDF" on an Invoice.
+2. `invoices.js` fetches the full Invoice record and the associated Client record from memory.
+3. It passes this JSON object to `pdfEngine.generateDocument('Invoice', data)`.
+4. `pdfEngine` initializes `jsPDF`.
+5. It fetches `logo.png` from the root directory and converts it to Base64 to embed in the PDF.
+6. It uses absolute X,Y coordinates to draw text (Company Name, Dates, Totals).
+7. It uses the `jsPDF-AutoTable` plugin to dynamically generate the line items grid.
+8. A Blob URL is created and immediately downloaded to the user's machine, or opened in a new tab via `iframe` for preview.
