@@ -140,7 +140,7 @@ const licensesManager = {
             `,
             focusConfirm: false,
             showCancelButton: true,
-            width: '600px',
+            width: 'min(95%, 600px)',
             preConfirm: () => {
                 const cid = document.getElementById('swal-l-client').value;
                 const pid = document.getElementById('swal-l-product').value;

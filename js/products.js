@@ -96,7 +96,7 @@ const productsManager = {
             `,
             focusConfirm: false,
             showCancelButton: true,
-            width: '600px',
+            width: 'min(95%, 600px)',
             preConfirm: () => {
                 const name = document.getElementById('swal-p-name').value;
                 if (!name) {

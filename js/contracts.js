@@ -167,7 +167,7 @@ Both parties agree to maintain the confidentiality of proprietary information.`;
                     <div><label class="font-medium">Contract Terms / Content</label><textarea id="swal-c-content" class="w-full mt-1 p-2 border border-gray-300 dark:border-gray-600 rounded-md" rows="8" style="font-size: 14px;">${con.content || defaultTemplate}</textarea></div>
                 </div>
             `,
-            width: '700px',
+            width: 'min(95%, 700px)',
             focusConfirm: false,
             showCancelButton: true,
             preConfirm: () => {

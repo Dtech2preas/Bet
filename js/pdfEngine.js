@@ -42,7 +42,9 @@ const pdfEngine = {
         doc.setFontSize(10);
         doc.setTextColor(...grayColor);
         doc.setFont('helvetica', 'normal');
-        doc.text("Business Management", 14, 32);
+        doc.text("Email dtech2services@gmail.com", 14, 32);
+        doc.text("WhatsApp 0670015423", 14, 37);
+        doc.text("Website www.dtech-services.co.za", 14, 42);
 
         // Document Type & Meta
         doc.setFontSize(24);
@@ -157,6 +159,37 @@ const pdfEngine = {
             doc.line(120, finalY, 196, finalY);
             doc.text("D-TECH Signature", 120, finalY + 5);
         }
+
+        if (type === 'Quotation' || type === 'Invoice') {
+            finalY += 15;
+
+            // Banking Details
+            doc.setFontSize(12);
+            doc.setFont('helvetica', 'bold');
+            doc.text("Banking Details", 14, finalY);
+
+            finalY += 6;
+            doc.setFontSize(10);
+            doc.setFont('helvetica', 'normal');
+            doc.text("Account Holder: MR SJ MOCHEBANE", 14, finalY);
+            finalY += 5;
+            doc.text("Bank: Capitec Bank", 14, finalY);
+            finalY += 5;
+            doc.text("Account Type: Savings", 14, finalY);
+            finalY += 5;
+            doc.text("Account Number: 1988749210", 14, finalY);
+            finalY += 5;
+            doc.text("Branch Code: 470010", 14, finalY);
+            finalY += 5;
+            doc.text(`Payment Reference: ${data.reference || ''}`, 14, finalY);
+        }
+
+        // Thank you note
+        finalY = doc.internal.pageSize.getHeight() - 25; // fixed position above footer
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'italic');
+        doc.setTextColor(...primaryColor);
+        doc.text("Thank you for choosing D-TECH SERVICES", 105, finalY, { align: 'center' });
 
         // --- FOOTER ---
         const pageCount = doc.internal.getNumberOfPages();
