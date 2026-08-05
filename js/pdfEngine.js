@@ -111,10 +111,20 @@ const pdfEngine = {
             doc.text("Subtotal:", totalWidth - 60, finalY);
             doc.text(`R ${Number(data.subtotal).toFixed(2)}`, totalWidth - 14, finalY, { align: 'right' });
 
-            if (data.discount) {
+            if (data.discountAmt && Number(data.discountAmt) > 0) {
                 finalY += 6;
                 doc.text("Discount:", totalWidth - 60, finalY);
-                doc.text(`- R ${Number(data.discount).toFixed(2)}`, totalWidth - 14, finalY, { align: 'right' });
+                doc.text(`- R ${Number(data.discountAmt).toFixed(2)}`, totalWidth - 14, finalY, { align: 'right' });
+            }
+
+            if (data.vatAmt && Number(data.vatAmt) > 0) {
+                finalY += 6;
+                doc.setFontSize(9);
+                doc.setTextColor(100, 100, 100);
+                doc.text(`Includes VAT (${data.vatPct}%):`, totalWidth - 60, finalY);
+                doc.text(`R ${Number(data.vatAmt).toFixed(2)}`, totalWidth - 14, finalY, { align: 'right' });
+                doc.setFontSize(10);
+                doc.setTextColor(0, 0, 0);
             }
 
             finalY += 8;

@@ -63,7 +63,7 @@ const contractsManager = {
                         <div class="md:hidden font-bold text-xs uppercase text-gray-500 mr-2">Actions:</div>
                         <div>
                             <button onclick="contractsManager.toggleStatus('${con.id}')" class="text-blue-600 hover:text-blue-900 mr-2" title="Mark Signed/Unsigned"><i class="fas fa-check-circle"></i></button>
-                            <button onclick="contractsManager.preview('${con.id}')" class="text-gray-600 hover:text-gray-900 mr-2" title="Preview PDF"><i class="fas fa-file-pdf"></i></button>
+                            <button onclick="contractsManager.download('${con.id}')" class="text-gray-600 hover:text-gray-900 mr-2" title="Download PDF"><i class="fas fa-file-pdf"></i></button>
                             <button onclick="contractsManager.deleteContract('${con.id}')" class="text-red-600 hover:text-red-900"><i class="fas fa-trash"></i></button>
                         </div>
                     </td>
@@ -124,8 +124,8 @@ Both parties agree to maintain the confidentiality of proprietary information.`;
         const { value: formValues } = await Swal.fire({
             title: title,
             html: `
-                <div class="text-left text-sm space-y-3 h-96 overflow-y-auto pr-2">
-                    <div class="grid grid-cols-2 gap-2">
+                <div class="text-left text-sm space-y-3 max-h-[70vh] overflow-y-auto pr-2">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
                         <div><label class="font-medium">Client *</label><select id="swal-c-client" class="swal2-input mt-1 w-full m-0"><option value="" disabled ${!isEdit?'selected':''}>Select Client</option>${clientOptions}</select></div>
                         <div><label class="font-medium">Contract Type</label><select id="swal-c-type" class="swal2-input mt-1 w-full m-0">
                             <option value="SLA" ${con.contractType==='SLA'?'selected':''}>SLA (Service Level Agreement)</option>
@@ -136,12 +136,12 @@ Both parties agree to maintain the confidentiality of proprietary information.`;
                         </select></div>
                     </div>
 
-                    <div class="grid grid-cols-2 gap-2">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
                         <div><label class="font-medium">Start Date</label><input type="date" id="swal-c-start" class="swal2-input mt-1 w-full m-0" value="${sDate}"></div>
                         <div><label class="font-medium">End Date</label><input type="date" id="swal-c-end" class="swal2-input mt-1 w-full m-0" value="${eDate}"></div>
                     </div>
 
-                    <div class="grid grid-cols-2 gap-2">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
                         <div><label class="font-medium">Renewal Option</label><select id="swal-c-renew" class="swal2-input mt-1 w-full m-0">
                             <option value="Yes" ${con.renewalOption==='Yes'?'selected':''}>Yes</option>
                             <option value="No" ${con.renewalOption==='No'?'selected':''}>No</option>
@@ -153,13 +153,13 @@ Both parties agree to maintain the confidentiality of proprietary information.`;
                         </select></div>
                     </div>
 
-                    <div class="grid grid-cols-2 gap-2">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
                         <div><label class="font-medium">Client Sign Date</label><input type="date" id="swal-c-csign" class="swal2-input mt-1 w-full m-0" value="${con.clientSignDate ? con.clientSignDate.split('T')[0] : ''}"></div>
                         <div><label class="font-medium">D-TECH Sign Date</label><input type="date" id="swal-c-dsign" class="swal2-input mt-1 w-full m-0" value="${con.dtechSignDate ? con.dtechSignDate.split('T')[0] : ''}"></div>
                     </div>
 
                     <h4 class="font-semibold border-b pb-1 mt-4">Linked Records</h4>
-                    <div class="grid grid-cols-2 gap-2">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
                         <div><label class="font-medium">Related License</label><select id="swal-c-license" class="swal2-input mt-1 w-full m-0">${licenseOptions}</select></div>
                         <div><label class="font-medium">Related Invoice</label><select id="swal-c-invoice" class="swal2-input mt-1 w-full m-0">${invoiceOptions}</select></div>
                     </div>
@@ -235,10 +235,10 @@ Both parties agree to maintain the confidentiality of proprietary information.`;
         }
     },
 
-    async preview(id) {
+    async download(id) {
         const con = this.contracts.find(x => x.id === id);
         con.client = this.clients.find(c => c.id === con.clientId);
-        pdfEngine.preview('License Agreement', con);
+        pdfEngine.download('License Agreement', con);
     },
 
     async deleteContract(id) {

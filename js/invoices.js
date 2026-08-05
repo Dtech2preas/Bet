@@ -66,7 +66,7 @@ const invoicesManager = {
                     <td class="px-0 md:px-6 py-2 md:py-4 flex md:table-cell justify-between items-center text-right text-sm">
                         <div class="md:hidden font-bold text-xs uppercase text-gray-500 mr-2">Actions:</div>
                         <div>
-                            <button onclick="invoicesManager.preview('${inv.id}')" class="text-gray-600 hover:text-gray-900 mr-2" title="Preview PDF"><i class="fas fa-file-pdf"></i></button>
+                            <button onclick="invoicesManager.download('${inv.id}')" class="text-gray-600 hover:text-gray-900 mr-2" title="Download PDF"><i class="fas fa-file-pdf"></i></button>
                             <button onclick="invoicesManager.deleteInvoice('${inv.id}')" class="text-red-600 hover:text-red-900"><i class="fas fa-trash"></i></button>
                         </div>
                     </td>
@@ -93,9 +93,6 @@ const invoicesManager = {
             }
         } catch (e) { console.warn("Could not load quotes for dropdown", e); }
 
-        const itemDesc = i.items && i.items.length > 0 ? i.items[0].description : '';
-        const itemPrice = i.items && i.items.length > 0 ? i.items[0].price : '';
-        const itemQty = i.items && i.items.length > 0 ? i.items[0].quantity : 1;
 
         const d = new Date();
         d.setDate(d.getDate() + 14); // Due default 14 days
@@ -104,26 +101,27 @@ const invoicesManager = {
         const { value: formValues } = await Swal.fire({
             title: title,
             html: `
-                <div class="text-left text-sm space-y-3 h-96 overflow-y-auto pr-2">
-                    <div class="grid grid-cols-2 gap-2">
+                <div class="text-left text-sm space-y-3 max-h-[70vh] overflow-y-auto pr-2">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
                         <div><label class="font-medium">Client *</label><select id="swal-i-client" class="swal2-input mt-1 w-full m-0"><option value="" disabled ${!isEdit?'selected':''}>Select Client</option>${clientOptions}</select></div>
                         <div><label class="font-medium">Related Quotation</label><select id="swal-i-quote" class="swal2-input mt-1 w-full m-0">${quotesOptions}</select></div>
                     </div>
 
-                    <h4 class="font-semibold border-b pb-1 mt-4">Item Details</h4>
-                    <div><label class="font-medium">Item Description *</label><input id="swal-i-desc" class="swal2-input mt-1 w-full m-0" value="${itemDesc}" placeholder="Item Description"></div>
-                    <div class="grid grid-cols-2 gap-2">
-                        <div><label class="font-medium">Unit Price</label><input id="swal-i-price" type="number" class="swal2-input mt-1 w-full m-0" value="${itemPrice}" placeholder="0.00"></div>
-                        <div><label class="font-medium">Quantity</label><input id="swal-i-qty" type="number" class="swal2-input mt-1 w-full m-0" value="${itemQty}" placeholder="1"></div>
+
+                    <div class="flex justify-between items-center border-b pb-1 mt-4">
+                        <h4 class="font-semibold">Item Details</h4>
+                        <button type="button" id="add-i-item-btn" class="text-xs bg-dtech-100 text-dtech-700 px-2 py-1 rounded hover:bg-dtech-200">+ Add Item</button>
                     </div>
+                    <div id="swal-i-items-container" class="space-y-2 mt-2"></div>
+
 
                     <h4 class="font-semibold border-b pb-1 mt-4">Financials & Terms</h4>
-                    <div class="grid grid-cols-3 gap-2">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
                         <div><label class="font-medium">Discount (%)</label><input id="swal-i-discount" type="number" class="swal2-input mt-1 w-full m-0" value="${i.discount || 0}" placeholder="0"></div>
                         <div><label class="font-medium">VAT (%)</label><input id="swal-i-vat" type="number" class="swal2-input mt-1 w-full m-0" value="${i.vat || 15}" placeholder="15"></div>
                         <div><label class="font-medium">Status</label><select id="swal-i-status" class="swal2-input mt-1 w-full m-0"><option value="Unpaid" ${i.status==='Unpaid'?'selected':''}>Unpaid</option><option value="Paid" ${i.status==='Paid'?'selected':''}>Paid</option><option value="Overdue" ${i.status==='Overdue'?'selected':''}>Overdue</option><option value="Cancelled" ${i.status==='Cancelled'?'selected':''}>Cancelled</option></select></div>
                     </div>
-                    <div class="grid grid-cols-2 gap-2">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
                         <div><label class="font-medium">Due Date</label><input type="date" id="swal-i-due" class="swal2-input mt-1 w-full m-0" value="${dueStr}"></div>
                         <div><label class="font-medium">Payment Terms</label><select id="swal-i-terms" class="swal2-input mt-1 w-full m-0">
                             <option value="Due on Receipt" ${i.paymentTerms==='Due on Receipt'?'selected':''}>Due on Receipt</option>
@@ -134,7 +132,7 @@ const invoicesManager = {
                     </div>
 
                     <h4 class="font-semibold border-b pb-1 mt-4">Other Info</h4>
-                    <div class="grid grid-cols-2 gap-2">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
                         <div><label class="font-medium">Purchase Order (PO) #</label><input id="swal-i-po" class="swal2-input mt-1 w-full m-0" value="${i.poNumber || ''}" placeholder="PO-12345"></div>
                         <div><label class="font-medium">Salesperson</label><input id="swal-i-sales" class="swal2-input mt-1 w-full m-0" value="${i.salesperson || ''}" placeholder="Name"></div>
                     </div>
@@ -144,35 +142,67 @@ const invoicesManager = {
             focusConfirm: false,
             showCancelButton: true,
             width: '700px',
+            didOpen: () => {
+                const container = document.getElementById('swal-i-items-container');
+                const addBtn = document.getElementById('add-i-item-btn');
+
+                window.removeIItemRow = function(btn) {
+                    btn.closest('.invoice-item-row').remove();
+                };
+
+                function createRow(desc, price, qty) {
+                    const div = document.createElement('div');
+                    div.className = 'invoice-item-row flex space-x-2 items-center';
+                    div.innerHTML = `
+                        <input type="text" class="i-item-desc swal2-input m-0 flex-1" style="min-width: 0;" placeholder="Description" value="${desc || ''}">
+                        <input type="number" class="i-item-price swal2-input m-0 w-24" placeholder="Price" value="${price || ''}">
+                        <input type="number" class="i-item-qty swal2-input m-0 w-16" placeholder="Qty" value="${qty || 1}">
+                        <button type="button" onclick="window.removeIItemRow(this)" class="text-red-500 hover:text-red-700 ml-1"><i class="fas fa-times"></i></button>
+                    `;
+                    container.appendChild(div);
+                }
+
+                if (isEdit && i.items && i.items.length > 0) {
+                    i.items.forEach(item => createRow(item.description, item.price, item.quantity));
+                } else {
+                    createRow('', '', 1);
+                }
+
+                addBtn.addEventListener('click', () => createRow('', '', 1));
+            },
             preConfirm: () => {
                 const cid = document.getElementById('swal-i-client').value;
-                const desc = document.getElementById('swal-i-desc').value;
-                if (!cid || !desc) {
-                    Swal.showValidationMessage('Client and Item Description are required');
+                const rowElements = document.querySelectorAll('.invoice-item-row');
+                const items = [];
+                let subtotal = 0;
+
+                rowElements.forEach(row => {
+                    const desc = row.querySelector('.i-item-desc').value;
+                    const price = parseFloat(row.querySelector('.i-item-price').value || 0);
+                    const qty = parseFloat(row.querySelector('.i-item-qty').value || 1);
+                    if (desc) {
+                        items.push({ description: desc, price: price, quantity: qty });
+                        subtotal += (price * qty);
+                    }
+                });
+
+                if (!cid || items.length === 0) {
+                    Swal.showValidationMessage('Client and at least one Item Description are required');
                     return false;
                 }
 
-                const price = parseFloat(document.getElementById('swal-i-price').value || 0);
-                const qty = parseFloat(document.getElementById('swal-i-qty').value || 1);
                 const discountPct = parseFloat(document.getElementById('swal-i-discount').value || 0);
                 const vatPct = parseFloat(document.getElementById('swal-i-vat').value || 0);
-
-                const subtotal = price * qty;
                 const discountAmt = subtotal * (discountPct / 100);
-                const afterDiscount = subtotal - discountAmt;
-                const vatAmt = afterDiscount * (vatPct / 100);
-                const total = afterDiscount + vatAmt;
+                const total = subtotal - discountAmt;
+                const vatAmt = total - (total / (1 + (vatPct / 100)));
 
                 const dueDate = document.getElementById('swal-i-due').value;
 
                 return {
                     clientId: cid,
                     quotationId: document.getElementById('swal-i-quote').value,
-                    items: [{
-                        description: desc,
-                        price: price,
-                        quantity: qty
-                    }],
+                    items: items,
                     subtotal: subtotal.toFixed(2),
                     discountPct: discountPct,
                     discountAmt: discountAmt.toFixed(2),
@@ -216,10 +246,10 @@ const invoicesManager = {
         if (i) this.openModal(i);
     },
 
-    async preview(id) {
+    async download(id) {
         const inv = this.invoices.find(x => x.id === id);
         inv.client = this.clients.find(c => c.id === inv.clientId);
-        pdfEngine.preview('Invoice', inv);
+        pdfEngine.download('Invoice', inv);
     },
 
     async deleteInvoice(id) {
