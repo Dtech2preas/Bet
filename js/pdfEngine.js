@@ -23,6 +23,9 @@ const pdfEngine = {
     async generateDocument(type, data) {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
+        if (typeof doc.setR2L === 'function') {
+            doc.setR2L(false); // Fix potential RTL text reversal bug
+        }
         const logoData = await this.getLogoBase64();
 
         // Standard Colors
@@ -110,8 +113,12 @@ const pdfEngine = {
             doc.setTextColor(0, 0, 0);
             const totalWidth = doc.internal.pageSize.getWidth();
 
-            doc.text("Subtotal:", totalWidth - 60, finalY);
-            doc.text(`R ${Number(data.subtotal).toFixed(2)}`, totalWidth - 14, finalY, { align: 'right' });
+            const total = Number(data.total) || 0;
+            const vatAmt = Number(data.vatAmt) || 0;
+            const exclVat = total - vatAmt;
+
+            doc.text("Subtotal (Excl. VAT):", totalWidth - 60, finalY);
+            doc.text(`R ${exclVat.toFixed(2)}`, totalWidth - 14, finalY, { align: 'right' });
 
             if (data.discountAmt && Number(data.discountAmt) > 0) {
                 finalY += 6;
@@ -119,21 +126,17 @@ const pdfEngine = {
                 doc.text(`- R ${Number(data.discountAmt).toFixed(2)}`, totalWidth - 14, finalY, { align: 'right' });
             }
 
-            if (data.vatAmt && Number(data.vatAmt) > 0) {
+            if (vatAmt > 0) {
                 finalY += 6;
-                doc.setFontSize(9);
-                doc.setTextColor(100, 100, 100);
-                doc.text(`Includes VAT (${data.vatPct}%):`, totalWidth - 60, finalY);
-                doc.text(`R ${Number(data.vatAmt).toFixed(2)}`, totalWidth - 14, finalY, { align: 'right' });
-                doc.setFontSize(10);
-                doc.setTextColor(0, 0, 0);
+                doc.text(`VAT (${data.vatPct}%):`, totalWidth - 60, finalY);
+                doc.text(`R ${vatAmt.toFixed(2)}`, totalWidth - 14, finalY, { align: 'right' });
             }
 
             finalY += 8;
             doc.setFontSize(12);
             doc.setFont('helvetica', 'bold');
-            doc.text("Total Due:", totalWidth - 60, finalY);
-            doc.text(`R ${Number(data.total).toFixed(2)}`, totalWidth - 14, finalY, { align: 'right' });
+            doc.text("Total Due (Incl. VAT):", totalWidth - 60, finalY);
+            doc.text(`R ${total.toFixed(2)}`, totalWidth - 14, finalY, { align: 'right' });
         }
 
         if (type === 'License Agreement') {
