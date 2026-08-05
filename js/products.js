@@ -76,19 +76,19 @@ const productsManager = {
             html: `
                 <div class="text-left text-sm space-y-3">
                     <div><label class="font-medium">Product Name *</label><input id="swal-p-name" class="swal2-input mt-1 w-full m-0" value="${p.name || ''}" placeholder="Product Name"></div>
-                    <div class="grid grid-cols-2 gap-2">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
                         <div><label class="font-medium">Category</label><input id="swal-p-category" class="swal2-input mt-1 w-full m-0" value="${p.category || ''}" placeholder="Category"></div>
                         <div><label class="font-medium">Version</label><input id="swal-p-version" class="swal2-input mt-1 w-full m-0" value="${p.version || ''}" placeholder="Version"></div>
                         <div><label class="font-medium">SKU / Code</label><input id="swal-p-sku" class="swal2-input mt-1 w-full m-0" value="${p.sku || ''}" placeholder="SKU"></div>
                         <div><label class="font-medium">Status</label><select id="swal-p-status" class="swal2-input mt-1 w-full m-0"><option value="Active" ${p.status==='Active'?'selected':''}>Active</option><option value="Discontinued" ${p.status==='Discontinued'?'selected':''}>Discontinued</option></select></div>
                     </div>
                     <div><label class="font-medium">Description</label><input id="swal-p-desc" class="swal2-input mt-1 w-full m-0" value="${p.description || ''}" placeholder="Description"></div>
-                    <div class="grid grid-cols-3 gap-2">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
                         <div><label class="font-medium">Once-off/Setup (ZAR)</label><input id="swal-p-setup" type="number" class="swal2-input mt-1 w-full m-0" value="${p.setupFee || p.onceOffPrice || ''}" placeholder="0"></div>
                         <div><label class="font-medium">Monthly (ZAR)</label><input id="swal-p-monthly" type="number" class="swal2-input mt-1 w-full m-0" value="${p.monthlyFee || ''}" placeholder="0"></div>
                         <div><label class="font-medium">Renewal (ZAR)</label><input id="swal-p-renewal" type="number" class="swal2-input mt-1 w-full m-0" value="${p.renewalPrice || ''}" placeholder="0"></div>
                     </div>
-                    <div class="grid grid-cols-2 gap-2">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
                         <div><label class="font-medium">Download Link (URL)</label><input id="swal-p-link" class="swal2-input mt-1 w-full m-0" value="${p.downloadLink || ''}" placeholder="https://..."></div>
                         <div><label class="font-medium">Support Period</label><input id="swal-p-support" class="swal2-input mt-1 w-full m-0" value="${p.supportPeriod || ''}" placeholder="e.g. 12 months"></div>
                     </div>

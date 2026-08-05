@@ -65,7 +65,7 @@ const quotationsManager = {
                     <td class="px-0 md:px-6 py-2 md:py-4 flex md:table-cell justify-between items-center text-right text-sm">
                         <div class="md:hidden font-bold text-xs uppercase text-gray-500 mr-2">Actions:</div>
                         <div>
-                            <button onclick="quotationsManager.preview('${q.id}')" class="text-gray-600 hover:text-gray-900 mr-2" title="Preview PDF"><i class="fas fa-file-pdf"></i></button>
+                            <button onclick="quotationsManager.download('${q.id}')" class="text-gray-600 hover:text-gray-900 mr-2" title="Download PDF"><i class="fas fa-file-pdf"></i></button>
                             <button onclick="quotationsManager.sendWhatsApp('${q.id}')" class="text-green-600 hover:text-green-900 mr-2" title="WhatsApp"><i class="fab fa-whatsapp"></i></button>
                             <button onclick="quotationsManager.deleteQuote('${q.id}')" class="text-red-600 hover:text-red-900"><i class="fas fa-trash"></i></button>
                         </div>
@@ -85,10 +85,6 @@ const quotationsManager = {
 
         const clientOptions = this.clients.map(c => `<option value="${c.id}" ${q.clientId === c.id ? 'selected' : ''}>${c.companyName}</option>`).join('');
 
-        // Extract single item if it exists for simpler editing in this modal style
-        const itemDesc = q.items && q.items.length > 0 ? q.items[0].description : '';
-        const itemPrice = q.items && q.items.length > 0 ? q.items[0].price : '';
-        const itemQty = q.items && q.items.length > 0 ? q.items[0].quantity : 1;
 
         const d = new Date();
         d.setDate(d.getDate() + 30); // Valid until default 30 days
@@ -98,26 +94,27 @@ const quotationsManager = {
         const { value: formValues } = await Swal.fire({
             title: title,
             html: `
-                <div class="text-left text-sm space-y-3 h-96 overflow-y-auto pr-2">
-                    <div class="grid grid-cols-2 gap-2">
+                <div class="text-left text-sm space-y-3 max-h-[70vh] overflow-y-auto pr-2">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
                         <div><label class="font-medium">Client *</label><select id="swal-q-client" class="swal2-input mt-1 w-full m-0"><option value="" disabled ${!isEdit?'selected':''}>Select Client</option>${clientOptions}</select></div>
                         <div><label class="font-medium">Quotation Title</label><input id="swal-q-title" class="swal2-input mt-1 w-full m-0" value="${q.title || ''}" placeholder="e.g. Website Redesign"></div>
                     </div>
 
-                    <h4 class="font-semibold border-b pb-1 mt-4">Item Details (Single item for now)</h4>
-                    <div><label class="font-medium">Item Description *</label><input id="swal-q-desc" class="swal2-input mt-1 w-full m-0" value="${itemDesc}" placeholder="Item Description"></div>
-                    <div class="grid grid-cols-2 gap-2">
-                        <div><label class="font-medium">Unit Price</label><input id="swal-q-price" type="number" class="swal2-input mt-1 w-full m-0" value="${itemPrice}" placeholder="0.00"></div>
-                        <div><label class="font-medium">Quantity</label><input id="swal-q-qty" type="number" class="swal2-input mt-1 w-full m-0" value="${itemQty}" placeholder="1"></div>
+
+                    <div class="flex justify-between items-center border-b pb-1 mt-4">
+                        <h4 class="font-semibold">Item Details</h4>
+                        <button type="button" id="add-q-item-btn" class="text-xs bg-dtech-100 text-dtech-700 px-2 py-1 rounded hover:bg-dtech-200">+ Add Item</button>
                     </div>
+                    <div id="swal-q-items-container" class="space-y-2 mt-2"></div>
+
 
                     <h4 class="font-semibold border-b pb-1 mt-4">Financials & Terms</h4>
-                    <div class="grid grid-cols-3 gap-2">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
                         <div><label class="font-medium">Currency</label><input id="swal-q-currency" class="swal2-input mt-1 w-full m-0" value="${q.currency || 'ZAR'}" placeholder="ZAR"></div>
                         <div><label class="font-medium">Discount (%)</label><input id="swal-q-discount" type="number" class="swal2-input mt-1 w-full m-0" value="${q.discount || 0}" placeholder="0"></div>
                         <div><label class="font-medium">VAT (%)</label><input id="swal-q-vat" type="number" class="swal2-input mt-1 w-full m-0" value="${q.vat || 15}" placeholder="15"></div>
                     </div>
-                    <div class="grid grid-cols-2 gap-2">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
                         <div><label class="font-medium">Valid Until</label><input type="date" id="swal-q-valid" class="swal2-input mt-1 w-full m-0" value="${validStr}"></div>
                         <div><label class="font-medium">Payment Terms</label><select id="swal-q-terms" class="swal2-input mt-1 w-full m-0">
                             <option value="Due on Receipt" ${q.paymentTerms==='Due on Receipt'?'selected':''}>Due on Receipt</option>
@@ -128,7 +125,7 @@ const quotationsManager = {
                     </div>
 
                     <h4 class="font-semibold border-b pb-1 mt-4">Logistics & Notes</h4>
-                    <div class="grid grid-cols-2 gap-2">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
                         <div><label class="font-medium">Expected Project Start</label><input type="date" id="swal-q-start" class="swal2-input mt-1 w-full m-0" value="${projStartStr}"></div>
                         <div><label class="font-medium">Delivery Time</label><input id="swal-q-delivery" class="swal2-input mt-1 w-full m-0" value="${q.deliveryTime || ''}" placeholder="e.g. 2 weeks"></div>
                     </div>
@@ -140,20 +137,57 @@ const quotationsManager = {
             focusConfirm: false,
             showCancelButton: true,
             width: '700px',
+            didOpen: () => {
+                const container = document.getElementById('swal-q-items-container');
+                const addBtn = document.getElementById('add-q-item-btn');
+
+                window.removeQItemRow = function(btn) {
+                    btn.closest('.quote-item-row').remove();
+                };
+
+                function createRow(desc, price, qty) {
+                    const div = document.createElement('div');
+                    div.className = 'quote-item-row flex space-x-2 items-center';
+                    div.innerHTML = `
+                        <input type="text" class="q-item-desc swal2-input m-0 flex-1" style="min-width: 0;" placeholder="Description" value="${desc || ''}">
+                        <input type="number" class="q-item-price swal2-input m-0 w-24" placeholder="Price" value="${price || ''}">
+                        <input type="number" class="q-item-qty swal2-input m-0 w-16" placeholder="Qty" value="${qty || 1}">
+                        <button type="button" onclick="window.removeQItemRow(this)" class="text-red-500 hover:text-red-700 ml-1"><i class="fas fa-times"></i></button>
+                    `;
+                    container.appendChild(div);
+                }
+
+                if (isEdit && q.items && q.items.length > 0) {
+                    q.items.forEach(item => createRow(item.description, item.price, item.quantity));
+                } else {
+                    createRow('', '', 1);
+                }
+
+                addBtn.addEventListener('click', () => createRow('', '', 1));
+            },
             preConfirm: () => {
                 const cid = document.getElementById('swal-q-client').value;
-                const desc = document.getElementById('swal-q-desc').value;
-                if (!cid || !desc) {
-                    Swal.showValidationMessage('Client and Item Description are required');
+                const rowElements = document.querySelectorAll('.quote-item-row');
+                const items = [];
+                let subtotal = 0;
+
+                rowElements.forEach(row => {
+                    const desc = row.querySelector('.q-item-desc').value;
+                    const price = parseFloat(row.querySelector('.q-item-price').value || 0);
+                    const qty = parseFloat(row.querySelector('.q-item-qty').value || 1);
+                    if (desc) {
+                        items.push({ description: desc, price: price, quantity: qty });
+                        subtotal += (price * qty);
+                    }
+                });
+
+                if (!cid || items.length === 0) {
+                    Swal.showValidationMessage('Client and at least one Item Description are required');
                     return false;
                 }
 
-                const price = parseFloat(document.getElementById('swal-q-price').value || 0);
-                const qty = parseFloat(document.getElementById('swal-q-qty').value || 1);
                 const discountPct = parseFloat(document.getElementById('swal-q-discount').value || 0);
                 const vatPct = parseFloat(document.getElementById('swal-q-vat').value || 0);
-
-                const subtotal = price * qty;
                 const discountAmt = subtotal * (discountPct / 100);
                 const afterDiscount = subtotal - discountAmt;
                 const vatAmt = afterDiscount * (vatPct / 100);
@@ -165,11 +199,7 @@ const quotationsManager = {
                 return {
                     clientId: cid,
                     title: document.getElementById('swal-q-title').value,
-                    items: [{
-                        description: desc,
-                        price: price,
-                        quantity: qty
-                    }],
+                    items: items,
                     subtotal: subtotal.toFixed(2),
                     discountPct: discountPct,
                     discountAmt: discountAmt.toFixed(2),
@@ -212,10 +242,10 @@ const quotationsManager = {
         if (q) this.openModal(q);
     },
 
-    async preview(id) {
+    async download(id) {
         const q = this.quotations.find(x => x.id === id);
         q.client = this.clients.find(c => c.id === q.clientId);
-        pdfEngine.preview('Quotation', q);
+        pdfEngine.download('Quotation', q);
     },
 
     sendWhatsApp(id) {

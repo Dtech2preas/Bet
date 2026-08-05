@@ -70,7 +70,7 @@ const paymentsManager = {
                     <td class="px-0 md:px-6 py-2 md:py-4 flex md:table-cell justify-between items-center text-right text-sm">
                         <div class="md:hidden font-bold text-xs uppercase text-gray-500 mr-2">Actions:</div>
                         <div>
-                            <button onclick="paymentsManager.preview('${pay.id}')" class="text-gray-600 hover:text-gray-900 mr-2" title="Preview Receipt PDF"><i class="fas fa-file-pdf"></i></button>
+                            <button onclick="paymentsManager.download('${pay.id}')" class="text-gray-600 hover:text-gray-900 mr-2" title="Download Receipt PDF"><i class="fas fa-file-pdf"></i></button>
                             <button onclick="paymentsManager.editPayment('${pay.id}')" class="text-blue-600 hover:text-blue-900 mr-2" title="Edit"><i class="fas fa-edit"></i></button>
                         </div>
                     </td>
@@ -101,15 +101,15 @@ const paymentsManager = {
         const { value: formValues } = await Swal.fire({
             title: title,
             html: `
-                <div class="text-left text-sm space-y-3 h-96 overflow-y-auto pr-2">
+                <div class="text-left text-sm space-y-3 max-h-[70vh] overflow-y-auto pr-2">
                     <div><label class="font-medium">Invoice *</label><select id="swal-pay-inv" class="swal2-input mt-1 w-full m-0" ${isEdit ? 'disabled' : ''}>${invoiceOptions}</select></div>
 
-                    <div class="grid grid-cols-2 gap-2">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
                         <div><label class="font-medium">Amount Paid *</label><input id="swal-pay-amount" type="number" class="swal2-input mt-1 w-full m-0" value="${p.total || p.amount || ''}" placeholder="0.00"></div>
                         <div><label class="font-medium">Currency</label><input id="swal-pay-currency" class="swal2-input mt-1 w-full m-0" value="${p.currency || 'ZAR'}" placeholder="ZAR"></div>
                     </div>
 
-                    <div class="grid grid-cols-2 gap-2">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
                         <div><label class="font-medium">Payment Date</label><input type="date" id="swal-pay-date" class="swal2-input mt-1 w-full m-0" value="${dStr}"></div>
                         <div><label class="font-medium">Payment Status</label><select id="swal-pay-status" class="swal2-input mt-1 w-full m-0">
                             <option value="Pending" ${p.paymentStatus==='Pending'?'selected':''}>Pending</option>
@@ -118,7 +118,7 @@ const paymentsManager = {
                         </select></div>
                     </div>
 
-                    <div class="grid grid-cols-2 gap-2">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
                         <div><label class="font-medium">Payment Method</label><select id="swal-pay-method" class="swal2-input mt-1 w-full m-0">
                             <option value="EFT" ${p.method==='EFT'?'selected':''}>EFT</option>
                             <option value="Card" ${p.method==='Card'?'selected':''}>Card</option>
@@ -202,9 +202,9 @@ const paymentsManager = {
         if (p) this.openModal(p);
     },
 
-    async preview(id) {
+    async download(id) {
         const pay = this.payments.find(x => x.id === id);
         pay.client = this.clients.find(c => c.id === pay.clientId);
-        pdfEngine.preview('Receipt', pay);
+        pdfEngine.download('Receipt', pay);
     }
 };

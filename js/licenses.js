@@ -108,11 +108,11 @@ const licensesManager = {
             title: title,
             html: `
                 <div class="text-left text-sm space-y-3">
-                    <div class="grid grid-cols-2 gap-2">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
                         <div><label class="font-medium">Client *</label><select id="swal-l-client" class="swal2-input mt-1 w-full m-0"><option value="" disabled ${!isEdit?'selected':''}>Select Client</option>${clientOptions}</select></div>
                         <div><label class="font-medium">Product *</label><select id="swal-l-product" class="swal2-input mt-1 w-full m-0"><option value="" disabled ${!isEdit?'selected':''}>Select Product</option>${productOptions}</select></div>
                     </div>
-                    <div class="grid grid-cols-2 gap-2">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
                         <div><label class="font-medium">License Type</label><select id="swal-l-type" class="swal2-input mt-1 w-full m-0">
                             <option value="Trial" ${l.licenseType==='Trial'?'selected':''}>Trial</option>
                             <option value="Monthly" ${l.licenseType==='Monthly'?'selected':''}>Monthly</option>
@@ -122,16 +122,16 @@ const licensesManager = {
                         <div><label class="font-medium">Status</label><select id="swal-l-status" class="swal2-input mt-1 w-full m-0"><option value="Active" ${l.status==='Active'?'selected':''}>Active</option><option value="Expired" ${l.status==='Expired'?'selected':''}>Expired</option><option value="Revoked" ${l.status==='Revoked'?'selected':''}>Revoked</option></select></div>
                     </div>
                     <div><label class="font-medium">License Key (Auto-generated if empty)</label><input id="swal-l-key" class="swal2-input mt-1 w-full m-0" value="${l.licenseKey || ''}" placeholder="Leave blank to auto-generate"></div>
-                    <div class="grid grid-cols-2 gap-2">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
                         <div><label class="font-medium">Start Date</label><input type="date" id="swal-l-start" class="swal2-input mt-1 w-full m-0" value="${startStr}"></div>
                         <div><label class="font-medium">Expiry Date</label><input type="date" id="swal-l-exp" class="swal2-input mt-1 w-full m-0" value="${expStr}"></div>
                     </div>
-                    <div class="grid grid-cols-2 gap-2">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
                         <div><label class="font-medium">Max Activations</label><input type="number" id="swal-l-max" class="swal2-input mt-1 w-full m-0" value="${l.maxActivations || 1}"></div>
                         <div><label class="font-medium">Auto Renewal</label><select id="swal-l-autorenew" class="swal2-input mt-1 w-full m-0"><option value="No" ${l.autoRenewal==='No'?'selected':''}>No</option><option value="Yes" ${l.autoRenewal==='Yes'?'selected':''}>Yes</option></select></div>
                         <div><label class="font-medium">Renewal Price</label><input id="swal-l-renewprice" class="swal2-input mt-1 w-full m-0" value="${l.renewalPrice||''}"></div>
                     </div>
-                    <div class="grid grid-cols-2 gap-2">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
                         <div><label class="font-medium">Domain / Website URL</label><input id="swal-l-domain" class="swal2-input mt-1 w-full m-0" value="${l.domain || ''}" placeholder="https://..."></div>
                         <div><label class="font-medium">Device ID / Installation ID</label><input id="swal-l-device" class="swal2-input mt-1 w-full m-0" value="${l.deviceId || ''}" placeholder="..."></div>
                     </div>
