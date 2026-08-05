@@ -23,6 +23,9 @@ const pdfEngine = {
     async generateDocument(type, data) {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
+        if (typeof doc.setR2L === 'function') {
+            doc.setR2L(false); // Fix potential RTL text reversal bug
+        }
         const logoData = await this.getLogoBase64();
 
         // Standard Colors
@@ -42,7 +45,9 @@ const pdfEngine = {
         doc.setFontSize(10);
         doc.setTextColor(...grayColor);
         doc.setFont('helvetica', 'normal');
-        doc.text("Business Management", 14, 32);
+        doc.text("Email dtech2services@gmail.com", 14, 32);
+        doc.text("WhatsApp 0670015423", 14, 37);
+        doc.text("Website www.dtech-services.co.za", 14, 42);
 
         // Document Type & Meta
         doc.setFontSize(24);
@@ -108,8 +113,12 @@ const pdfEngine = {
             doc.setTextColor(0, 0, 0);
             const totalWidth = doc.internal.pageSize.getWidth();
 
-            doc.text("Subtotal:", totalWidth - 60, finalY);
-            doc.text(`R ${Number(data.subtotal).toFixed(2)}`, totalWidth - 14, finalY, { align: 'right' });
+            const total = Number(data.total) || 0;
+            const vatAmt = Number(data.vatAmt) || 0;
+            const exclVat = total - vatAmt;
+
+            doc.text("Subtotal (Excl. VAT):", totalWidth - 60, finalY);
+            doc.text(`R ${exclVat.toFixed(2)}`, totalWidth - 14, finalY, { align: 'right' });
 
             if (data.discountAmt && Number(data.discountAmt) > 0) {
                 finalY += 6;
@@ -117,21 +126,17 @@ const pdfEngine = {
                 doc.text(`- R ${Number(data.discountAmt).toFixed(2)}`, totalWidth - 14, finalY, { align: 'right' });
             }
 
-            if (data.vatAmt && Number(data.vatAmt) > 0) {
+            if (vatAmt > 0) {
                 finalY += 6;
-                doc.setFontSize(9);
-                doc.setTextColor(100, 100, 100);
-                doc.text(`Includes VAT (${data.vatPct}%):`, totalWidth - 60, finalY);
-                doc.text(`R ${Number(data.vatAmt).toFixed(2)}`, totalWidth - 14, finalY, { align: 'right' });
-                doc.setFontSize(10);
-                doc.setTextColor(0, 0, 0);
+                doc.text(`VAT (${data.vatPct}%):`, totalWidth - 60, finalY);
+                doc.text(`R ${vatAmt.toFixed(2)}`, totalWidth - 14, finalY, { align: 'right' });
             }
 
             finalY += 8;
             doc.setFontSize(12);
             doc.setFont('helvetica', 'bold');
-            doc.text("Total Due:", totalWidth - 60, finalY);
-            doc.text(`R ${Number(data.total).toFixed(2)}`, totalWidth - 14, finalY, { align: 'right' });
+            doc.text("Total Due (Incl. VAT):", totalWidth - 60, finalY);
+            doc.text(`R ${total.toFixed(2)}`, totalWidth - 14, finalY, { align: 'right' });
         }
 
         if (type === 'License Agreement') {
@@ -157,6 +162,37 @@ const pdfEngine = {
             doc.line(120, finalY, 196, finalY);
             doc.text("D-TECH Signature", 120, finalY + 5);
         }
+
+        if (type === 'Quotation' || type === 'Invoice') {
+            finalY += 15;
+
+            // Banking Details
+            doc.setFontSize(12);
+            doc.setFont('helvetica', 'bold');
+            doc.text("Banking Details", 14, finalY);
+
+            finalY += 6;
+            doc.setFontSize(10);
+            doc.setFont('helvetica', 'normal');
+            doc.text("Account Holder: MR SJ MOCHEBANE", 14, finalY);
+            finalY += 5;
+            doc.text("Bank: Capitec Bank", 14, finalY);
+            finalY += 5;
+            doc.text("Account Type: Savings", 14, finalY);
+            finalY += 5;
+            doc.text("Account Number: 1988749210", 14, finalY);
+            finalY += 5;
+            doc.text("Branch Code: 470010", 14, finalY);
+            finalY += 5;
+            doc.text(`Payment Reference: ${data.reference || ''}`, 14, finalY);
+        }
+
+        // Thank you note
+        finalY = doc.internal.pageSize.getHeight() - 25; // fixed position above footer
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'italic');
+        doc.setTextColor(...primaryColor);
+        doc.text("Thank you for choosing D-TECH SERVICES", 105, finalY, { align: 'center' });
 
         // --- FOOTER ---
         const pageCount = doc.internal.getNumberOfPages();

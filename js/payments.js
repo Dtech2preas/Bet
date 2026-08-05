@@ -135,7 +135,7 @@ const paymentsManager = {
             `,
             focusConfirm: false,
             showCancelButton: true,
-            width: '600px',
+            width: 'min(95%, 600px)',
             preConfirm: () => {
                 const invId = isEdit ? p.invoiceId : document.getElementById('swal-pay-inv').value;
                 const amt = parseFloat(document.getElementById('swal-pay-amount').value || 0);

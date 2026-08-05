@@ -136,7 +136,7 @@ const quotationsManager = {
             `,
             focusConfirm: false,
             showCancelButton: true,
-            width: '700px',
+            width: 'min(95%, 700px)',
             didOpen: () => {
                 const container = document.getElementById('swal-q-items-container');
                 const addBtn = document.getElementById('add-q-item-btn');
@@ -147,12 +147,12 @@ const quotationsManager = {
 
                 function createRow(desc, price, qty) {
                     const div = document.createElement('div');
-                    div.className = 'quote-item-row flex space-x-2 items-center';
+                    div.className = 'quote-item-row grid grid-cols-1 md:grid-cols-12 gap-2 items-center border-b md:border-0 pb-2 md:pb-0 mb-2 md:mb-0';
                     div.innerHTML = `
-                        <input type="text" class="q-item-desc swal2-input m-0 flex-1" style="min-width: 0;" placeholder="Description" value="${desc || ''}">
-                        <input type="number" class="q-item-price swal2-input m-0 w-24" placeholder="Price" value="${price || ''}">
-                        <input type="number" class="q-item-qty swal2-input m-0 w-16" placeholder="Qty" value="${qty || 1}">
-                        <button type="button" onclick="window.removeQItemRow(this)" class="text-red-500 hover:text-red-700 ml-1"><i class="fas fa-times"></i></button>
+                        <div class="md:col-span-6 flex"><input type="text" class="q-item-desc swal2-input m-0 flex-1 w-full" placeholder="Description" value="${desc || ''}"></div>
+                        <div class="md:col-span-3 flex"><input type="number" class="q-item-price swal2-input m-0 w-full" placeholder="Price" value="${price || ''}"></div>
+                        <div class="md:col-span-2 flex"><input type="number" class="q-item-qty swal2-input m-0 w-full" placeholder="Qty" value="${qty || 1}"></div>
+                        <div class="md:col-span-1 flex justify-end md:justify-center"><button type="button" onclick="window.removeQItemRow(this)" class="text-red-500 hover:text-red-700 p-2"><i class="fas fa-times"></i></button></div>
                     `;
                     container.appendChild(div);
                 }
