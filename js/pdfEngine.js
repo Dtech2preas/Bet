@@ -33,60 +33,78 @@ const pdfEngine = {
         const grayColor = [107, 114, 128];
 
         // --- HEADER ---
+        let logoWidth = 40;
+        let logoHeight = 15;
+        let logoBottomY = 30;
+
         if (logoData) {
-            doc.addImage(logoData, 'PNG', 14, 15, 40, 15);
+            await new Promise((resolve) => {
+                const img = new Image();
+                img.onload = () => {
+                    const maxWidth = 50;
+                    const maxHeight = 20;
+                    const ratio = Math.min(maxWidth / img.width, maxHeight / img.height);
+                    logoWidth = img.width * ratio;
+                    logoHeight = img.height * ratio;
+                    resolve();
+                };
+                img.onerror = resolve;
+                img.src = logoData;
+            });
+            doc.addImage(logoData, 'PNG', 14, 15, logoWidth, logoHeight);
+            logoBottomY = 15 + logoHeight;
         } else {
             doc.setFontSize(22);
             doc.setTextColor(...primaryColor);
             doc.setFont('helvetica', 'bold');
             doc.text("D-TECH", 14, 25);
+            logoBottomY = 28;
         }
 
-        doc.setFontSize(10);
-        doc.setTextColor(...grayColor);
-        doc.setFont('helvetica', 'normal');
-        doc.text("Email dtech2services@gmail.com", 14, 32);
-        doc.text("WhatsApp 0670015423", 14, 37);
-        doc.text("Website www.dtech-services.co.za", 14, 42);
-
-        // Document Type & Meta
-        doc.setFontSize(24);
+        // Document Type & Meta (Moved below logo on the left)
+        let metaY = logoBottomY + 8;
+        doc.setFontSize(18);
         doc.setTextColor(0, 0, 0);
         doc.setFont('helvetica', 'bold');
-        doc.text(type.toUpperCase(), 196, 25, { align: 'right' });
+        doc.text(type.toUpperCase(), 14, metaY);
 
+        metaY += 6;
         doc.setFontSize(10);
         doc.setTextColor(...grayColor);
         doc.setFont('helvetica', 'normal');
 
-        let metaY = 32;
         if (data.reference) {
-            doc.text(`Ref: ${data.reference}`, 196, metaY, { align: 'right' });
+            doc.text(`Ref: ${data.reference}`, 14, metaY);
             metaY += 5;
         }
         if (data.date) {
-            doc.text(`Date: ${new Date(data.date).toLocaleDateString()}`, 196, metaY, { align: 'right' });
+            doc.text(`Date: ${new Date(data.date).toLocaleDateString()}`, 14, metaY);
+            metaY += 5;
         }
 
-        // --- CLIENT DETAILS ---
-        doc.setDrawColor(229, 231, 235);
-        doc.line(14, 45, 196, 45);
-
+        // --- CLIENT DETAILS (Moved to Top Right) ---
+        let clientY = 18;
         doc.setFontSize(12);
         doc.setTextColor(0, 0, 0);
         doc.setFont('helvetica', 'bold');
-        doc.text("Prepared For:", 14, 55);
+        doc.text("Prepared For:", 196, clientY, { align: 'right' });
 
+        clientY += 6;
         doc.setFontSize(10);
         doc.setFont('helvetica', 'normal');
         const client = data.client || {};
-        doc.text(client.companyName || 'Unknown Client', 14, 62);
-        doc.text(client.contactPerson || '', 14, 67);
-        doc.text(client.email || '', 14, 72);
-        doc.text(client.phone || '', 14, 77);
+        doc.text(client.companyName || 'Unknown Client', 196, clientY, { align: 'right' });
+        clientY += 5;
+        if (client.contactPerson) { doc.text(client.contactPerson, 196, clientY, { align: 'right' }); clientY += 5; }
+        if (client.email) { doc.text(client.email, 196, clientY, { align: 'right' }); clientY += 5; }
+        if (client.phone) { doc.text(client.phone, 196, clientY, { align: 'right' }); clientY += 5; }
+
+        doc.setDrawColor(229, 231, 235);
+        let headerBottom = Math.max(metaY, clientY) + 5;
+        doc.line(14, headerBottom, 196, headerBottom);
 
         // --- DOCUMENT SPECIFIC CONTENT ---
-        let finalY = 90;
+        let finalY = headerBottom + 10;
 
         if (type === 'Quotation' || type === 'Invoice' || type === 'Receipt') {
             const tableData = data.items.map(item => [
@@ -117,25 +135,25 @@ const pdfEngine = {
             const vatAmt = Number(data.vatAmt) || 0;
             const exclVat = total - vatAmt;
 
-            doc.text("Subtotal (Excl. VAT):", totalWidth - 60, finalY);
+            doc.text("Subtotal (Excl. VAT):", totalWidth - 50, finalY, { align: 'right' });
             doc.text(`R ${exclVat.toFixed(2)}`, totalWidth - 14, finalY, { align: 'right' });
 
             if (data.discountAmt && Number(data.discountAmt) > 0) {
                 finalY += 6;
-                doc.text("Discount:", totalWidth - 60, finalY);
+                doc.text("Discount:", totalWidth - 50, finalY, { align: 'right' });
                 doc.text(`- R ${Number(data.discountAmt).toFixed(2)}`, totalWidth - 14, finalY, { align: 'right' });
             }
 
             if (vatAmt > 0) {
                 finalY += 6;
-                doc.text(`VAT (${data.vatPct}%):`, totalWidth - 60, finalY);
+                doc.text(`VAT (${data.vatPct}%):`, totalWidth - 50, finalY, { align: 'right' });
                 doc.text(`R ${vatAmt.toFixed(2)}`, totalWidth - 14, finalY, { align: 'right' });
             }
 
             finalY += 8;
             doc.setFontSize(12);
             doc.setFont('helvetica', 'bold');
-            doc.text("Total Due (Incl. VAT):", totalWidth - 60, finalY);
+            doc.text("Total Due (Incl. VAT):", totalWidth - 50, finalY, { align: 'right' });
             doc.text(`R ${total.toFixed(2)}`, totalWidth - 14, finalY, { align: 'right' });
         }
 
@@ -166,25 +184,41 @@ const pdfEngine = {
         if (type === 'Quotation' || type === 'Invoice') {
             finalY += 15;
 
-            // Banking Details
+            let bottomSectionY = finalY;
+
+            // Banking Details (Bottom Left)
             doc.setFontSize(12);
             doc.setFont('helvetica', 'bold');
-            doc.text("Banking Details", 14, finalY);
+            doc.text("Banking Details", 14, bottomSectionY);
 
-            finalY += 6;
+            let bankY = bottomSectionY + 6;
             doc.setFontSize(10);
             doc.setFont('helvetica', 'normal');
-            doc.text("Account Holder: MR SJ MOCHEBANE", 14, finalY);
-            finalY += 5;
-            doc.text("Bank: Capitec Bank", 14, finalY);
-            finalY += 5;
-            doc.text("Account Type: Savings", 14, finalY);
-            finalY += 5;
-            doc.text("Account Number: 1988749210", 14, finalY);
-            finalY += 5;
-            doc.text("Branch Code: 470010", 14, finalY);
-            finalY += 5;
-            doc.text(`Payment Reference: ${data.reference || ''}`, 14, finalY);
+            doc.text("Account Holder: MR SJ MOCHEBANE", 14, bankY);
+            bankY += 5;
+            doc.text("Bank: Capitec Bank", 14, bankY);
+            bankY += 5;
+            doc.text("Account Type: Savings", 14, bankY);
+            bankY += 5;
+            doc.text("Account Number: 1988749210", 14, bankY);
+            bankY += 5;
+            doc.text("Branch Code: 470010", 14, bankY);
+            bankY += 5;
+            doc.text(`Payment Reference: ${data.reference || ''}`, 14, bankY);
+
+            // Business Details (Bottom Right)
+            doc.setFontSize(12);
+            doc.setFont('helvetica', 'bold');
+            doc.text("Business Details", 196, bottomSectionY, { align: 'right' });
+
+            let bizY = bottomSectionY + 6;
+            doc.setFontSize(10);
+            doc.setFont('helvetica', 'normal');
+            doc.text("Email: dtech2services@gmail.com", 196, bizY, { align: 'right' });
+            bizY += 5;
+            doc.text("WhatsApp: 0670015423", 196, bizY, { align: 'right' });
+            bizY += 5;
+            doc.text("Website: www.dtech-services.co.za", 196, bizY, { align: 'right' });
         }
 
         // Thank you note

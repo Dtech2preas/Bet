@@ -1,0 +1,7 @@
+ INFO  Accepting connections at http://localhost:8080
+ HTTP  8/5/2026 2:47:57 PM ::1 GET /js/pdfEngine.js
+ HTTP  8/5/2026 2:47:57 PM ::1 Returned 200 in 240 ms
+ HTTP  8/5/2026 2:48:13 PM ::1 GET /js/public_pdfEngine.js
+ HTTP  8/5/2026 2:48:13 PM ::1 Returned 200 in 2 ms
+
+ INFO  Gracefully shutting down. Please wait...

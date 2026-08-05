@@ -48,59 +48,78 @@ const pdfEngine = {
         const grayColor = [107, 114, 128];
 
         // --- HEADER ---
+        let logoWidth = 40;
+        let logoHeight = 15;
+        let logoBottomY = 30;
+
         if (logoData) {
-            doc.addImage(logoData, 'PNG', 14, 15, 40, 15);
+            await new Promise((resolve) => {
+                const img = new Image();
+                img.onload = () => {
+                    const maxWidth = 50;
+                    const maxHeight = 20;
+                    const ratio = Math.min(maxWidth / img.width, maxHeight / img.height);
+                    logoWidth = img.width * ratio;
+                    logoHeight = img.height * ratio;
+                    resolve();
+                };
+                img.onerror = resolve;
+                img.src = logoData;
+            });
+            doc.addImage(logoData, 'PNG', 14, 15, logoWidth, logoHeight);
+            logoBottomY = 15 + logoHeight;
         } else {
             doc.setFontSize(22);
             doc.setTextColor(...primaryColor);
             doc.setFont('helvetica', 'bold');
             doc.text(businessName, 14, 25);
+            logoBottomY = 28;
         }
 
-        doc.setFontSize(10);
-        doc.setTextColor(...grayColor);
-        doc.setFont('helvetica', 'normal');
-        if (contactName) doc.text(contactName, 14, 32);
-        if (email) doc.text(email, 14, 37);
-
-        // Document Type & Meta
-        doc.setFontSize(24);
+        // Document Type & Meta (Moved below logo on the left)
+        let metaY = logoBottomY + 8;
+        doc.setFontSize(18);
         doc.setTextColor(0, 0, 0);
         doc.setFont('helvetica', 'bold');
-        doc.text(type.toUpperCase(), 196, 25, { align: 'right' });
+        doc.text(type.toUpperCase(), 14, metaY);
 
+        metaY += 6;
         doc.setFontSize(10);
         doc.setTextColor(...grayColor);
         doc.setFont('helvetica', 'normal');
 
-        let metaY = 32;
         if (data.reference) {
-            doc.text(`Ref: ${data.reference}`, 196, metaY, { align: 'right' });
+            doc.text(`Ref: ${data.reference}`, 14, metaY);
             metaY += 5;
         }
         if (data.date) {
-            doc.text(`Date: ${new Date(data.date).toLocaleDateString()}`, 196, metaY, { align: 'right' });
+            doc.text(`Date: ${new Date(data.date).toLocaleDateString()}`, 14, metaY);
+            metaY += 5;
         }
 
-        // --- CLIENT DETAILS ---
-        doc.setDrawColor(229, 231, 235);
-        doc.line(14, 45, 196, 45);
-
+        // --- CLIENT DETAILS (Moved to Top Right) ---
+        let clientY = 18;
         doc.setFontSize(12);
         doc.setTextColor(0, 0, 0);
         doc.setFont('helvetica', 'bold');
-        doc.text("Prepared For:", 14, 55);
+        doc.text("Prepared For:", 196, clientY, { align: 'right' });
 
+        clientY += 6;
         doc.setFontSize(10);
         doc.setFont('helvetica', 'normal');
         const client = data.client || {};
-        doc.text(client.companyName || 'Unknown Client', 14, 62);
-        doc.text(client.contactPerson || '', 14, 67);
-        doc.text(client.email || '', 14, 72);
-        doc.text(client.phone || '', 14, 77);
+        doc.text(client.companyName || 'Unknown Client', 196, clientY, { align: 'right' });
+        clientY += 5;
+        if (client.contactPerson) { doc.text(client.contactPerson, 196, clientY, { align: 'right' }); clientY += 5; }
+        if (client.email) { doc.text(client.email, 196, clientY, { align: 'right' }); clientY += 5; }
+        if (client.phone) { doc.text(client.phone, 196, clientY, { align: 'right' }); clientY += 5; }
+
+        doc.setDrawColor(229, 231, 235);
+        let headerBottom = Math.max(metaY, clientY) + 5;
+        doc.line(14, headerBottom, 196, headerBottom);
 
         // --- DOCUMENT SPECIFIC CONTENT ---
-        let finalY = 90;
+        let finalY = headerBottom + 10;
 
         if (type === 'Quotation' || type === 'Invoice' || type === 'Receipt') {
             const tableData = data.items.map(item => [
@@ -127,19 +146,19 @@ const pdfEngine = {
             doc.setTextColor(0, 0, 0);
             const totalWidth = doc.internal.pageSize.getWidth();
 
-            doc.text("Subtotal:", totalWidth - 60, finalY);
+            doc.text("Subtotal:", totalWidth - 50, finalY, { align: 'right' });
             doc.text(`R ${Number(data.subtotal).toFixed(2)}`, totalWidth - 14, finalY, { align: 'right' });
 
             if (data.discount) {
                 finalY += 6;
-                doc.text("Discount:", totalWidth - 60, finalY);
+                doc.text("Discount:", totalWidth - 50, finalY, { align: 'right' });
                 doc.text(`- R ${Number(data.discount).toFixed(2)}`, totalWidth - 14, finalY, { align: 'right' });
             }
 
             finalY += 8;
             doc.setFontSize(12);
             doc.setFont('helvetica', 'bold');
-            doc.text("Total Due:", totalWidth - 60, finalY);
+            doc.text("Total Due:", totalWidth - 50, finalY, { align: 'right' });
             doc.text(`R ${Number(data.total).toFixed(2)}`, totalWidth - 14, finalY, { align: 'right' });
         }
 
@@ -165,6 +184,28 @@ const pdfEngine = {
 
             doc.line(120, finalY, 196, finalY);
             doc.text(`${businessName} Signature`, 120, finalY + 5);
+        }
+
+        if (type === 'Quotation' || type === 'Invoice') {
+            finalY += 15;
+            let bottomSectionY = finalY;
+
+            // Business Details (Bottom Right)
+            doc.setFontSize(12);
+            doc.setFont('helvetica', 'bold');
+            doc.text("Business Details", 196, bottomSectionY, { align: 'right' });
+
+            let bizY = bottomSectionY + 6;
+            doc.setFontSize(10);
+            doc.setFont('helvetica', 'normal');
+            if (contactName) {
+                doc.text(`Contact: ${contactName}`, 196, bizY, { align: 'right' });
+                bizY += 5;
+            }
+            if (email) {
+                doc.text(`Email: ${email}`, 196, bizY, { align: 'right' });
+                bizY += 5;
+            }
         }
 
         // --- FOOTER ---
