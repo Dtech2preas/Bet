@@ -189,9 +189,8 @@ const quotationsManager = {
                 const discountPct = parseFloat(document.getElementById('swal-q-discount').value || 0);
                 const vatPct = parseFloat(document.getElementById('swal-q-vat').value || 0);
                 const discountAmt = subtotal * (discountPct / 100);
-                const afterDiscount = subtotal - discountAmt;
-                const vatAmt = afterDiscount * (vatPct / 100);
-                const total = afterDiscount + vatAmt;
+                const total = subtotal - discountAmt;
+                const vatAmt = total - (total / (1 + (vatPct / 100)));
 
                 const validDate = document.getElementById('swal-q-valid').value;
                 const startDate = document.getElementById('swal-q-start').value;

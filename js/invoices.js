@@ -194,9 +194,8 @@ const invoicesManager = {
                 const discountPct = parseFloat(document.getElementById('swal-i-discount').value || 0);
                 const vatPct = parseFloat(document.getElementById('swal-i-vat').value || 0);
                 const discountAmt = subtotal * (discountPct / 100);
-                const afterDiscount = subtotal - discountAmt;
-                const vatAmt = afterDiscount * (vatPct / 100);
-                const total = afterDiscount + vatAmt;
+                const total = subtotal - discountAmt;
+                const vatAmt = total - (total / (1 + (vatPct / 100)));
 
                 const dueDate = document.getElementById('swal-i-due').value;
 
