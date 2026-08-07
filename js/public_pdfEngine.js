@@ -190,6 +190,24 @@ const pdfEngine = {
             finalY += 15;
             let bottomSectionY = finalY;
 
+            // Banking Details (Bottom Left)
+            let hasBankingDetails = settings.accountHolder || settings.bank || settings.accountType || settings.accountNumber || settings.branchCode;
+            if (hasBankingDetails) {
+                doc.setFontSize(12);
+                doc.setFont('helvetica', 'bold');
+                doc.text("Banking Details", 14, bottomSectionY);
+
+                let bankY = bottomSectionY + 6;
+                doc.setFontSize(10);
+                doc.setFont('helvetica', 'normal');
+                if (settings.accountHolder) { doc.text(`Account Holder: ${settings.accountHolder}`, 14, bankY); bankY += 5; }
+                if (settings.bank) { doc.text(`Bank: ${settings.bank}`, 14, bankY); bankY += 5; }
+                if (settings.accountType) { doc.text(`Account Type: ${settings.accountType}`, 14, bankY); bankY += 5; }
+                if (settings.accountNumber) { doc.text(`Account Number: ${settings.accountNumber}`, 14, bankY); bankY += 5; }
+                if (settings.branchCode) { doc.text(`Branch Code: ${settings.branchCode}`, 14, bankY); bankY += 5; }
+                doc.text(`Payment Reference: ${data.reference || ''}`, 14, bankY);
+            }
+
             // Business Details (Bottom Right)
             doc.setFontSize(12);
             doc.setFont('helvetica', 'bold');
@@ -198,12 +216,23 @@ const pdfEngine = {
             let bizY = bottomSectionY + 6;
             doc.setFontSize(10);
             doc.setFont('helvetica', 'normal');
-            if (contactName) {
-                doc.text(`Contact: ${contactName}`, 196, bizY, { align: 'right' });
+
+            // For business details we only show email, whatsapp, phone, website if they exist,
+            // similar to admin invoice
+            if (settings.email) {
+                doc.text(`Email: ${settings.email}`, 196, bizY, { align: 'right' });
                 bizY += 5;
             }
-            if (email) {
-                doc.text(`Email: ${email}`, 196, bizY, { align: 'right' });
+            if (settings.whatsapp) {
+                doc.text(`WhatsApp: ${settings.whatsapp}`, 196, bizY, { align: 'right' });
+                bizY += 5;
+            }
+            if (settings.phone) {
+                doc.text(`Phone: ${settings.phone}`, 196, bizY, { align: 'right' });
+                bizY += 5;
+            }
+            if (settings.website) {
+                doc.text(`Website: ${settings.website}`, 196, bizY, { align: 'right' });
                 bizY += 5;
             }
         }

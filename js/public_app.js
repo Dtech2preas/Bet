@@ -126,7 +126,15 @@ const app = {
                 document.getElementById('settingsContactName').value = response.settings.contactName || '';
                 document.getElementById('settingsEmail').value = response.settings.email || '';
                 document.getElementById('settingsPhone').value = response.settings.phone || '';
+                document.getElementById('settingsWhatsApp').value = response.settings.whatsapp || '';
+                document.getElementById('settingsWebsite').value = response.settings.website || '';
                 document.getElementById('settingsAddress').value = response.settings.address || '';
+
+                document.getElementById('settingsAccountHolder').value = response.settings.accountHolder || '';
+                document.getElementById('settingsBank').value = response.settings.bank || '';
+                document.getElementById('settingsAccountType').value = response.settings.accountType || '';
+                document.getElementById('settingsAccountNumber').value = response.settings.accountNumber || '';
+                document.getElementById('settingsBranchCode').value = response.settings.branchCode || '';
             }
         } catch (error) {
             console.error('Failed to load settings', error);
@@ -146,7 +154,14 @@ const app = {
                 contactName: document.getElementById('settingsContactName').value,
                 email: document.getElementById('settingsEmail').value,
                 phone: document.getElementById('settingsPhone').value,
+                whatsapp: document.getElementById('settingsWhatsApp').value,
+                website: document.getElementById('settingsWebsite').value,
                 address: document.getElementById('settingsAddress').value,
+                accountHolder: document.getElementById('settingsAccountHolder').value,
+                bank: document.getElementById('settingsBank').value,
+                accountType: document.getElementById('settingsAccountType').value,
+                accountNumber: document.getElementById('settingsAccountNumber').value,
+                branchCode: document.getElementById('settingsBranchCode').value,
             };
 
             const response = await API.request('/api/settings', {
