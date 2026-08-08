@@ -191,22 +191,19 @@ const pdfEngine = {
             let bottomSectionY = finalY;
 
             // Banking Details (Bottom Left)
-            let hasBankingDetails = settings.accountHolder || settings.bank || settings.accountType || settings.accountNumber || settings.branchCode;
-            if (hasBankingDetails) {
-                doc.setFontSize(12);
-                doc.setFont('helvetica', 'bold');
-                doc.text("Banking Details", 14, bottomSectionY);
+            doc.setFontSize(12);
+            doc.setFont('helvetica', 'bold');
+            doc.text("Banking Details", 14, bottomSectionY);
 
-                let bankY = bottomSectionY + 6;
-                doc.setFontSize(10);
-                doc.setFont('helvetica', 'normal');
-                if (settings.accountHolder) { doc.text(`Account Holder: ${settings.accountHolder}`, 14, bankY); bankY += 5; }
-                if (settings.bank) { doc.text(`Bank: ${settings.bank}`, 14, bankY); bankY += 5; }
-                if (settings.accountType) { doc.text(`Account Type: ${settings.accountType}`, 14, bankY); bankY += 5; }
-                if (settings.accountNumber) { doc.text(`Account Number: ${settings.accountNumber}`, 14, bankY); bankY += 5; }
-                if (settings.branchCode) { doc.text(`Branch Code: ${settings.branchCode}`, 14, bankY); bankY += 5; }
-                doc.text(`Payment Reference: ${data.reference || ''}`, 14, bankY);
-            }
+            let bankY = bottomSectionY + 6;
+            doc.setFontSize(10);
+            doc.setFont('helvetica', 'normal');
+            doc.text(`Account Holder: ${settings.accountHolder || ''}`, 14, bankY); bankY += 5;
+            doc.text(`Bank: ${settings.bank || ''}`, 14, bankY); bankY += 5;
+            doc.text(`Account Type: ${settings.accountType || ''}`, 14, bankY); bankY += 5;
+            doc.text(`Account Number: ${settings.accountNumber || ''}`, 14, bankY); bankY += 5;
+            doc.text(`Branch Code: ${settings.branchCode || ''}`, 14, bankY); bankY += 5;
+            doc.text(`Payment Reference: ${data.reference || ''}`, 14, bankY);
 
             // Business Details (Bottom Right)
             doc.setFontSize(12);
@@ -217,24 +214,13 @@ const pdfEngine = {
             doc.setFontSize(10);
             doc.setFont('helvetica', 'normal');
 
-            // For business details we only show email, whatsapp, phone, website if they exist,
+            // For business details we show contact, email, whatsapp, phone, website if they exist,
             // similar to admin invoice
-            if (settings.email) {
-                doc.text(`Email: ${settings.email}`, 196, bizY, { align: 'right' });
-                bizY += 5;
-            }
-            if (settings.whatsapp) {
-                doc.text(`WhatsApp: ${settings.whatsapp}`, 196, bizY, { align: 'right' });
-                bizY += 5;
-            }
-            if (settings.phone) {
-                doc.text(`Phone: ${settings.phone}`, 196, bizY, { align: 'right' });
-                bizY += 5;
-            }
-            if (settings.website) {
-                doc.text(`Website: ${settings.website}`, 196, bizY, { align: 'right' });
-                bizY += 5;
-            }
+            doc.text(`Contact: ${settings.contactName || ''}`, 196, bizY, { align: 'right' }); bizY += 5;
+            doc.text(`Email: ${settings.email || ''}`, 196, bizY, { align: 'right' }); bizY += 5;
+            doc.text(`WhatsApp: ${settings.whatsapp || ''}`, 196, bizY, { align: 'right' }); bizY += 5;
+            doc.text(`Phone: ${settings.phone || ''}`, 196, bizY, { align: 'right' }); bizY += 5;
+            doc.text(`Website: ${settings.website || ''}`, 196, bizY, { align: 'right' }); bizY += 5;
         }
 
         // --- FOOTER ---
