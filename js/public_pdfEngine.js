@@ -146,20 +146,43 @@ const pdfEngine = {
             doc.setTextColor(0, 0, 0);
             const totalWidth = doc.internal.pageSize.getWidth();
 
-            doc.text("Subtotal:", totalWidth - 50, finalY, { align: 'right' });
-            doc.text(`R ${Number(data.subtotal).toFixed(2)}`, totalWidth - 14, finalY, { align: 'right' });
+            const vatAmt = Number(data.vatAmt) || 0;
+            const subtotal = Number(data.subtotal) || 0;
+            const total = Number(data.total) || 0;
 
-            if (data.discount) {
-                finalY += 6;
-                doc.text("Discount:", totalWidth - 50, finalY, { align: 'right' });
-                doc.text(`- R ${Number(data.discount).toFixed(2)}`, totalWidth - 14, finalY, { align: 'right' });
+            if (vatAmt === 0) {
+                if (data.discount && Number(data.discount) > 0) {
+                    doc.text("Discount:", totalWidth - 50, finalY, { align: 'right' });
+                    doc.text(`- R ${Number(data.discount).toFixed(2)}`, totalWidth - 14, finalY, { align: 'right' });
+                    finalY += 6;
+                }
+
+                finalY += 2;
+                doc.setFontSize(12);
+                doc.setFont('helvetica', 'bold');
+                doc.text("Total:", totalWidth - 50, finalY, { align: 'right' });
+                doc.text(`R ${total.toFixed(2)}`, totalWidth - 14, finalY, { align: 'right' });
+
+                finalY += 8;
+                doc.setFontSize(9);
+                doc.setFont('helvetica', 'italic');
+                doc.text("Prices are not subject to VAT (Non-VAT vendor).", totalWidth - 14, finalY, { align: 'right' });
+            } else {
+                doc.text("Subtotal:", totalWidth - 50, finalY, { align: 'right' });
+                doc.text(`R ${subtotal.toFixed(2)}`, totalWidth - 14, finalY, { align: 'right' });
+
+                if (data.discount) {
+                    finalY += 6;
+                    doc.text("Discount:", totalWidth - 50, finalY, { align: 'right' });
+                    doc.text(`- R ${Number(data.discount).toFixed(2)}`, totalWidth - 14, finalY, { align: 'right' });
+                }
+
+                finalY += 8;
+                doc.setFontSize(12);
+                doc.setFont('helvetica', 'bold');
+                doc.text("Total Due:", totalWidth - 50, finalY, { align: 'right' });
+                doc.text(`R ${total.toFixed(2)}`, totalWidth - 14, finalY, { align: 'right' });
             }
-
-            finalY += 8;
-            doc.setFontSize(12);
-            doc.setFont('helvetica', 'bold');
-            doc.text("Total Due:", totalWidth - 50, finalY, { align: 'right' });
-            doc.text(`R ${Number(data.total).toFixed(2)}`, totalWidth - 14, finalY, { align: 'right' });
         }
 
         if (type === 'License Agreement') {

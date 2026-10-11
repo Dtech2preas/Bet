@@ -53,13 +53,27 @@ const pdfEngine = {
             });
             doc.addImage(logoData, 'PNG', 14, 15, logoWidth, logoHeight);
             logoBottomY = 15 + logoHeight;
+
+            // Add business name under logo
+            doc.setFontSize(14);
+            doc.setTextColor(...primaryColor);
+            doc.setFont('helvetica', 'bold');
+            doc.text("THE D-TECH ECOSYSTEM (Pty) Ltd", 14, logoBottomY + 6);
+            logoBottomY += 8;
         } else {
             doc.setFontSize(22);
             doc.setTextColor(...primaryColor);
             doc.setFont('helvetica', 'bold');
-            doc.text("D-TECH", 14, 25);
+            doc.text("THE D-TECH ECOSYSTEM (Pty) Ltd", 14, 25);
             logoBottomY = 28;
         }
+
+        doc.setFontSize(10);
+        doc.setTextColor(...grayColor);
+        doc.setFont('helvetica', 'normal');
+        doc.text("Reg No: 2026/697427/07", 14, logoBottomY + 5);
+        doc.text("Stand No 762 Kwena Motolo 3, Moletjie, Polokwane, Limpopo, 0709", 14, logoBottomY + 10);
+        logoBottomY += 12;
 
         // Document Type & Meta (Moved below logo on the left)
         let metaY = logoBottomY + 8;
@@ -135,26 +149,44 @@ const pdfEngine = {
             const vatAmt = Number(data.vatAmt) || 0;
             const exclVat = total - vatAmt;
 
-            doc.text("Subtotal (Excl. VAT):", totalWidth - 50, finalY, { align: 'right' });
-            doc.text(`R ${exclVat.toFixed(2)}`, totalWidth - 14, finalY, { align: 'right' });
+            if (vatAmt === 0) {
+                // When VAT is 0, just show discount if any, and Total
+                if (data.discountAmt && Number(data.discountAmt) > 0) {
+                    doc.text("Discount:", totalWidth - 50, finalY, { align: 'right' });
+                    doc.text(`- R ${Number(data.discountAmt).toFixed(2)}`, totalWidth - 14, finalY, { align: 'right' });
+                    finalY += 6;
+                }
 
-            if (data.discountAmt && Number(data.discountAmt) > 0) {
-                finalY += 6;
-                doc.text("Discount:", totalWidth - 50, finalY, { align: 'right' });
-                doc.text(`- R ${Number(data.discountAmt).toFixed(2)}`, totalWidth - 14, finalY, { align: 'right' });
-            }
+                finalY += 2;
+                doc.setFontSize(12);
+                doc.setFont('helvetica', 'bold');
+                doc.text("Total:", totalWidth - 50, finalY, { align: 'right' });
+                doc.text(`R ${total.toFixed(2)}`, totalWidth - 14, finalY, { align: 'right' });
 
-            if (vatAmt > 0) {
+                finalY += 8;
+                doc.setFontSize(9);
+                doc.setFont('helvetica', 'italic');
+                doc.text("Prices are not subject to VAT (Non-VAT vendor).", totalWidth - 14, finalY, { align: 'right' });
+            } else {
+                doc.text("Subtotal (Excl. VAT):", totalWidth - 50, finalY, { align: 'right' });
+                doc.text(`R ${exclVat.toFixed(2)}`, totalWidth - 14, finalY, { align: 'right' });
+
+                if (data.discountAmt && Number(data.discountAmt) > 0) {
+                    finalY += 6;
+                    doc.text("Discount:", totalWidth - 50, finalY, { align: 'right' });
+                    doc.text(`- R ${Number(data.discountAmt).toFixed(2)}`, totalWidth - 14, finalY, { align: 'right' });
+                }
+
                 finalY += 6;
                 doc.text(`VAT (${data.vatPct}%):`, totalWidth - 50, finalY, { align: 'right' });
                 doc.text(`R ${vatAmt.toFixed(2)}`, totalWidth - 14, finalY, { align: 'right' });
-            }
 
-            finalY += 8;
-            doc.setFontSize(12);
-            doc.setFont('helvetica', 'bold');
-            doc.text("Total Due (Incl. VAT):", totalWidth - 50, finalY, { align: 'right' });
-            doc.text(`R ${total.toFixed(2)}`, totalWidth - 14, finalY, { align: 'right' });
+                finalY += 8;
+                doc.setFontSize(12);
+                doc.setFont('helvetica', 'bold');
+                doc.text("Total Due (Incl. VAT):", totalWidth - 50, finalY, { align: 'right' });
+                doc.text(`R ${total.toFixed(2)}`, totalWidth - 14, finalY, { align: 'right' });
+            }
         }
 
         if (type === 'License Agreement') {
@@ -178,7 +210,7 @@ const pdfEngine = {
             doc.text("Client Signature", 14, finalY + 5);
 
             doc.line(120, finalY, 196, finalY);
-            doc.text("D-TECH Signature", 120, finalY + 5);
+            doc.text("THE D-TECH ECOSYSTEM (Pty) Ltd Signature", 120, finalY + 5);
         }
 
         if (type === 'Quotation' || type === 'Invoice') {
@@ -226,7 +258,7 @@ const pdfEngine = {
         doc.setFontSize(11);
         doc.setFont('helvetica', 'italic');
         doc.setTextColor(...primaryColor);
-        doc.text("Thank you for choosing D-TECH SERVICES", 105, finalY, { align: 'center' });
+        doc.text("Thank you for choosing THE D-TECH ECOSYSTEM (Pty) Ltd", 105, finalY, { align: 'center' });
 
         // --- FOOTER ---
         const pageCount = doc.internal.getNumberOfPages();
@@ -234,7 +266,7 @@ const pdfEngine = {
             doc.setPage(i);
             doc.setFontSize(8);
             doc.setTextColor(156, 163, 175);
-            doc.text(`D-TECH Software Solutions | Generated automatically by CRM`, 14, 285);
+            doc.text(`THE D-TECH ECOSYSTEM (Pty) Ltd | Generated automatically by CRM`, 14, 285);
             doc.text(`Page ${i} of ${pageCount}`, 196, 285, { align: 'right' });
         }
 
