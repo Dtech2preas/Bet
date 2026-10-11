@@ -98,6 +98,16 @@ const invoicesManager = {
         d.setDate(d.getDate() + 14); // Due default 14 days
         const dueStr = isEdit && i.dueDate ? i.dueDate.split('T')[0] : d.toISOString().split('T')[0];
 
+        let validStr = '';
+        if (isEdit && i.validUntil) {
+            try { validStr = new Date(i.validUntil).toISOString().split('T')[0]; } catch(e){}
+        }
+
+        let projStartStr = '';
+        if (isEdit && i.expectedStartDate) {
+            try { projStartStr = new Date(i.expectedStartDate).toISOString().split('T')[0]; } catch(e){}
+        }
+
         const { value: formValues } = await Swal.fire({
             title: title,
             html: `
@@ -121,8 +131,9 @@ const invoicesManager = {
                         <div><label class="font-medium">VAT (%)</label><input id="swal-i-vat" type="number" class="swal2-input mt-1 w-full m-0" value="${i.vat || 15}" placeholder="15"></div>
                         <div><label class="font-medium">Status</label><select id="swal-i-status" class="swal2-input mt-1 w-full m-0"><option value="Unpaid" ${i.status==='Unpaid'?'selected':''}>Unpaid</option><option value="Paid" ${i.status==='Paid'?'selected':''}>Paid</option><option value="Overdue" ${i.status==='Overdue'?'selected':''}>Overdue</option><option value="Cancelled" ${i.status==='Cancelled'?'selected':''}>Cancelled</option></select></div>
                     </div>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
                         <div><label class="font-medium">Due Date</label><input type="date" id="swal-i-due" class="swal2-input mt-1 w-full m-0" value="${dueStr}"></div>
+                        <div><label class="font-medium">Valid Until</label><input type="date" id="swal-i-valid" class="swal2-input mt-1 w-full m-0" value="${validStr}"></div>
                         <div><label class="font-medium">Payment Terms</label><select id="swal-i-terms" class="swal2-input mt-1 w-full m-0">
                             <option value="Due on Receipt" ${i.paymentTerms==='Due on Receipt'?'selected':''}>Due on Receipt</option>
                             <option value="7 Days" ${i.paymentTerms==='7 Days'?'selected':''}>7 Days</option>
@@ -130,6 +141,13 @@ const invoicesManager = {
                             <option value="30 Days" ${i.paymentTerms==='30 Days'?'selected':''}>30 Days</option>
                         </select></div>
                     </div>
+
+                    <h4 class="font-semibold border-b pb-1 mt-4">Logistics & Notes</h4>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                        <div><label class="font-medium">Expected Project Start</label><input type="date" id="swal-i-start" class="swal2-input mt-1 w-full m-0" value="${projStartStr}"></div>
+                        <div><label class="font-medium">Delivery Time</label><input id="swal-i-delivery" class="swal2-input mt-1 w-full m-0" value="${i.deliveryTime || ''}" placeholder="e.g. 2 weeks"></div>
+                    </div>
+                    <div><label class="font-medium">Customer Notes</label><textarea id="swal-i-cnotes" class="swal2-input mt-1 w-full m-0 p-2 text-sm" rows="2" placeholder="Visible on PDF">${i.customerNotes || ''}</textarea></div>
 
                     <h4 class="font-semibold border-b pb-1 mt-4">Other Info</h4>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
@@ -198,6 +216,8 @@ const invoicesManager = {
                 const vatAmt = total - (total / (1 + (vatPct / 100)));
 
                 const dueDate = document.getElementById('swal-i-due').value;
+                const validDate = document.getElementById('swal-i-valid').value;
+                const startDate = document.getElementById('swal-i-start').value;
 
                 return {
                     clientId: cid,
@@ -212,7 +232,11 @@ const invoicesManager = {
                     balanceDue: total.toFixed(2), // Initial balance = total
                     status: document.getElementById('swal-i-status').value,
                     dueDate: dueDate ? new Date(dueDate).toISOString() : null,
+                    validUntil: validDate ? new Date(validDate).toISOString() : null,
                     paymentTerms: document.getElementById('swal-i-terms').value,
+                    expectedStartDate: startDate ? new Date(startDate).toISOString() : null,
+                    deliveryTime: document.getElementById('swal-i-delivery').value,
+                    customerNotes: document.getElementById('swal-i-cnotes').value,
                     poNumber: document.getElementById('swal-i-po').value,
                     salesperson: document.getElementById('swal-i-sales').value,
                     notes: document.getElementById('swal-i-notes').value,

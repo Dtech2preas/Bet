@@ -114,6 +114,34 @@ const pdfEngine = {
         if (client.email) { doc.text(client.email, 196, clientY, { align: 'right' }); clientY += 5; }
         if (client.phone) { doc.text(client.phone, 196, clientY, { align: 'right' }); clientY += 5; }
 
+        // Optional Document Details section (Quote Details / Invoice Details)
+        if (data.validUntil || data.paymentTerms || data.expectedStartDate || data.deliveryTime) {
+            clientY += 4;
+            doc.setFontSize(10);
+            doc.setTextColor(0, 0, 0);
+            doc.setFont('helvetica', 'bold');
+            doc.text(`${type} Details:`, 196, clientY, { align: 'right' });
+            clientY += 5;
+
+            doc.setFont('helvetica', 'normal');
+            if (data.validUntil) {
+                doc.text(`Valid Until: ${new Date(data.validUntil).toLocaleDateString()}`, 196, clientY, { align: 'right' });
+                clientY += 5;
+            }
+            if (data.paymentTerms) {
+                doc.text(`Payment Terms: ${data.paymentTerms}`, 196, clientY, { align: 'right' });
+                clientY += 5;
+            }
+            if (data.expectedStartDate) {
+                doc.text(`Project Start: ${new Date(data.expectedStartDate).toLocaleDateString()}`, 196, clientY, { align: 'right' });
+                clientY += 5;
+            }
+            if (data.deliveryTime) {
+                doc.text(`Delivery Time: ${data.deliveryTime}`, 196, clientY, { align: 'right' });
+                clientY += 5;
+            }
+        }
+
         doc.setDrawColor(229, 231, 235);
         let headerBottom = Math.max(metaY, clientY) + 5;
         doc.line(14, headerBottom, 196, headerBottom);
@@ -211,6 +239,23 @@ const pdfEngine = {
 
         if (type === 'Quotation' || type === 'Invoice') {
             finalY += 15;
+
+            // Customer Notes (Full Width, Above Banking Details)
+            if (data.customerNotes) {
+                doc.setFontSize(10);
+                doc.setTextColor(0, 0, 0);
+                doc.setFont('helvetica', 'bold');
+                doc.text("Customer Notes:", 14, finalY);
+                finalY += 5;
+
+                doc.setFont('helvetica', 'normal');
+                doc.setTextColor(...grayColor);
+                const splitNotes = doc.splitTextToSize(data.customerNotes, 182);
+                doc.text(splitNotes, 14, finalY);
+                finalY += (splitNotes.length * 5) + 10;
+                doc.setTextColor(0, 0, 0);
+            }
+
             let bottomSectionY = finalY;
 
             // Banking Details (Bottom Left)
