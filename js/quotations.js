@@ -122,6 +122,7 @@ const quotationsManager = {
                             <option value="7 Days" ${q.paymentTerms==='7 Days'?'selected':''}>7 Days</option>
                             <option value="14 Days" ${q.paymentTerms==='14 Days'?'selected':''}>14 Days</option>
                             <option value="30 Days" ${q.paymentTerms==='30 Days'?'selected':''}>30 Days</option>
+                            <option value="50% Deposit, 50% on Launch" ${q.paymentTerms==='50% Deposit, 50% on Launch'?'selected':''}>50% Deposit, 50% on Launch</option>
                         </select></div>
                     </div>
 

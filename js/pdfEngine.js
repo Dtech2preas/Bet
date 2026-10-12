@@ -191,6 +191,15 @@ const pdfEngine = {
                 doc.text("Total:", totalWidth - 50, finalY, { align: 'right' });
                 doc.text(`R ${total.toFixed(2)}`, totalWidth - 14, finalY, { align: 'right' });
 
+                if (data.paymentTerms === '50% Deposit, 50% on Launch' && (!data.reference.startsWith('INV-') || data.isDepositInvoice)) {
+                    finalY += 8;
+                    doc.setFontSize(10);
+                    doc.setFont('helvetica', 'bold');
+                    doc.text("Due on receipt 50%:", totalWidth - 50, finalY, { align: 'right' });
+                    const displayTotal = data.originalTotal ? parseFloat(data.originalTotal) : total;
+                    doc.text(`R ${(displayTotal / 2).toFixed(2)}`, totalWidth - 14, finalY, { align: 'right' });
+                }
+
                 finalY += 8;
                 doc.setFontSize(9);
                 doc.setFont('helvetica', 'italic');
@@ -214,6 +223,14 @@ const pdfEngine = {
                 doc.setFont('helvetica', 'bold');
                 doc.text("Total Due (Incl. VAT):", totalWidth - 50, finalY, { align: 'right' });
                 doc.text(`R ${total.toFixed(2)}`, totalWidth - 14, finalY, { align: 'right' });
+
+                if (data.paymentTerms === '50% Deposit, 50% on Launch' && (!data.reference.startsWith('INV-') || data.isDepositInvoice)) {
+                    finalY += 8;
+                    doc.setFontSize(10);
+                    doc.text("Due on receipt 50%:", totalWidth - 50, finalY, { align: 'right' });
+                    const displayTotal = data.originalTotal ? parseFloat(data.originalTotal) : total;
+                    doc.text(`R ${(displayTotal / 2).toFixed(2)}`, totalWidth - 14, finalY, { align: 'right' });
+                }
             }
         }
 
