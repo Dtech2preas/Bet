@@ -66,6 +66,7 @@ const invoicesManager = {
                     <td class="px-0 md:px-6 py-2 md:py-4 flex md:table-cell justify-between items-center text-right text-sm">
                         <div class="md:hidden font-bold text-xs uppercase text-gray-500 mr-2">Actions:</div>
                         <div>
+                            <button onclick="invoicesManager.editInvoice('${inv.id}')" class="text-blue-600 hover:text-blue-900 mr-2" title="Edit"><i class="fas fa-edit"></i></button>
                             <button onclick="invoicesManager.download('${inv.id}')" class="text-gray-600 hover:text-gray-900 mr-2" title="Download PDF"><i class="fas fa-file-pdf"></i></button>
                             <button onclick="invoicesManager.deleteInvoice('${inv.id}')" class="text-red-600 hover:text-red-900"><i class="fas fa-trash"></i></button>
                         </div>
@@ -187,6 +188,45 @@ const invoicesManager = {
                 }
 
                 addBtn.addEventListener('click', () => createRow('', '', 1));
+
+                // Auto-populate when quotation is selected
+                const quoteSelect = document.getElementById('swal-i-quote');
+                if (quoteSelect) {
+                    quoteSelect.addEventListener('change', async (e) => {
+                        const qId = e.target.value;
+                        if (!qId) return;
+
+                        try {
+                            const qRes = await API.request('/api/quotations');
+                            if (qRes.success && qRes.quotations) {
+                                const q = qRes.quotations.find(x => x.id == qId);
+                                if (q) {
+                                    // Clear existing items
+                                    container.innerHTML = '';
+
+                                    // Add items from quotation
+                                    if (q.items && q.items.length > 0) {
+                                        q.items.forEach(item => createRow(item.description, item.price, item.quantity));
+                                    } else {
+                                        createRow('', '', 1);
+                                    }
+
+                                    // Update financial fields
+                                    if (q.discountPct !== undefined) {
+                                        const discInput = document.getElementById('swal-i-discount');
+                                        if (discInput) discInput.value = q.discountPct;
+                                    }
+                                    if (q.vatPct !== undefined) {
+                                        const vatInput = document.getElementById('swal-i-vat');
+                                        if (vatInput) vatInput.value = q.vatPct;
+                                    }
+                                }
+                            }
+                        } catch (err) {
+                            console.error("Failed to auto-populate from quotation", err);
+                        }
+                    });
+                }
             },
             preConfirm: () => {
                 const cid = document.getElementById('swal-i-client').value;
