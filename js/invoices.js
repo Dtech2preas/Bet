@@ -140,7 +140,13 @@ const invoicesManager = {
                             <option value="7 Days" ${i.paymentTerms==='7 Days'?'selected':''}>7 Days</option>
                             <option value="14 Days" ${i.paymentTerms==='14 Days'?'selected':''}>14 Days</option>
                             <option value="30 Days" ${i.paymentTerms==='30 Days'?'selected':''}>30 Days</option>
+                            <option value="50% Deposit, 50% on Launch" ${i.paymentTerms==='50% Deposit, 50% on Launch'?'selected':''}>50% Deposit, 50% on Launch</option>
                         </select></div>
+                    </div>
+
+                    <div id="second-invoice-date-container" class="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2 hidden">
+                        <div><label class="font-medium text-dtech-600">Balance Invoice Date (30 Days)</label><input type="date" id="swal-i-second-date" class="swal2-input mt-1 w-full m-0"></div>
+                        <div class="flex items-end pb-2 text-xs text-gray-500">The 50% balance invoice will be automatically created with this date.</div>
                     </div>
 
                     <h4 class="font-semibold border-b pb-1 mt-4">Logistics & Notes</h4>
@@ -220,12 +226,42 @@ const invoicesManager = {
                                         const vatInput = document.getElementById('swal-i-vat');
                                         if (vatInput) vatInput.value = q.vatPct;
                                     }
+                                    if (q.paymentTerms !== undefined) {
+                                        const termsInput = document.getElementById('swal-i-terms');
+                                        if (termsInput) {
+                                            termsInput.value = q.paymentTerms;
+                                            termsInput.dispatchEvent(new Event('change'));
+                                        }
+                                    }
                                 }
                             }
                         } catch (err) {
                             console.error("Failed to auto-populate from quotation", err);
                         }
                     });
+                }
+
+                // Handle toggling of second invoice date for 50% deposit
+                const termsSelect = document.getElementById('swal-i-terms');
+                const secondDateContainer = document.getElementById('second-invoice-date-container');
+                const secondDateInput = document.getElementById('swal-i-second-date');
+
+                // set default date to 30 days from now
+                const thirtyDays = new Date();
+                thirtyDays.setDate(thirtyDays.getDate() + 30);
+                secondDateInput.value = thirtyDays.toISOString().split('T')[0];
+
+                function toggleSecondDate() {
+                    if (termsSelect.value === '50% Deposit, 50% on Launch' && !isEdit) {
+                        secondDateContainer.classList.remove('hidden');
+                    } else {
+                        secondDateContainer.classList.add('hidden');
+                    }
+                }
+
+                if (termsSelect) {
+                    termsSelect.addEventListener('change', toggleSecondDate);
+                    toggleSecondDate();
                 }
             },
             preConfirm: () => {
@@ -258,10 +294,12 @@ const invoicesManager = {
                 const dueDate = document.getElementById('swal-i-due').value;
                 const validDate = document.getElementById('swal-i-valid').value;
                 const startDate = document.getElementById('swal-i-start').value;
+                const secondDate = document.getElementById('swal-i-second-date').value;
 
                 return {
                     clientId: cid,
                     quotationId: document.getElementById('swal-i-quote').value,
+                    secondInvoiceDate: secondDate ? new Date(secondDate).toISOString() : null,
                     items: items,
                     subtotal: subtotal.toFixed(2),
                     discountPct: discountPct,
@@ -289,13 +327,100 @@ const invoicesManager = {
                 if (isEdit) {
                     // if status is paid, balance should be 0 (simple auto calc for now)
                     if (formValues.status === 'Paid') formValues.balanceDue = '0.00';
+                    delete formValues.secondInvoiceDate;
                     await API.request(`/api/invoices/${i.id}`, { method: 'PUT', body: JSON.stringify(formValues) });
                     Swal.fire('Success', 'Invoice updated', 'success');
                 } else {
+                    const is50PercentDeposit = formValues.paymentTerms === '50% Deposit, 50% on Launch';
+                    const secondDate = formValues.secondInvoiceDate;
+                    delete formValues.secondInvoiceDate;
+
+                    // Capture original full total before applying deposit deduction
+                    const originalTotalForPDF = parseFloat(formValues.total);
+                    const originalSubtotal = parseFloat(formValues.subtotal);
+
+                    if (is50PercentDeposit) {
+                        // The subtotal deduction needs to be half the *subtotal*
+                        // so that discounts and VAT scale down correctly.
+                        const deduction = originalSubtotal * 0.5;
+                        formValues.items.push({
+                            description: '50% Balance deferred to Launch',
+                            price: -deduction,
+                            quantity: 1
+                        });
+
+                        // Recompute subtotal, vat, total
+                        let newSubtotal = 0;
+                        formValues.items.forEach(item => {
+                            newSubtotal += (item.price * item.quantity);
+                        });
+
+                        const discountAmt = newSubtotal * (formValues.discountPct / 100);
+                        const newTotal = newSubtotal - discountAmt;
+                        const vatAmt = newTotal - (newTotal / (1 + (formValues.vatPct / 100)));
+
+                        formValues.subtotal = newSubtotal.toFixed(2);
+                        formValues.discountAmt = discountAmt.toFixed(2);
+                        formValues.vatAmt = vatAmt.toFixed(2);
+                        formValues.total = newTotal.toFixed(2);
+                        formValues.balanceDue = newTotal.toFixed(2);
+
+                        // Pass along a flag that this invoice *is* the deposit one
+                        formValues.isDepositInvoice = true;
+                        // Keep original total for PDF text rendering
+                        formValues.originalTotal = originalTotalForPDF.toFixed(2);
+                    }
+
                     formValues.reference = 'INV-' + Math.floor(1000 + Math.random() * 9000);
                     formValues.date = new Date().toISOString();
+
+                    const firstQuoteRef = formValues.reference;
+
                     await API.request('/api/invoices', { method: 'POST', body: JSON.stringify(formValues) });
-                    Swal.fire('Success', 'Invoice created', 'success');
+
+                    if (is50PercentDeposit) {
+                        // Create second invoice for the balance
+                        const refForText = formValues.quotationId ? 'Quotation' : `Invoice ${firstQuoteRef}`;
+
+                        // We duplicate the object to avoid reference issues
+                        const secondInvoice = JSON.parse(JSON.stringify(formValues));
+                        secondInvoice.reference = 'INV-' + Math.floor(1000 + Math.random() * 9000);
+                        secondInvoice.date = secondDate || new Date().toISOString();
+                        secondInvoice.dueDate = secondInvoice.date; // Due on the created date
+
+                        // We need the raw total balance amount.
+                        // The remaining balance is 50% of the *original total* (not the current formValues.total which is already 50%)
+                        // However, since we're creating an invoice that has VAT/Discount, we should just insert a subtotal item
+                        // that equates to the remaining subtotal, so the math works out perfectly.
+                        const balanceSubtotal = originalSubtotal * 0.5;
+
+                        // Overwrite items with just the balance
+                        secondInvoice.items = [{
+                            description: `50% Balance on Launch for ${refForText}`,
+                            price: balanceSubtotal,
+                            quantity: 1
+                        }];
+
+                        // Recompute with original discount and VAT pcts applied to this new subtotal
+                        let newSubtotal2 = balanceSubtotal;
+                        const discountAmt2 = newSubtotal2 * (secondInvoice.discountPct / 100);
+                        const newTotal2 = newSubtotal2 - discountAmt2;
+                        const vatAmt2 = newTotal2 - (newTotal2 / (1 + (secondInvoice.vatPct / 100)));
+
+                        secondInvoice.subtotal = newSubtotal2.toFixed(2);
+                        secondInvoice.discountAmt = discountAmt2.toFixed(2);
+                        secondInvoice.vatAmt = vatAmt2.toFixed(2);
+                        secondInvoice.total = newTotal2.toFixed(2);
+                        secondInvoice.balanceDue = newTotal2.toFixed(2);
+                        secondInvoice.status = 'Unpaid';
+                        delete secondInvoice.isDepositInvoice; // don't add the text for the balance invoice
+                        delete secondInvoice.originalTotal;
+
+                        await API.request('/api/invoices', { method: 'POST', body: JSON.stringify(secondInvoice) });
+                        Swal.fire('Success', 'Deposit and Balance invoices created successfully', 'success');
+                    } else {
+                        Swal.fire('Success', 'Invoice created', 'success');
+                    }
                 }
                 this.loadInvoices();
                 app.loadDashboardData();
