@@ -98,13 +98,17 @@ const contractsManager = {
             }
         } catch(e) {}
 
-        const defaultTemplate = `This Software License Agreement ("Agreement") is entered into by and between THE D-TECH ECOSYSTEM (Pty) Ltd ("Licensor") and the Client ("Licensee").
+        const userStr = localStorage.getItem('dtech_user');
+        const user = userStr ? JSON.parse(userStr) : {};
+        const bName = user.businessName || "THE D-TECH ECOSYSTEM (Pty) Ltd";
+
+        const defaultTemplate = `This Software License Agreement ("Agreement") is entered into by and between ${bName} ("Licensor") and the Client ("Licensee").
 
 1. Grant of License:
 Licensor grants Licensee a non-exclusive, non-transferable license to use the Software.
 
 2. Intellectual Property:
-All intellectual property rights belong exclusively to THE D-TECH ECOSYSTEM (Pty) Ltd.
+All intellectual property rights belong exclusively to ${bName}.
 
 3. Payment Terms:
 The Licensee agrees to pay all fees associated with the product subscription. Failure to pay may result in immediate termination of the license.
@@ -155,7 +159,7 @@ Both parties agree to maintain the confidentiality of proprietary information.`;
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
                         <div><label class="font-medium">Client Sign Date</label><input type="date" id="swal-c-csign" class="swal2-input mt-1 w-full m-0" value="${con.clientSignDate ? con.clientSignDate.split('T')[0] : ''}"></div>
-                        <div><label class="font-medium">THE D-TECH ECOSYSTEM (Pty) Ltd Sign Date</label><input type="date" id="swal-c-dsign" class="swal2-input mt-1 w-full m-0" value="${con.dtechSignDate ? con.dtechSignDate.split('T')[0] : ''}"></div>
+                        <div><label class="font-medium">${bName} Sign Date</label><input type="date" id="swal-c-dsign" class="swal2-input mt-1 w-full m-0" value="${con.dtechSignDate ? con.dtechSignDate.split('T')[0] : ''}"></div>
                     </div>
 
                     <h4 class="font-semibold border-b pb-1 mt-4">Linked Records</h4>

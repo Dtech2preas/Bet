@@ -253,7 +253,10 @@ const quotationsManager = {
         const client = this.clients.find(c => c.id === q.clientId);
         if (!client || !client.phone) return Swal.fire('Error', 'Client has no phone number', 'error');
 
-        const msg = encodeURIComponent(`Hi ${client.contactPerson || client.companyName},\n\nHere is the summary for Quotation ${q.reference}:\nTotal: R ${q.total}\n\nPlease let us know if you have any questions.\n\nRegards,\nD-TECH`);
+        const userStr = localStorage.getItem('dtech_user');
+        const user = userStr ? JSON.parse(userStr) : {};
+        const bName = user.businessName || "D-TECH";
+        const msg = encodeURIComponent(`Hi ${client.contactPerson || client.companyName},\n\nHere is the summary for Quotation ${q.reference}:\nTotal: R ${q.total}\n\nPlease let us know if you have any questions.\n\nRegards,\n${bName}`);
         const phone = client.phone.replace(/[^0-9]/g, '');
         window.open(`https://wa.me/${phone}?text=${msg}`, '_blank');
     },
