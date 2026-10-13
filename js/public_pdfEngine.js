@@ -44,7 +44,15 @@ const pdfEngine = {
         const email = settings.email || "";
 
         // Standard Colors
-        const primaryColor = [37, 99, 235];
+        let primaryColor = [37, 99, 235]; // Default Blue
+        if (settings.brandColor && /^#[0-9A-F]{6}$/i.test(settings.brandColor)) {
+            const hex = settings.brandColor;
+            primaryColor = [
+                parseInt(hex.slice(1, 3), 16),
+                parseInt(hex.slice(3, 5), 16),
+                parseInt(hex.slice(5, 7), 16)
+            ];
+        }
         const grayColor = [107, 114, 128];
 
         // --- HEADER ---

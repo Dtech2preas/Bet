@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Business Portal Business Portal - Dashboard</title>
+    <title>Business Portal - Dashboard</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- SweetAlert2 -->
@@ -200,6 +200,44 @@
                     </div>
                 </div>
 
+                <!-- Charts & Activity -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <!-- Chart -->
+                    <div class="lg:col-span-2 bg-white dark:bg-dark-card p-6 rounded-lg shadow-sm border border-gray-100 dark:border-dark-border">
+                        <h3 class="text-lg font-medium mb-4">Revenue Overview (Last 6 Months)</h3>
+                        <div class="h-64 w-full">
+                            <canvas id="revenueChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Quick Actions / Activity Placeholder -->
+                    <div class="bg-white dark:bg-dark-card p-6 rounded-lg shadow-sm border border-gray-100 dark:border-dark-border">
+                        <h3 class="text-lg font-medium mb-4">Quick Actions</h3>
+                        <div class="space-y-3">
+                            <button onclick="app.showSection('settings')" class="w-full text-left px-4 py-3 rounded-md border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors flex items-center">
+                                <i class="fas fa-cog text-gray-400 mr-3 w-5 text-center"></i>
+                                <div>
+                                    <p class="text-sm font-medium text-gray-900 dark:text-gray-100">Setup Business Profile</p>
+                                    <p class="text-xs text-gray-500">Add your logo and bank details</p>
+                                </div>
+                            </button>
+                            <button onclick="app.showSection('clients'); setTimeout(() => clientsManager.openModal(), 100);" class="w-full text-left px-4 py-3 rounded-md border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors flex items-center">
+                                <i class="fas fa-user-plus text-blue-400 mr-3 w-5 text-center"></i>
+                                <div>
+                                    <p class="text-sm font-medium text-gray-900 dark:text-gray-100">Add a New Client</p>
+                                    <p class="text-xs text-gray-500">Start managing relationships</p>
+                                </div>
+                            </button>
+                            <button onclick="app.showSection('invoices'); setTimeout(() => invoicesManager.openModal(), 100);" class="w-full text-left px-4 py-3 rounded-md border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors flex items-center">
+                                <i class="fas fa-file-invoice-dollar text-green-400 mr-3 w-5 text-center"></i>
+                                <div>
+                                    <p class="text-sm font-medium text-gray-900 dark:text-gray-100">Create an Invoice</p>
+                                    <p class="text-xs text-gray-500">Bill your clients</p>
+                                </div>
+                            </button>
+                        </div>
+                    </div>
+                </div>
 
             </section>
 
@@ -331,6 +369,20 @@
                         <div>
                             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Address</label>
                             <textarea id="settingsAddress" rows="3" class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm px-3 py-2 border focus:border-dtech-500 focus:ring-dtech-500 sm:text-sm"></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Primary Brand Color (Hex)</label>
+                            <div class="flex items-center mt-1">
+                                <input type="color" id="settingsBrandColor" class="h-10 w-10 p-1 border border-gray-300 dark:border-gray-600 rounded-md cursor-pointer mr-2" value="#2563eb">
+                                <span class="text-sm text-gray-500" id="brandColorDisplay">#2563eb</span>
+                            </div>
+                            <p class="text-xs text-gray-500 mt-1">This color will be used for your generated PDFs (e.g. Invoices).</p>
+                            <script>
+                                document.getElementById('settingsBrandColor')?.addEventListener('input', function(e) {
+                                    const display = document.getElementById('brandColorDisplay');
+                                    if(display) display.textContent = e.target.value;
+                                });
+                            </script>
                         </div>
 
                         <h2 class="text-lg font-medium text-gray-900 dark:text-gray-100 border-b dark:border-gray-700 pb-2 mt-8">Banking Details</h2>

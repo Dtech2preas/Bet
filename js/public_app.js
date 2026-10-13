@@ -18,6 +18,24 @@ const app = {
         this.initDarkMode();
         // Load dashboard data (which also initializes charts)
         this.loadDashboardData();
+
+        // Guided Onboarding for new users
+        if (localStorage.getItem('dtech_new_user') === 'true') {
+            localStorage.removeItem('dtech_new_user');
+            setTimeout(() => {
+                Swal.fire({
+                    icon: 'info',
+                    title: 'Welcome!',
+                    text: 'Please set up your business profile and banking details so you can start generating invoices.',
+                    confirmButtonText: 'Go to Settings',
+                    allowOutsideClick: false
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        this.showSection('settings');
+                    }
+                });
+            }, 500);
+        }
     },
 
     toggleSidebar() {
@@ -78,6 +96,52 @@ const app = {
         }
     },
 
+    renderChart(chartData) {
+        const ctx = document.getElementById('revenueChart');
+        if (!ctx) return;
+
+        if (this.chartInstance) {
+            this.chartInstance.destroy();
+        }
+
+        const isDark = document.documentElement.classList.contains('dark');
+        const textColor = isDark ? '#9ca3af' : '#4b5563';
+        const gridColor = isDark ? '#374151' : '#e5e7eb';
+
+        this.chartInstance = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: chartData.labels,
+                datasets: [{
+                    label: 'Revenue (Paid Invoices)',
+                    data: chartData.data,
+                    backgroundColor: '#3b82f6',
+                    borderRadius: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { color: textColor },
+                        grid: { color: gridColor }
+                    },
+                    x: {
+                        ticks: { color: textColor },
+                        grid: { display: false }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        labels: { color: textColor }
+                    }
+                }
+            }
+        });
+    },
+
     initDarkMode() {
         if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
             document.documentElement.classList.add('dark');
@@ -110,7 +174,9 @@ const app = {
                 document.getElementById('stat-monthly-rev').innerText = 'R ' + data.stats.monthlyRevenue.toLocaleString();
                 document.getElementById('stat-total-rev').innerText = 'R ' + data.stats.totalRevenue.toLocaleString();
 
-
+                if (data.stats.chartData) {
+                    this.renderChart(data.stats.chartData);
+                }
             }
         } catch (error) {
             console.error('Failed to load dashboard stats', error);
@@ -129,6 +195,13 @@ const app = {
                 document.getElementById('settingsWhatsApp').value = response.settings.whatsapp || '';
                 document.getElementById('settingsWebsite').value = response.settings.website || '';
                 document.getElementById('settingsAddress').value = response.settings.address || '';
+
+                if (response.settings.brandColor) {
+                    const colorInput = document.getElementById('settingsBrandColor');
+                    if(colorInput) colorInput.value = response.settings.brandColor;
+                    const colorDisplay = document.getElementById('brandColorDisplay');
+                    if(colorDisplay) colorDisplay.textContent = response.settings.brandColor;
+                }
 
                 document.getElementById('settingsAccountHolder').value = response.settings.accountHolder || '';
                 document.getElementById('settingsBank').value = response.settings.bank || '';
@@ -157,6 +230,7 @@ const app = {
                 whatsapp: document.getElementById('settingsWhatsApp').value,
                 website: document.getElementById('settingsWebsite').value,
                 address: document.getElementById('settingsAddress').value,
+                brandColor: document.getElementById('settingsBrandColor') ? document.getElementById('settingsBrandColor').value : '#2563eb',
                 accountHolder: document.getElementById('settingsAccountHolder').value,
                 bank: document.getElementById('settingsBank').value,
                 accountType: document.getElementById('settingsAccountType').value,
