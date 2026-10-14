@@ -190,6 +190,7 @@ const clientsManager = {
                     method: 'PUT',
                     body: JSON.stringify(clientData)
                 });
+                if (typeof app !== 'undefined' && app.logActivity) app.logActivity(`Updated Client: ${clientData.name}`);
                 Swal.fire({ icon: 'success', title: 'Updated!', text: 'Client updated successfully', timer: 1500, showConfirmButton: false });
             } else {
                 // Create
@@ -197,6 +198,7 @@ const clientsManager = {
                     method: 'POST',
                     body: JSON.stringify(clientData)
                 });
+                if (typeof app !== 'undefined' && app.logActivity) app.logActivity(`Added Client: ${clientData.name}`);
                 Swal.fire({ icon: 'success', title: 'Created!', text: 'Client added successfully', timer: 1500, showConfirmButton: false });
             }
 
@@ -226,6 +228,7 @@ const clientsManager = {
         if (result.isConfirmed) {
             try {
                 await API.request(`/api/clients/${id}`, { method: 'DELETE' });
+                if (typeof app !== 'undefined' && app.logActivity) app.logActivity(`Deleted Client`);
                 Swal.fire({ icon: 'success', title: 'Deleted!', text: 'Client has been deleted.', timer: 1500, showConfirmButton: false });
                 this.loadClients();
                 app.loadDashboardData();

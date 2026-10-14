@@ -222,12 +222,14 @@ const quotationsManager = {
             try {
                 if (isEdit) {
                     await API.request(`/api/quotations/${q.id}`, { method: 'PUT', body: JSON.stringify(formValues) });
+                    if (typeof app !== 'undefined' && app.logActivity) app.logActivity(`Updated Quotation`);
                     Swal.fire('Success', 'Quotation updated', 'success');
                 } else {
                     formValues.reference = 'QT-' + Math.floor(1000 + Math.random() * 9000);
                     formValues.status = 'Draft';
                     formValues.date = new Date().toISOString();
                     await API.request('/api/quotations', { method: 'POST', body: JSON.stringify(formValues) });
+                    if (typeof app !== 'undefined' && app.logActivity) app.logActivity(`Created Quotation`);
                     Swal.fire('Success', 'Quotation created', 'success');
                 }
                 this.loadQuotations();
@@ -253,7 +255,10 @@ const quotationsManager = {
         const client = this.clients.find(c => c.id === q.clientId);
         if (!client || !client.phone) return Swal.fire('Error', 'Client has no phone number', 'error');
 
-        const msg = encodeURIComponent(`Hi ${client.contactPerson || client.companyName},\n\nHere is the summary for Quotation ${q.reference}:\nTotal: R ${q.total}\n\nPlease let us know if you have any questions.\n\nRegards,\nD-TECH`);
+        const userStr = localStorage.getItem('dtech_user');
+        const user = userStr ? JSON.parse(userStr) : {};
+        const bName = user.businessName || "D-TECH";
+        const msg = encodeURIComponent(`Hi ${client.contactPerson || client.companyName},\n\nHere is the summary for Quotation ${q.reference}:\nTotal: R ${q.total}\n\nPlease let us know if you have any questions.\n\nRegards,\n${bName}`);
         const phone = client.phone.replace(/[^0-9]/g, '');
         window.open(`https://wa.me/${phone}?text=${msg}`, '_blank');
     },
@@ -261,6 +266,7 @@ const quotationsManager = {
     async deleteQuote(id) {
         if (confirm("Are you sure?")) {
             await API.request(`/api/quotations/${id}`, { method: 'DELETE' });
+            if (typeof app !== 'undefined' && app.logActivity) app.logActivity(`Deleted Quotation`);
             this.loadQuotations();
         }
     }

@@ -98,6 +98,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (response.success) {
                     localStorage.setItem('dtech_token', response.token);
                     localStorage.setItem('dtech_user', JSON.stringify(response.user));
+                    localStorage.setItem('dtech_new_user', 'true');
 
                     Swal.fire({
                         icon: 'success',

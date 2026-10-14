@@ -175,12 +175,14 @@ const paymentsManager = {
                 if (isEdit) {
                     // Update payment
                     await API.request(`/api/payments/${p.id}`, { method: 'PUT', body: JSON.stringify(formValues) });
+                    if (typeof app !== 'undefined' && app.logActivity) app.logActivity(`Updated Payment`);
                     Swal.fire('Success', 'Payment updated', 'success');
                 } else {
                     formValues.reference = 'REC-' + Math.floor(1000 + Math.random() * 9000);
                     formValues.date = new Date().toISOString();
                     // Save payment
                     await API.request('/api/payments', { method: 'POST', body: JSON.stringify(formValues) });
+                    if (typeof app !== 'undefined' && app.logActivity) app.logActivity(`Recorded Payment for ${formValues.amount}`);
 
                     // If Confirmed, update Invoice status to Paid
                     if (formValues.paymentStatus === 'Confirmed') {
