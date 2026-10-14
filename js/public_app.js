@@ -18,6 +18,7 @@ const app = {
         this.initDarkMode();
         // Load dashboard data (which also initializes charts)
         this.loadDashboardData();
+        this.checkPaymentStatus();
 
         // Guided Onboarding for new users
         if (localStorage.getItem('dtech_new_user') === 'true') {
@@ -59,7 +60,7 @@ const app = {
 
     showSection(sectionId) {
         // Hide all sections
-        const sections = ['dashboard', 'clients', 'products', 'licenses', 'quotations', 'invoices', 'payments', 'contracts', 'settings'];
+        const sections = ['dashboard', 'clients', 'products', 'licenses', 'quotations', 'invoices', 'payments', 'contracts', 'plan', 'settings'];
         sections.forEach(sec => {
             document.getElementById(`section-${sec}`).classList.add('hidden');
             document.getElementById(`nav-${sec}`).classList.remove('active', 'bg-dtech-700', 'text-white');
@@ -85,6 +86,7 @@ const app = {
         if (sectionId === 'payments') paymentsManager.loadPayments();
         if (sectionId === 'contracts') contractsManager.loadContracts();
         if (sectionId === 'dashboard') this.loadDashboardData();
+        this.checkPaymentStatus();
         if (sectionId === 'settings') this.loadSettingsData();
 
         // Close sidebar on mobile after navigating
@@ -163,6 +165,69 @@ const app = {
         }
     },
 
+
+    async paySubscription() {
+        const selectedAmount = document.querySelector('input[name="paymentAmount"]:checked').value;
+        const btn = document.getElementById('payPlanBtn');
+        const originalText = btn.innerHTML;
+
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Initializing...';
+
+        try {
+            const response = await API.request('/api/checkout', {
+                method: 'POST',
+                body: JSON.stringify({
+                    amount: parseFloat(selectedAmount),
+                    type: 'subscription'
+                })
+            });
+
+            if (response.success && response.redirectUrl) {
+                // Redirect user to Yoco Checkout
+                window.location.href = response.redirectUrl;
+            } else {
+                throw new Error(response.message || 'Could not initiate payment');
+            }
+        } catch (error) {
+            Swal.fire('Payment Error', error.message, 'error');
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        }
+    },
+
+    checkPaymentStatus() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const paymentStatus = urlParams.get('payment');
+
+        if (paymentStatus === 'success') {
+            Swal.fire({
+                icon: 'success',
+                title: 'Payment Successful',
+                text: 'Thank you! Your subscription plan has been updated.',
+            });
+            // Clean URL
+            window.history.replaceState({}, document.title, window.location.pathname);
+            this.showSection('plan');
+        } else if (paymentStatus === 'cancelled' || paymentStatus === 'failed') {
+            Swal.fire({
+                icon: 'error',
+                title: 'Payment Failed',
+                text: 'Your payment was cancelled or failed. Please try again.',
+            });
+            // Clean URL
+            window.history.replaceState({}, document.title, window.location.pathname);
+            this.showSection('plan');
+        }
+
+        // Update next billing date UI
+        const d = new Date();
+        d.setMonth(d.getMonth() + 1);
+        const nbDate = document.getElementById('nextBillingDate');
+        if (nbDate) {
+           nbDate.innerText = "Next billing date: " + d.toLocaleDateString();
+        }
+    },
 
     async loadDashboardData() {
         try {

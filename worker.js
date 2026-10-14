@@ -266,6 +266,49 @@ export default {
       }
     }
 
+
+    // /api/checkout - Generate a Yoco Payment Link
+    if (path === '/api/checkout' && request.method === 'POST') {
+      try {
+        const body = await request.json();
+
+        // Use test keys provided by user. User says they will put live in variables later.
+        const YOCO_SECRET_KEY = env.YOCO_SECRET_KEY || 'sk_test_3f5bc6d3V45ZM476554422498e8a';
+
+        const payload = {
+          amount: Math.round(body.amount * 100), // Yoco expects amount in cents
+          currency: 'ZAR',
+          cancelUrl: request.headers.get('origin') + '/public_app.html?payment=cancelled',
+          successUrl: request.headers.get('origin') + '/public_app.html?payment=success',
+          failureUrl: request.headers.get('origin') + '/public_app.html?payment=failed',
+          metadata: {
+             business_id: business_id,
+             type: body.type || 'subscription'
+          }
+        };
+
+        const response = await fetch('https://payments.yoco.com/api/checkouts', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${YOCO_SECRET_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+           const err = await response.text();
+           console.error("Yoco API Error", err);
+           return jsonResponse({ success: false, message: 'Failed to create payment link' }, 500);
+        }
+
+        const data = await response.json();
+        return jsonResponse({ success: true, redirectUrl: data.redirectUrl, id: data.id });
+      } catch(e) {
+         return jsonResponse({ success: false, message: e.message }, 500);
+      }
+    }
+
     // /api/dashboard
     if (path === '/api/dashboard' && request.method === 'GET') {
       try {
