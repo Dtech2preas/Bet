@@ -223,6 +223,11 @@ export default {
     }
     const business_id = authPayload.business_id;
 
+    // /api/yoco/checkout
+    if (path === '/api/yoco/checkout' && request.method === 'POST') {
+       return handleYocoCheckout(request, env, authPayload);
+    }
+
     // /api/settings (for public user business settings)
     if (path === '/api/settings') {
        if (request.method === 'GET') {
@@ -331,3 +336,58 @@ export default {
     return jsonResponse({ success: false, message: 'Not found' }, 404);
   }
 };
+
+// --- Yoco Checkout Handler ---
+async function handleYocoCheckout(request, env, authPayload) {
+    if (!authPayload) return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: corsHeaders });
+    const session = authPayload;
+
+    try {
+        const body = await request.json();
+
+        // Ensure required parameters are provided (defaults to R80 plan if not)
+        const amount = body.amount || 8000;
+        const currency = body.currency || 'ZAR';
+        const successUrl = body.successUrl || 'https://example.com/success';
+        const cancelUrl = body.cancelUrl || 'https://example.com/cancel';
+
+        // Use environment variable if available, fallback to provided test key
+        const yocoSecretKey = env.YOCO_SECRET_KEY || 'sk_test_3f5bc6d3V45ZM476554422498e8a';
+
+        const yocoResponse = await fetch('https://payments.yoco.com/api/checkouts', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${yocoSecretKey}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                amount: amount,
+                currency: currency,
+                successUrl: successUrl,
+                cancelUrl: cancelUrl,
+                metadata: {
+                    business_id: session.business_id,
+                    purpose: "Subscription Plan"
+                }
+            })
+        });
+
+        if (!yocoResponse.ok) {
+            const errorText = await yocoResponse.text();
+            console.error('Yoco API Error:', errorText);
+            return new Response(JSON.stringify({ error: 'Failed to initiate payment with Yoco', details: errorText }), { status: 500, headers: corsHeaders });
+        }
+
+        const yocoData = await yocoResponse.json();
+
+        return new Response(JSON.stringify({
+            redirectUrl: yocoData.redirectUrl,
+            checkoutId: yocoData.id
+        }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+
+    } catch (e) {
+        return new Response(JSON.stringify({ error: e.message }), { status: 500, headers: corsHeaders });
+    }
+}
