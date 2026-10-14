@@ -1,0 +1,77 @@
+ INFO  Accepting connections at http://localhost:8080
+ HTTP  10/14/2026 8:51:06 PM ::1 GET /public_app.html
+ HTTP  10/14/2026 8:51:06 PM ::1 Returned 301 in 317 ms
+ HTTP  10/14/2026 8:51:06 PM ::1 GET /public_app
+ HTTP  10/14/2026 8:51:06 PM ::1 Returned 200 in 15 ms
+ HTTP  10/14/2026 8:51:06 PM ::1 GET /js/api.js
+ HTTP  10/14/2026 8:51:06 PM ::1 Returned 200 in 5 ms
+ HTTP  10/14/2026 8:51:06 PM ::1 GET /js/public_auth.js
+ HTTP  10/14/2026 8:51:06 PM ::1 GET /js/public_pdfEngine.js
+ HTTP  10/14/2026 8:51:06 PM ::1 GET /js/public_app.js
+ HTTP  10/14/2026 8:51:06 PM ::1 GET /js/clients.js
+ HTTP  10/14/2026 8:51:06 PM ::1 GET /js/products.js
+ HTTP  10/14/2026 8:51:06 PM ::1 Returned 200 in 12 ms
+ HTTP  10/14/2026 8:51:06 PM ::1 Returned 200 in 11 ms
+ HTTP  10/14/2026 8:51:06 PM ::1 Returned 200 in 12 ms
+ HTTP  10/14/2026 8:51:06 PM ::1 Returned 200 in 12 ms
+ HTTP  10/14/2026 8:51:06 PM ::1 Returned 200 in 12 ms
+ HTTP  10/14/2026 8:51:06 PM ::1 GET /js/licenses.js
+ HTTP  10/14/2026 8:51:06 PM ::1 Returned 200 in 14 ms
+ HTTP  10/14/2026 8:51:06 PM ::1 GET /js/quotations.js
+ HTTP  10/14/2026 8:51:06 PM ::1 GET /js/invoices.js
+ HTTP  10/14/2026 8:51:06 PM ::1 GET /js/payments.js
+ HTTP  10/14/2026 8:51:06 PM ::1 GET /js/contracts.js
+ HTTP  10/14/2026 8:51:06 PM ::1 GET /js/plan.js
+ HTTP  10/14/2026 8:51:06 PM ::1 Returned 200 in 5 ms
+ HTTP  10/14/2026 8:51:06 PM ::1 Returned 200 in 6 ms
+ HTTP  10/14/2026 8:51:06 PM ::1 Returned 200 in 5 ms
+ HTTP  10/14/2026 8:51:06 PM ::1 Returned 200 in 6 ms
+ HTTP  10/14/2026 8:51:06 PM ::1 Returned 200 in 6 ms
+ HTTP  10/14/2026 8:51:08 PM ::1 GET /index.html
+ HTTP  10/14/2026 8:51:08 PM ::1 Returned 301 in 1 ms
+ HTTP  10/14/2026 8:51:08 PM ::1 GET /index
+ HTTP  10/14/2026 8:51:08 PM ::1 Returned 301 in 1 ms
+ HTTP  10/14/2026 8:51:08 PM ::1 GET /
+ HTTP  10/14/2026 8:51:08 PM ::1 Returned 200 in 2 ms
+ HTTP  10/14/2026 8:51:08 PM ::1 GET /js/api.js
+ HTTP  10/14/2026 8:51:08 PM ::1 GET /js/public_auth.js
+ HTTP  10/14/2026 8:51:08 PM ::1 Returned 304 in 1 ms
+ HTTP  10/14/2026 8:51:08 PM ::1 Returned 304 in 2 ms
+ HTTP  10/14/2026 8:52:07 PM ::1 GET /index.html
+ HTTP  10/14/2026 8:52:07 PM ::1 Returned 301 in 0 ms
+ HTTP  10/14/2026 8:52:07 PM ::1 GET /index
+ HTTP  10/14/2026 8:52:07 PM ::1 Returned 301 in 1 ms
+ HTTP  10/14/2026 8:52:07 PM ::1 GET /
+ HTTP  10/14/2026 8:52:07 PM ::1 Returned 200 in 1 ms
+ HTTP  10/14/2026 8:52:07 PM ::1 GET /js/api.js
+ HTTP  10/14/2026 8:52:07 PM ::1 GET /js/public_auth.js
+ HTTP  10/14/2026 8:52:07 PM ::1 Returned 200 in 1 ms
+ HTTP  10/14/2026 8:52:07 PM ::1 Returned 200 in 1 ms
+ HTTP  10/14/2026 8:52:08 PM ::1 GET /public_app.html
+ HTTP  10/14/2026 8:52:08 PM ::1 Returned 301 in 0 ms
+ HTTP  10/14/2026 8:52:08 PM ::1 GET /public_app
+ HTTP  10/14/2026 8:52:08 PM ::1 Returned 200 in 1 ms
+ HTTP  10/14/2026 8:52:08 PM ::1 GET /js/public_pdfEngine.js
+ HTTP  10/14/2026 8:52:08 PM ::1 GET /js/public_app.js
+ HTTP  10/14/2026 8:52:08 PM ::1 GET /js/clients.js
+ HTTP  10/14/2026 8:52:08 PM ::1 GET /js/products.js
+ HTTP  10/14/2026 8:52:08 PM ::1 GET /js/licenses.js
+ HTTP  10/14/2026 8:52:08 PM ::1 GET /js/quotations.js
+ HTTP  10/14/2026 8:52:08 PM ::1 Returned 200 in 2 ms
+ HTTP  10/14/2026 8:52:08 PM ::1 Returned 200 in 2 ms
+ HTTP  10/14/2026 8:52:08 PM ::1 Returned 200 in 2 ms
+ HTTP  10/14/2026 8:52:08 PM ::1 Returned 200 in 3 ms
+ HTTP  10/14/2026 8:52:08 PM ::1 Returned 200 in 3 ms
+ HTTP  10/14/2026 8:52:08 PM ::1 Returned 200 in 2 ms
+ HTTP  10/14/2026 8:52:08 PM ::1 GET /js/invoices.js
+ HTTP  10/14/2026 8:52:08 PM ::1 GET /js/payments.js
+ HTTP  10/14/2026 8:52:08 PM ::1 GET /js/contracts.js
+ HTTP  10/14/2026 8:52:08 PM ::1 GET /js/plan.js
+ HTTP  10/14/2026 8:52:08 PM ::1 GET /js/api.js
+ HTTP  10/14/2026 8:52:08 PM ::1 GET /js/public_auth.js
+ HTTP  10/14/2026 8:52:08 PM ::1 Returned 200 in 2 ms
+ HTTP  10/14/2026 8:52:08 PM ::1 Returned 200 in 2 ms
+ HTTP  10/14/2026 8:52:08 PM ::1 Returned 200 in 1 ms
+ HTTP  10/14/2026 8:52:08 PM ::1 Returned 200 in 2 ms
+ HTTP  10/14/2026 8:52:08 PM ::1 Returned 304 in 2 ms
+ HTTP  10/14/2026 8:52:08 PM ::1 Returned 304 in 2 ms
