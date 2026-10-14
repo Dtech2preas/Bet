@@ -290,11 +290,13 @@ const invoicesManager = {
                     // if status is paid, balance should be 0 (simple auto calc for now)
                     if (formValues.status === 'Paid') formValues.balanceDue = '0.00';
                     await API.request(`/api/invoices/${i.id}`, { method: 'PUT', body: JSON.stringify(formValues) });
+                    if (typeof app !== 'undefined' && app.logActivity) app.logActivity(`Updated Invoice`);
                     Swal.fire('Success', 'Invoice updated', 'success');
                 } else {
                     formValues.reference = 'INV-' + Math.floor(1000 + Math.random() * 9000);
                     formValues.date = new Date().toISOString();
                     await API.request('/api/invoices', { method: 'POST', body: JSON.stringify(formValues) });
+                    if (typeof app !== 'undefined' && app.logActivity) app.logActivity(`Created Invoice`);
                     Swal.fire('Success', 'Invoice created', 'success');
                 }
                 this.loadInvoices();
@@ -319,6 +321,7 @@ const invoicesManager = {
     async deleteInvoice(id) {
         if (confirm("Are you sure?")) {
             await API.request(`/api/invoices/${id}`, { method: 'DELETE' });
+            if (typeof app !== 'undefined' && app.logActivity) app.logActivity(`Deleted Invoice`);
             this.loadInvoices();
             app.loadDashboardData();
         }

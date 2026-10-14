@@ -222,12 +222,14 @@ const quotationsManager = {
             try {
                 if (isEdit) {
                     await API.request(`/api/quotations/${q.id}`, { method: 'PUT', body: JSON.stringify(formValues) });
+                    if (typeof app !== 'undefined' && app.logActivity) app.logActivity(`Updated Quotation`);
                     Swal.fire('Success', 'Quotation updated', 'success');
                 } else {
                     formValues.reference = 'QT-' + Math.floor(1000 + Math.random() * 9000);
                     formValues.status = 'Draft';
                     formValues.date = new Date().toISOString();
                     await API.request('/api/quotations', { method: 'POST', body: JSON.stringify(formValues) });
+                    if (typeof app !== 'undefined' && app.logActivity) app.logActivity(`Created Quotation`);
                     Swal.fire('Success', 'Quotation created', 'success');
                 }
                 this.loadQuotations();
@@ -264,6 +266,7 @@ const quotationsManager = {
     async deleteQuote(id) {
         if (confirm("Are you sure?")) {
             await API.request(`/api/quotations/${id}`, { method: 'DELETE' });
+            if (typeof app !== 'undefined' && app.logActivity) app.logActivity(`Deleted Quotation`);
             this.loadQuotations();
         }
     }
