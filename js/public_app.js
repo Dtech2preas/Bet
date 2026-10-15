@@ -175,6 +175,9 @@ const app = {
         btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Initializing...';
 
         try {
+            // Save amount locally so we can update the subscription on return
+            localStorage.setItem('dtech_pending_payment', selectedAmount);
+
             const response = await API.request('/api/checkout', {
                 method: 'POST',
                 body: JSON.stringify({
@@ -196,20 +199,43 @@ const app = {
         }
     },
 
-    checkPaymentStatus() {
+    async checkPaymentStatus() {
         const urlParams = new URLSearchParams(window.location.search);
         const paymentStatus = urlParams.get('payment');
+        const token = urlParams.get('token');
 
-        if (paymentStatus === 'success') {
-            Swal.fire({
-                icon: 'success',
-                title: 'Payment Successful',
-                text: 'Thank you! Your subscription plan has been updated.',
-            });
+        if (paymentStatus === 'success' && token) {
+            localStorage.removeItem('dtech_pending_payment'); // clear it just in case
+
+            try {
+                const res = await API.request('/api/subscription', {
+                    method: 'POST',
+                    body: JSON.stringify({ token: token })
+                });
+
+                if (res.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Payment Successful',
+                        text: 'Thank you! Your subscription plan has been updated.',
+                    });
+                } else {
+                     throw new Error(res.message || 'Payment verification failed.');
+                }
+            } catch (err) {
+                console.error("Failed to update subscription", err);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Verification Error',
+                    text: err.message || 'We received your payment but there was an issue verifying it. Please contact support.',
+                });
+            }
+
             // Clean URL
             window.history.replaceState({}, document.title, window.location.pathname);
             this.showSection('plan');
         } else if (paymentStatus === 'cancelled' || paymentStatus === 'failed') {
+            localStorage.removeItem('dtech_pending_payment');
             Swal.fire({
                 icon: 'error',
                 title: 'Payment Failed',
@@ -218,14 +244,61 @@ const app = {
             // Clean URL
             window.history.replaceState({}, document.title, window.location.pathname);
             this.showSection('plan');
+        } else if (paymentStatus === 'success' && !token) {
+            // Success but no token, just clear URL and ignore as it might be a manual tamper
+            window.history.replaceState({}, document.title, window.location.pathname);
+            this.showSection('plan');
         }
 
-        // Update next billing date UI
-        const d = new Date();
-        d.setMonth(d.getMonth() + 1);
-        const nbDate = document.getElementById('nextBillingDate');
-        if (nbDate) {
-           nbDate.innerText = "Next billing date: " + d.toLocaleDateString();
+        // Fetch and Update subscription UI
+        try {
+            const res = await API.request('/api/subscription');
+            if (res.success && res.subscription) {
+                const sub = res.subscription;
+                const nbDate = document.getElementById('nextBillingDate');
+                const badge = document.getElementById('planBadge');
+                const price = document.getElementById('planPriceDisplay');
+                const status = document.getElementById('planStatusText');
+
+                if (sub.plan === 'Premium') {
+                    if (badge) {
+                        badge.className = "bg-blue-100 text-blue-800 text-xs font-semibold mr-2 px-2.5 py-0.5 rounded dark:bg-blue-200 dark:text-blue-800";
+                        badge.innerText = "Premium";
+                    }
+                    if (price) price.innerHTML = `Premium <span class="text-sm font-normal text-gray-500">/ active</span>`;
+
+                    const endDate = new Date(sub.endDate);
+                    const now = new Date();
+
+                    if (endDate > now) {
+                        if (status) {
+                            status.className = "text-green-600";
+                            status.innerText = "Active";
+                        }
+                        if (nbDate) nbDate.innerText = "Next billing date: " + endDate.toLocaleDateString();
+                    } else {
+                        if (status) {
+                            status.className = "text-red-600";
+                            status.innerText = "Expired";
+                        }
+                        if (nbDate) nbDate.innerText = "Your subscription has expired. Please renew.";
+                    }
+                } else {
+                    // Free Plan defaults
+                    if (badge) {
+                        badge.className = "bg-gray-100 text-gray-800 text-xs font-semibold mr-2 px-2.5 py-0.5 rounded dark:bg-gray-700 dark:text-gray-300";
+                        badge.innerText = "Free";
+                    }
+                    if (price) price.innerHTML = `R0 <span class="text-sm font-normal text-gray-500">/ forever</span>`;
+                    if (status) {
+                        status.className = "text-gray-600 dark:text-gray-400";
+                        status.innerText = "Basic";
+                    }
+                    if (nbDate) nbDate.innerText = "Upgrade to premium for support and more features.";
+                }
+            }
+        } catch(e) {
+            console.error("Could not fetch subscription", e);
         }
     },
 
