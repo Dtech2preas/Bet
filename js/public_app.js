@@ -1,7 +1,8 @@
 // public_app.js
 
 const app = {
-    init() {
+    userPlan: 'Free',
+    async init() {
         // Protect route
         if (!localStorage.getItem('dtech_token') && window.location.pathname.includes('public_app')) {
             window.location.href = 'index.html';
@@ -19,6 +20,17 @@ const app = {
         // Load dashboard data (which also initializes charts)
         this.loadDashboardData();
         this.checkPaymentStatus();
+
+        // Fetch plan state
+        try {
+            const subData = await API.request('/api/subscription');
+            if (subData.success) {
+                this.userPlan = subData.subscription.plan || "Free";
+                this.updateNavLocks();
+            }
+        } catch (e) {
+            console.error("Failed to load subscription plan", e);
+        }
 
         // Guided Onboarding for new users
         if (localStorage.getItem('dtech_new_user') === 'true') {
