@@ -339,12 +339,12 @@
 
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-5xl">
                     <!-- Current Plan Details -->
-                    <div class="bg-white dark:bg-dark-card rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 relative overflow-hidden">
+                    <div id="planDetailsContainer" class="bg-white dark:bg-dark-card rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 relative overflow-hidden">
                         <div class="absolute top-0 right-0 p-4">
-                            <span class="bg-blue-100 text-blue-800 text-xs font-semibold mr-2 px-2.5 py-0.5 rounded dark:bg-blue-200 dark:text-blue-800">Pro</span>
+                            <span id="planBadge" class="bg-gray-100 text-gray-800 text-xs font-semibold mr-2 px-2.5 py-0.5 rounded dark:bg-gray-700 dark:text-gray-300">Free</span>
                         </div>
                         <h2 class="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">Current Plan</h2>
-                        <div class="text-3xl font-bold text-gray-900 dark:text-white mb-4">R80 <span class="text-sm font-normal text-gray-500">/ month</span></div>
+                        <div id="planPriceDisplay" class="text-3xl font-bold text-gray-900 dark:text-white mb-4">R0 <span class="text-sm font-normal text-gray-500">/ forever</span></div>
                         <ul class="space-y-3 mb-6 text-sm text-gray-600 dark:text-gray-400">
                             <li class="flex items-center"><i class="fas fa-check text-green-500 mr-2"></i> Unlimited Clients</li>
                             <li class="flex items-center"><i class="fas fa-check text-green-500 mr-2"></i> Unlimited Invoices & Quotations</li>
@@ -352,8 +352,8 @@
                             <li class="flex items-center"><i class="fas fa-check text-green-500 mr-2"></i> Advanced Reporting</li>
                         </ul>
                         <div class="border-t dark:border-gray-700 pt-4 mt-4">
-                            <p class="text-sm font-medium text-gray-900 dark:text-white mb-1">Status: <span class="text-green-600">Active</span></p>
-                            <p class="text-xs text-gray-500" id="nextBillingDate">Next billing date: Calculating...</p>
+                            <p class="text-sm font-medium text-gray-900 dark:text-white mb-1">Status: <span id="planStatusText" class="text-gray-600 dark:text-gray-400">Basic</span></p>
+                            <p class="text-xs text-gray-500" id="nextBillingDate">Upgrade to premium for support and more features.</p>
                         </div>
                     </div>
 
@@ -365,26 +365,26 @@
 
                             <div class="space-y-4">
                                 <label class="flex items-center p-3 border rounded-md cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors border-blue-500 bg-blue-50 dark:bg-blue-900/20">
-                                    <input type="radio" name="paymentAmount" value="80" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300" checked>
+                                    <input type="radio" name="paymentAmount" value="12" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300" checked>
                                     <span class="ml-3 flex flex-col">
                                         <span class="block text-sm font-medium text-gray-900 dark:text-white">Pay 1 Month</span>
-                                        <span class="block text-sm text-gray-500 dark:text-gray-400">R80.00</span>
+                                        <span class="block text-sm text-gray-500 dark:text-gray-400">R12.00</span>
                                     </span>
                                 </label>
 
                                 <label class="flex items-center p-3 border border-gray-200 dark:border-gray-700 rounded-md cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
-                                    <input type="radio" name="paymentAmount" value="240" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300">
+                                    <input type="radio" name="paymentAmount" value="36" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300">
                                     <span class="ml-3 flex flex-col">
                                         <span class="block text-sm font-medium text-gray-900 dark:text-white">Pay 3 Months (Advance)</span>
-                                        <span class="block text-sm text-gray-500 dark:text-gray-400">R240.00</span>
+                                        <span class="block text-sm text-gray-500 dark:text-gray-400">R36.00</span>
                                     </span>
                                 </label>
 
                                 <label class="flex items-center p-3 border border-gray-200 dark:border-gray-700 rounded-md cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
-                                    <input type="radio" name="paymentAmount" value="864" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300">
+                                    <input type="radio" name="paymentAmount" value="120" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300">
                                     <span class="ml-3 flex flex-col">
                                         <span class="block text-sm font-medium text-gray-900 dark:text-white">Pay 1 Year (10% Discount)</span>
-                                        <span class="block text-sm text-gray-500 dark:text-gray-400">R864.00</span>
+                                        <span class="block text-sm text-gray-500 dark:text-gray-400">R120.00</span>
                                     </span>
                                 </label>
                             </div>

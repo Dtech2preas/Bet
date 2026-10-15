@@ -275,15 +275,44 @@ export default {
         // Use test keys provided by user. User says they will put live in variables later.
         const YOCO_SECRET_KEY = env.YOCO_SECRET_KEY || 'sk_test_3f5bc6d3V45ZM476554422498e8a';
 
+        // Fetch account to get businessName
+        let accountsData = await env.DTECH_KV.get('accounts');
+        let accounts = accountsData ? JSON.parse(accountsData) : [];
+        let account = accounts.find(acc => acc.business_id === business_id);
+        let businessName = account ? account.businessName : 'Unknown Business';
+
+        let amountParsed = parseFloat(body.amount);
+        let planDesc = amountParsed === 12 ? '1 Month' : (amountParsed === 36 ? '3 Months' : '1 Year');
+
+        // Generate a secure token to verify the callback
+        const paymentToken = crypto.randomUUID() + crypto.randomUUID();
+
+        let pendingPaymentsData = await env.DTECH_KV.get('pending_payments');
+        let pendingPayments = pendingPaymentsData ? JSON.parse(pendingPaymentsData) : {};
+
+        pendingPayments[paymentToken] = {
+            business_id: business_id,
+            amount: body.amount,
+            status: 'pending',
+            dateAdded: new Date().toISOString()
+        };
+
+        await env.DTECH_KV.put('pending_payments', JSON.stringify(pendingPayments));
+
         const payload = {
           amount: Math.round(body.amount * 100), // Yoco expects amount in cents
           currency: 'ZAR',
+          name: `${businessName} - Subscription`,
+          description: `Premium Plan - ${planDesc}`,
           cancelUrl: request.headers.get('origin') + '/public_app.html?payment=cancelled',
-          successUrl: request.headers.get('origin') + '/public_app.html?payment=success',
+          successUrl: request.headers.get('origin') + '/public_app.html?payment=success&token=' + paymentToken,
           failureUrl: request.headers.get('origin') + '/public_app.html?payment=failed',
           metadata: {
              business_id: business_id,
-             type: body.type || 'subscription'
+             business_name: businessName,
+             type: body.type || 'subscription',
+             plan_duration: planDesc,
+             token: paymentToken
           }
         };
 
@@ -306,6 +335,72 @@ export default {
         return jsonResponse({ success: true, redirectUrl: data.redirectUrl, id: data.id });
       } catch(e) {
          return jsonResponse({ success: false, message: e.message }, 500);
+      }
+    }
+
+    // /api/subscription
+    if (path === '/api/subscription') {
+      let subsData = await env.DTECH_KV.get('subscriptions');
+      let subscriptions = subsData ? JSON.parse(subsData) : [];
+      let mySub = subscriptions.find(s => s.business_id === business_id) || { plan: 'Free', endDate: null };
+
+      if (request.method === 'GET') {
+          return jsonResponse({ success: true, subscription: mySub });
+      }
+
+      if (request.method === 'POST') {
+          const body = await request.json();
+          const { token } = body;
+
+          if (!token) {
+              return jsonResponse({ success: false, message: 'Missing payment verification token' }, 400);
+          }
+
+          // Verify token against pending payments
+          let pendingPaymentsData = await env.DTECH_KV.get('pending_payments');
+          let pendingPayments = pendingPaymentsData ? JSON.parse(pendingPaymentsData) : {};
+
+          const pendingPayment = pendingPayments[token];
+
+          if (!pendingPayment || pendingPayment.business_id !== business_id || pendingPayment.status !== 'pending') {
+              return jsonResponse({ success: false, message: 'Invalid or expired payment token' }, 400);
+          }
+
+          let amount = parseFloat(pendingPayment.amount);
+
+          let durationMonths = 1;
+          if (amount >= 36 && amount < 120) durationMonths = 3;
+          if (amount >= 120) durationMonths = 12;
+
+          let startDate = new Date();
+          if (mySub.endDate && new Date(mySub.endDate) > startDate) {
+              startDate = new Date(mySub.endDate);
+          }
+
+          let endDate = new Date(startDate);
+          endDate.setMonth(endDate.getMonth() + durationMonths);
+
+          const newSub = {
+              business_id: business_id,
+              plan: 'Premium',
+              lastPaymentAmount: amount,
+              endDate: endDate.toISOString(),
+              updatedAt: new Date().toISOString()
+          };
+
+          const index = subscriptions.findIndex(s => s.business_id === business_id);
+          if (index === -1) {
+              subscriptions.push(newSub);
+          } else {
+              subscriptions[index] = newSub;
+          }
+
+          // Mark token as used to prevent replay attacks
+          pendingPayments[token].status = 'completed';
+          await env.DTECH_KV.put('pending_payments', JSON.stringify(pendingPayments));
+
+          await env.DTECH_KV.put('subscriptions', JSON.stringify(subscriptions));
+          return jsonResponse({ success: true, subscription: newSub });
       }
     }
 
