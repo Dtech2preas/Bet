@@ -3,15 +3,22 @@
 // Make sure jspdf is loaded in the HTML
 const pdfEngine = {
     async getSettings() {
+        let settings = {};
+        let plan = "Free";
         try {
             const response = await API.request('/api/settings');
             if (response.success && response.settings) {
-                return response.settings;
+                settings = response.settings;
             }
+            const subData = await API.request('/api/subscription');
+            if (subData.success) {
+                plan = subData.subscription.plan || "Free";
+            }
+            settings.userPlan = plan;
         } catch (e) {
-            console.warn("Could not load settings");
+            console.warn("Could not load settings or plan", e);
         }
-        return {};
+        return settings;
     },
 
     async getLogoBase64(url) {
@@ -38,21 +45,27 @@ const pdfEngine = {
         const doc = new jsPDF();
 
         const settings = await this.getSettings();
-        const logoData = await this.getLogoBase64(settings.logoUrl);
+
+        // Gate custom branding for Free tier
+        let logoData = null;
+        let primaryColor = [37, 99, 235]; // Default Blue
+
+        if (settings.userPlan === 'Premium') {
+            logoData = await this.getLogoBase64(settings.logoUrl);
+            if (settings.brandColor && /^#[0-9A-F]{6}$/i.test(settings.brandColor)) {
+                const hex = settings.brandColor;
+                primaryColor = [
+                    parseInt(hex.slice(1, 3), 16),
+                    parseInt(hex.slice(3, 5), 16),
+                    parseInt(hex.slice(5, 7), 16)
+                ];
+            }
+        }
+
         const businessName = settings.businessName || "Your Business";
         const contactName = settings.contactName || "";
         const email = settings.email || "";
 
-        // Standard Colors
-        let primaryColor = [37, 99, 235]; // Default Blue
-        if (settings.brandColor && /^#[0-9A-F]{6}$/i.test(settings.brandColor)) {
-            const hex = settings.brandColor;
-            primaryColor = [
-                parseInt(hex.slice(1, 3), 16),
-                parseInt(hex.slice(3, 5), 16),
-                parseInt(hex.slice(5, 7), 16)
-            ];
-        }
         const grayColor = [107, 114, 128];
 
         // --- HEADER ---

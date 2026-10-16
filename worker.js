@@ -47,6 +47,59 @@ async function verifyAuth(request, env) {
 }
 
 // Generic KV handler
+async function getSubscriptionPlan(business_id, env) {
+    let subsData = await env.DTECH_KV.get('subscriptions');
+    let subscriptions = subsData ? JSON.parse(subsData) : [];
+    let mySub = subscriptions.find(s => s.business_id === business_id) || { plan: 'Free', endDate: null };
+    return mySub.plan;
+}
+
+async function checkLimits(business_id, env, collectionName, items) {
+    const plan = await getSubscriptionPlan(business_id, env);
+    if (plan === 'Premium') return { allowed: true };
+
+    // Free plan logic
+    if (collectionName === 'contracts' || collectionName === 'licenses') {
+        return { allowed: false, message: 'Feature locked. Upgrade to Premium to use Licenses and Contracts.', code: 'FEATURE_LOCKED' };
+    }
+
+    if (collectionName === 'clients') {
+        if (items.length >= 5) return { allowed: false, message: 'Client limit reached. Upgrade to Premium for unlimited clients.', code: 'LIMIT_REACHED' };
+    }
+    if (collectionName === 'products') {
+        if (items.length >= 5) return { allowed: false, message: 'Product limit reached. Upgrade to Premium for unlimited products.', code: 'LIMIT_REACHED' };
+    }
+
+    // Check for loophole: user downgraded but has > 5 clients or products
+    if (collectionName === 'invoices' || collectionName === 'quotations') {
+        let clientsData = await env.DTECH_KV.get('clients');
+        let clients = clientsData ? JSON.parse(clientsData) : [];
+        let myClients = clients.filter(c => c.business_id === business_id);
+
+        let productsData = await env.DTECH_KV.get('products');
+        let products = productsData ? JSON.parse(productsData) : [];
+        let myProducts = products.filter(p => p.business_id === business_id);
+
+        if (myClients.length > 5 || myProducts.length > 5) {
+            return { allowed: false, message: 'You have more clients/products than allowed on the Free plan. Please upgrade to Premium or reduce your active list to continue creating invoices.', code: 'OVER_LIMIT_FROZEN' };
+        }
+
+        const now = new Date();
+        const currentMonth = now.getMonth();
+        const currentYear = now.getFullYear();
+        let thisMonthCount = items.filter(item => {
+            const d = new Date(item.dateAdded || 0);
+            return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+        }).length;
+
+        if (thisMonthCount >= 10) {
+             return { allowed: false, message: `Monthly limit reached for ${collectionName}. Upgrade to Premium for unlimited usage.`, code: 'LIMIT_REACHED' };
+        }
+    }
+
+    return { allowed: true };
+}
+
 async function handleKVCollection(request, env, collectionName, business_id) {
   if (request.method === 'GET') {
     const data = await env.DTECH_KV.get(collectionName);
@@ -68,6 +121,13 @@ async function handleKVCollection(request, env, collectionName, business_id) {
 
       let data = await env.DTECH_KV.get(collectionName);
       let items = data ? JSON.parse(data) : [];
+
+      const filteredItems = items.filter(item => item.business_id === business_id);
+      const limitCheck = await checkLimits(business_id, env, collectionName, filteredItems);
+      if (!limitCheck.allowed) {
+          return jsonResponse({ success: false, message: limitCheck.message, code: limitCheck.code }, 403);
+      }
+
       items.push(body);
 
       await env.DTECH_KV.put(collectionName, JSON.stringify(items));
@@ -237,11 +297,25 @@ export default {
              let settingsData = await env.DTECH_KV.get('settings');
              let settings = settingsData ? JSON.parse(settingsData) : [];
 
+             // Gate branding settings for Free plan
+             const plan = await getSubscriptionPlan(business_id, env);
+             if (plan !== 'Premium') {
+                 delete body.logoUrl;
+                 delete body.brandColor;
+             }
+
              const index = settings.findIndex(s => s.business_id === business_id);
              if (index === -1) {
                  settings.push({ ...body, business_id });
              } else {
-                 settings[index] = { ...settings[index], ...body, business_id };
+                 // For Free plan, ensure existing branding isn't accidentally overwritten with null if they downgraded,
+                 // just ignore the new incoming values. Or, we can clear them. Let's just ignore the updates to those fields.
+                 const currentSettings = settings[index];
+                 if (plan !== 'Premium') {
+                     body.logoUrl = currentSettings.logoUrl;
+                     body.brandColor = currentSettings.brandColor;
+                 }
+                 settings[index] = { ...currentSettings, ...body, business_id };
              }
 
              await env.DTECH_KV.put('settings', JSON.stringify(settings));
