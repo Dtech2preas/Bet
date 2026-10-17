@@ -50,7 +50,7 @@ const pdfEngine = {
         let logoData = null;
         let primaryColor = [37, 99, 235]; // Default Blue
 
-        if (settings.userPlan === 'Premium') {
+        if (settings.userPlan === 'Premium' || settings.userPlan === 'Pro') {
             logoData = await this.getLogoBase64(settings.logoUrl);
             if (settings.brandColor && /^#[0-9A-F]{6}$/i.test(settings.brandColor)) {
                 const hex = settings.brandColor;

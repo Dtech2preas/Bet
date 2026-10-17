@@ -444,6 +444,16 @@ async paySubscription(planTier) {
             if (response.success && response.settings) {
                 document.getElementById('settingsBusinessName').value = response.settings.businessName || '';
                 document.getElementById('settingsLogoUrl').value = response.settings.logoUrl || '';
+
+                const previewContainer = document.getElementById('logoPreviewContainer');
+                const previewImg = document.getElementById('logoPreview');
+                if (response.settings.logoUrl) {
+                    previewImg.src = response.settings.logoUrl;
+                    previewContainer.classList.remove('hidden');
+                } else {
+                    previewContainer.classList.add('hidden');
+                }
+
                 document.getElementById('settingsContactName').value = response.settings.contactName || '';
                 document.getElementById('settingsEmail').value = response.settings.email || '';
                 document.getElementById('settingsPhone').value = response.settings.phone || '';
@@ -476,9 +486,36 @@ async paySubscription(planTier) {
         saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Saving...';
 
         try {
+            let logoUrl = document.getElementById('settingsLogoUrl').value;
+            const logoFile = document.getElementById('settingsLogoFile').files[0];
+
+            if (logoFile) {
+                saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Uploading Image...';
+
+                const reader = new FileReader();
+                const imageBase64 = await new Promise((resolve, reject) => {
+                    reader.onload = () => resolve(reader.result.split(',')[1]);
+                    reader.onerror = error => reject(error);
+                    reader.readAsDataURL(logoFile);
+                });
+
+                const uploadResponse = await API.request('/api/upload', 'POST', { image: imageBase64 });
+                if (uploadResponse.success && uploadResponse.url) {
+                    logoUrl = uploadResponse.url;
+                    document.getElementById('settingsLogoUrl').value = logoUrl;
+                    const previewContainer = document.getElementById('logoPreviewContainer');
+                    const previewImg = document.getElementById('logoPreview');
+                    previewImg.src = logoUrl;
+                    previewContainer.classList.remove('hidden');
+                } else {
+                    throw new Error(uploadResponse.message || 'Image upload failed');
+                }
+                saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Saving...';
+            }
+
             const body = {
                 businessName: document.getElementById('settingsBusinessName').value,
-                logoUrl: document.getElementById('settingsLogoUrl').value,
+                logoUrl: logoUrl,
                 contactName: document.getElementById('settingsContactName').value,
                 email: document.getElementById('settingsEmail').value,
                 phone: document.getElementById('settingsPhone').value,
