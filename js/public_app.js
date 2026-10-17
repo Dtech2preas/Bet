@@ -73,7 +73,7 @@ const app = {
     updateNavLocks() {
         const lockContainers = document.querySelectorAll('.lock-container');
         lockContainers.forEach(container => {
-            if (this.userPlan === 'Premium') {
+            if (this.userPlan === 'Premium' || this.userPlan === 'Pro') {
                 container.innerHTML = '';
             } else {
                 container.innerHTML = '<i class="fas fa-lock text-gray-400 text-xs"></i>';
@@ -84,13 +84,13 @@ const app = {
     handleLockedSection(sectionId, event) {
         if (event) event.preventDefault();
 
-        if (this.userPlan === 'Premium') {
+        if (this.userPlan === 'Premium' || this.userPlan === 'Pro') {
             this.showSection(sectionId);
         } else {
             Swal.fire({
                 icon: 'lock',
-                title: 'Premium Feature',
-                text: `The ${sectionId} module is locked. Upgrade to Premium to unlock this and other advanced features.`,
+                title: 'Locked Feature',
+                text: `The ${sectionId} module is locked. Upgrade to Pro or Premium to unlock this and other advanced features.`,
                 confirmButtonText: 'View Plans',
                 confirmButtonColor: '#2563eb',
                 showCancelButton: true,
@@ -211,22 +211,72 @@ const app = {
     },
 
 
-    async paySubscription() {
-        const selectedAmount = document.querySelector('input[name="paymentAmount"]:checked').value;
-        const btn = document.getElementById('payPlanBtn');
-        const originalText = btn.innerHTML;
 
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Initializing...';
+    setBillingInterval(interval) {
+        const btnMonthly = document.getElementById('btn-monthly');
+        const btnQuarterly = document.getElementById('btn-quarterly');
+        const btnYearly = document.getElementById('btn-yearly');
+
+        const pricePro = document.getElementById('price-pro');
+        const pricePremium = document.getElementById('price-premium');
+        const periodPro = document.getElementById('period-pro');
+        const periodPremium = document.getElementById('period-premium');
+
+        // Reset all buttons
+        [btnMonthly, btnQuarterly, btnYearly].forEach(btn => {
+            btn.className = "px-4 py-2 text-sm font-medium rounded-md text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-all";
+        });
+        // Special case for yearly text
+        btnYearly.innerHTML = 'Yearly <span class="ml-2 bg-green-100 text-green-800 text-[10px] font-bold px-1.5 py-0.5 rounded">SAVE</span>';
+
+        // Set active button
+        if (interval === 'monthly') {
+            btnMonthly.className = "px-4 py-2 text-sm font-medium rounded-md bg-white dark:bg-gray-600 shadow-sm text-gray-900 dark:text-white transition-all";
+            pricePro.innerText = 'R29';
+            pricePremium.innerText = 'R79';
+            periodPro.innerText = '/mo';
+            periodPremium.innerText = '/mo';
+            this.currentBillingInterval = 'monthly';
+        } else if (interval === 'quarterly') {
+            btnQuarterly.className = "px-4 py-2 text-sm font-medium rounded-md bg-white dark:bg-gray-600 shadow-sm text-gray-900 dark:text-white transition-all";
+            pricePro.innerText = 'R87';
+            pricePremium.innerText = 'R237';
+            periodPro.innerText = '/3mo';
+            periodPremium.innerText = '/3mo';
+            this.currentBillingInterval = 'quarterly';
+        } else if (interval === 'yearly') {
+            btnYearly.className = "px-4 py-2 text-sm font-medium rounded-md bg-white dark:bg-gray-600 shadow-sm text-gray-900 dark:text-white transition-all flex items-center";
+            btnYearly.innerHTML = 'Yearly <span class="ml-2 bg-green-100 text-green-800 text-[10px] font-bold px-1.5 py-0.5 rounded">SAVE</span>';
+            pricePro.innerText = 'R290';
+            pricePremium.innerText = 'R790';
+            periodPro.innerText = '/yr';
+            periodPremium.innerText = '/yr';
+            this.currentBillingInterval = 'yearly';
+        }
+    },
+
+async paySubscription(planTier) {
+        let amount = 0;
+        const interval = this.currentBillingInterval || 'monthly';
+
+        if (planTier === 'Pro') {
+            if (interval === 'monthly') amount = 29;
+            if (interval === 'quarterly') amount = 87;
+            if (interval === 'yearly') amount = 290;
+        } else if (planTier === 'Premium') {
+            if (interval === 'monthly') amount = 79;
+            if (interval === 'quarterly') amount = 237;
+            if (interval === 'yearly') amount = 790;
+        }
 
         try {
             // Save amount locally so we can update the subscription on return
-            localStorage.setItem('dtech_pending_payment', selectedAmount);
+            localStorage.setItem('dtech_pending_payment', amount);
 
             const response = await API.request('/api/checkout', {
                 method: 'POST',
                 body: JSON.stringify({
-                    amount: parseFloat(selectedAmount),
+                    amount: amount,
                     type: 'subscription'
                 })
             });
@@ -239,8 +289,6 @@ const app = {
             }
         } catch (error) {
             Swal.fire('Payment Error', error.message, 'error');
-            btn.disabled = false;
-            btn.innerHTML = originalText;
         }
     },
 
@@ -308,7 +356,7 @@ const app = {
 
                 if (sub.plan === 'Premium') {
                     if (badge) {
-                        badge.className = "bg-blue-100 text-blue-800 text-xs font-semibold mr-2 px-2.5 py-0.5 rounded dark:bg-blue-200 dark:text-blue-800";
+                        badge.className = "bg-gray-900 text-white text-xs font-semibold mr-2 px-2.5 py-0.5 rounded";
                         badge.innerText = "Premium";
                     }
                     if (price) price.innerHTML = `Premium <span class="text-sm font-normal text-gray-500">/ active</span>`;
@@ -322,17 +370,29 @@ const app = {
                             status.innerText = "Active";
                         }
                         if (nbDate) nbDate.innerText = "Next billing date: " + endDate.toLocaleDateString();
-
-                        if (featuresList) {
-                            featuresList.innerHTML = `
-                                <li class="flex items-center"><i class="fas fa-check text-green-500 mr-2"></i> Unlimited Clients</li>
-                                <li class="flex items-center"><i class="fas fa-check text-green-500 mr-2"></i> Unlimited Products</li>
-                                <li class="flex items-center"><i class="fas fa-check text-green-500 mr-2"></i> Unlimited Invoices & Quotations</li>
-                                <li class="flex items-center"><i class="fas fa-check text-green-500 mr-2"></i> Custom PDF Branding</li>
-                                <li class="flex items-center"><i class="fas fa-check text-green-500 mr-2"></i> Contracts & Licenses</li>
-                                <li class="flex items-center"><i class="fas fa-check text-green-500 mr-2"></i> Advanced Reporting</li>
-                            `;
+                    } else {
+                        if (status) {
+                            status.className = "text-red-600";
+                            status.innerText = "Expired";
                         }
+                        if (nbDate) nbDate.innerText = "Your subscription has expired. Please renew.";
+                    }
+                } else if (sub.plan === 'Pro') {
+                    if (badge) {
+                        badge.className = "bg-blue-100 text-blue-800 text-xs font-semibold mr-2 px-2.5 py-0.5 rounded dark:bg-blue-200 dark:text-blue-800";
+                        badge.innerText = "Pro";
+                    }
+                    if (price) price.innerHTML = `Pro <span class="text-sm font-normal text-gray-500">/ active</span>`;
+
+                    const endDate = new Date(sub.endDate);
+                    const now = new Date();
+
+                    if (endDate > now) {
+                        if (status) {
+                            status.className = "text-green-600";
+                            status.innerText = "Active";
+                        }
+                        if (nbDate) nbDate.innerText = "Next billing date: " + endDate.toLocaleDateString();
                     } else {
                         if (status) {
                             status.className = "text-red-600";
@@ -351,16 +411,7 @@ const app = {
                         status.className = "text-gray-600 dark:text-gray-400";
                         status.innerText = "Basic";
                     }
-                    if (nbDate) nbDate.innerText = "Upgrade to premium for support and more features.";
-                    if (featuresList) {
-                        featuresList.innerHTML = `
-                            <li class="flex items-center"><i class="fas fa-info-circle text-blue-500 mr-2"></i> Up to 5 Clients</li>
-                            <li class="flex items-center"><i class="fas fa-info-circle text-blue-500 mr-2"></i> Up to 5 Products</li>
-                            <li class="flex items-center"><i class="fas fa-info-circle text-blue-500 mr-2"></i> Up to 10 Invoices & Quotations / month</li>
-                            <li class="flex items-center"><i class="fas fa-times text-red-500 mr-2"></i> Custom PDF Branding (Premium)</li>
-                            <li class="flex items-center"><i class="fas fa-times text-red-500 mr-2"></i> Contracts & Licenses (Premium)</li>
-                        `;
-                    }
+                    if (nbDate) nbDate.innerText = "Upgrade your plan for higher limits and features.";
                 }
             }
         } catch(e) {

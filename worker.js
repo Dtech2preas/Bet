@@ -58,19 +58,27 @@ async function checkLimits(business_id, env, collectionName, items) {
     const plan = await getSubscriptionPlan(business_id, env);
     if (plan === 'Premium') return { allowed: true };
 
-    // Free plan logic
-    if (collectionName === 'contracts' || collectionName === 'licenses') {
-        return { allowed: false, message: 'Feature locked. Upgrade to Premium to use Licenses and Contracts.', code: 'FEATURE_LOCKED' };
+    const limits = {
+        'Free': { clients: 5, products: 5, documents: 10, contracts: false },
+        'Pro': { clients: 25, products: 25, documents: 25, contracts: true }
+    };
+
+    // Default to Free if plan is somehow unrecognized
+    const currentLimits = limits[plan] || limits['Free'];
+
+    // Feature gating
+    if ((collectionName === 'contracts' || collectionName === 'licenses') && !currentLimits.contracts) {
+        return { allowed: false, message: 'Feature locked. Upgrade to Pro or Premium to use Licenses and Contracts.', code: 'FEATURE_LOCKED' };
     }
 
     if (collectionName === 'clients') {
-        if (items.length >= 5) return { allowed: false, message: 'Client limit reached. Upgrade to Premium for unlimited clients.', code: 'LIMIT_REACHED' };
+        if (items.length >= currentLimits.clients) return { allowed: false, message: `Client limit reached (${currentLimits.clients}). Upgrade your plan for higher limits.`, code: 'LIMIT_REACHED' };
     }
     if (collectionName === 'products') {
-        if (items.length >= 5) return { allowed: false, message: 'Product limit reached. Upgrade to Premium for unlimited products.', code: 'LIMIT_REACHED' };
+        if (items.length >= currentLimits.products) return { allowed: false, message: `Product limit reached (${currentLimits.products}). Upgrade your plan for higher limits.`, code: 'LIMIT_REACHED' };
     }
 
-    // Check for loophole: user downgraded but has > 5 clients or products
+    // Check for loophole: user downgraded
     if (collectionName === 'invoices' || collectionName === 'quotations') {
         let clientsData = await env.DTECH_KV.get('clients');
         let clients = clientsData ? JSON.parse(clientsData) : [];
@@ -80,8 +88,8 @@ async function checkLimits(business_id, env, collectionName, items) {
         let products = productsData ? JSON.parse(productsData) : [];
         let myProducts = products.filter(p => p.business_id === business_id);
 
-        if (myClients.length > 5 || myProducts.length > 5) {
-            return { allowed: false, message: 'You have more clients/products than allowed on the Free plan. Please upgrade to Premium or reduce your active list to continue creating invoices.', code: 'OVER_LIMIT_FROZEN' };
+        if (myClients.length > currentLimits.clients || myProducts.length > currentLimits.products) {
+            return { allowed: false, message: `You have more clients/products than allowed on your current plan. Please upgrade or reduce your active list to continue creating invoices.`, code: 'OVER_LIMIT_FROZEN' };
         }
 
         const now = new Date();
@@ -92,8 +100,8 @@ async function checkLimits(business_id, env, collectionName, items) {
             return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
         }).length;
 
-        if (thisMonthCount >= 10) {
-             return { allowed: false, message: `Monthly limit reached for ${collectionName}. Upgrade to Premium for unlimited usage.`, code: 'LIMIT_REACHED' };
+        if (thisMonthCount >= currentLimits.documents) {
+             return { allowed: false, message: `Monthly limit reached for ${collectionName} (${currentLimits.documents}). Upgrade your plan for higher limits.`, code: 'LIMIT_REACHED' };
         }
     }
 
@@ -299,7 +307,7 @@ export default {
 
              // Gate branding settings for Free plan
              const plan = await getSubscriptionPlan(business_id, env);
-             if (plan !== 'Premium') {
+             if (plan === 'Free') {
                  delete body.logoUrl;
                  delete body.brandColor;
              }
@@ -311,7 +319,7 @@ export default {
                  // For Free plan, ensure existing branding isn't accidentally overwritten with null if they downgraded,
                  // just ignore the new incoming values. Or, we can clear them. Let's just ignore the updates to those fields.
                  const currentSettings = settings[index];
-                 if (plan !== 'Premium') {
+                 if (plan === 'Free') {
                      body.logoUrl = currentSettings.logoUrl;
                      body.brandColor = currentSettings.brandColor;
                  }
@@ -356,7 +364,11 @@ export default {
         let businessName = account ? account.businessName : 'Unknown Business';
 
         let amountParsed = parseFloat(body.amount);
-        let planDesc = amountParsed === 12 ? '1 Month' : (amountParsed === 36 ? '3 Months' : '1 Year');
+
+        let planTier = [79, 237, 790].includes(amountParsed) ? 'Premium' : 'Pro';
+        let planDesc = '1 Month';
+        if (amountParsed === 87 || amountParsed === 237) planDesc = '3 Months';
+        if (amountParsed === 290 || amountParsed === 790) planDesc = '1 Year';
 
         // Generate a secure token to verify the callback
         const paymentToken = crypto.randomUUID() + crypto.randomUUID();
@@ -377,7 +389,7 @@ export default {
           amount: Math.round(body.amount * 100), // Yoco expects amount in cents
           currency: 'ZAR',
           name: `${businessName} - Subscription`,
-          description: `Premium Plan - ${planDesc}`,
+          description: `${planTier} Plan - ${planDesc}`,
           cancelUrl: request.headers.get('origin') + '/public_app.html?payment=cancelled',
           successUrl: request.headers.get('origin') + '/public_app.html?payment=success&token=' + paymentToken,
           failureUrl: request.headers.get('origin') + '/public_app.html?payment=failed',
@@ -443,8 +455,10 @@ export default {
           let amount = parseFloat(pendingPayment.amount);
 
           let durationMonths = 1;
-          if (amount >= 36 && amount < 120) durationMonths = 3;
-          if (amount >= 120) durationMonths = 12;
+          if (amount === 87 || amount === 237) durationMonths = 3;
+          if (amount === 290 || amount === 790) durationMonths = 12;
+
+          let planName = [79, 237, 790].includes(amount) ? 'Premium' : 'Pro';
 
           let startDate = new Date();
           if (mySub.endDate && new Date(mySub.endDate) > startDate) {
@@ -456,7 +470,7 @@ export default {
 
           const newSub = {
               business_id: business_id,
-              plan: 'Premium',
+              plan: planName,
               lastPaymentAmount: amount,
               endDate: endDate.toISOString(),
               updatedAt: new Date().toISOString()
