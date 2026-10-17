@@ -332,70 +332,108 @@
 
             <!-- PLAN SECTION -->
             <section id="section-plan" class="hidden">
-                <div class="mb-6">
-                    <h1 class="text-2xl font-semibold">Subscription Plan</h1>
-                    <p class="text-gray-500 text-sm mt-1">Manage your billing and subscription.</p>
+                <div class="mb-6 flex justify-between items-end">
+                    <div>
+                        <h1 class="text-2xl font-semibold">Subscription Plan</h1>
+                        <p class="text-gray-500 text-sm mt-1">Manage your billing and subscription.</p>
+                    </div>
                 </div>
 
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-5xl">
-                    <!-- Current Plan Details -->
-                    <div id="planDetailsContainer" class="bg-white dark:bg-dark-card rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 relative overflow-hidden">
-                        <div class="absolute top-0 right-0 p-4">
-                            <span id="planBadge" class="bg-gray-100 text-gray-800 text-xs font-semibold mr-2 px-2.5 py-0.5 rounded dark:bg-gray-700 dark:text-gray-300">Free</span>
+                <!-- Current Plan Status Block -->
+                <div class="bg-white dark:bg-dark-card rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-8 relative overflow-hidden">
+                    <div class="absolute top-0 right-0 p-4">
+                        <span id="planBadge" class="bg-gray-100 text-gray-800 text-xs font-semibold mr-2 px-2.5 py-0.5 rounded dark:bg-gray-700 dark:text-gray-300">Free</span>
+                    </div>
+                    <h2 class="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">Current Status</h2>
+                    <div class="flex items-center">
+                        <div id="planPriceDisplay" class="text-3xl font-bold text-gray-900 dark:text-white mr-4">R0 <span class="text-sm font-normal text-gray-500">/ forever</span></div>
+                    </div>
+                    <div class="mt-2 text-sm">
+                        <span class="font-medium text-gray-900 dark:text-white">Status: <span id="planStatusText" class="text-gray-600 dark:text-gray-400">Basic</span></span>
+                        <p class="text-xs text-gray-500 mt-1" id="nextBillingDate">Upgrade for more limits and advanced features.</p>
+                    </div>
+                </div>
+
+                <!-- Billing Toggle -->
+                <div class="flex justify-center mb-8">
+                    <div class="bg-gray-100 dark:bg-gray-800 p-1 rounded-lg inline-flex">
+                        <button onclick="app.setBillingInterval('monthly')" id="btn-monthly" class="px-4 py-2 text-sm font-medium rounded-md bg-white dark:bg-gray-600 shadow-sm text-gray-900 dark:text-white transition-all">Monthly</button>
+                        <button onclick="app.setBillingInterval('quarterly')" id="btn-quarterly" class="px-4 py-2 text-sm font-medium rounded-md text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-all">3 Months</button>
+                        <button onclick="app.setBillingInterval('yearly')" id="btn-yearly" class="px-4 py-2 text-sm font-medium rounded-md text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-all flex items-center">Yearly <span class="ml-2 bg-green-100 text-green-800 text-[10px] font-bold px-1.5 py-0.5 rounded">SAVE</span></button>
+                    </div>
+                </div>
+
+                <!-- Pricing Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto">
+
+                    <!-- Free Plan -->
+                    <div class="bg-white dark:bg-dark-card rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 flex flex-col">
+                        <div class="mb-4">
+                            <h3 class="text-xl font-semibold text-gray-900 dark:text-white">Free</h3>
+                            <p class="text-sm text-gray-500 mt-1">Perfect for getting started.</p>
                         </div>
-                        <h2 class="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">Current Plan</h2>
-                        <div id="planPriceDisplay" class="text-3xl font-bold text-gray-900 dark:text-white mb-4">R0 <span class="text-sm font-normal text-gray-500">/ forever</span></div>
-                        <ul id="planFeaturesList" class="space-y-3 mb-6 text-sm text-gray-600 dark:text-gray-400">
-                            <li class="flex items-center"><i class="fas fa-info-circle text-blue-500 mr-2"></i> Up to 5 Clients</li>
-                            <li class="flex items-center"><i class="fas fa-info-circle text-blue-500 mr-2"></i> Up to 5 Products</li>
-                            <li class="flex items-center"><i class="fas fa-info-circle text-blue-500 mr-2"></i> Up to 10 Invoices & Quotations / month</li>
-                            <li class="flex items-center"><i class="fas fa-times text-red-500 mr-2"></i> Custom PDF Branding (Premium)</li>
-                            <li class="flex items-center"><i class="fas fa-times text-red-500 mr-2"></i> Contracts & Licenses (Premium)</li>
+                        <div class="mb-6">
+                            <span class="text-4xl font-bold text-gray-900 dark:text-white">R0</span>
+                            <span class="text-gray-500">/mo</span>
+                        </div>
+                        <ul class="space-y-3 mb-8 flex-1 text-sm text-gray-600 dark:text-gray-400">
+                            <li class="flex items-start"><i class="fas fa-check text-green-500 mt-1 mr-2 w-4"></i> <span>Up to 5 Clients</span></li>
+                            <li class="flex items-start"><i class="fas fa-check text-green-500 mt-1 mr-2 w-4"></i> <span>Up to 5 Products</span></li>
+                            <li class="flex items-start"><i class="fas fa-check text-green-500 mt-1 mr-2 w-4"></i> <span>Up to 10 Invoices/Quotes per month</span></li>
+                            <li class="flex items-start"><i class="fas fa-times text-red-400 mt-1 mr-2 w-4"></i> <span class="line-through text-gray-400">Contracts & Licenses</span></li>
+                            <li class="flex items-start"><i class="fas fa-times text-red-400 mt-1 mr-2 w-4"></i> <span class="line-through text-gray-400">Custom Branding</span></li>
                         </ul>
-                        <div class="border-t dark:border-gray-700 pt-4 mt-4">
-                            <p class="text-sm font-medium text-gray-900 dark:text-white mb-1">Status: <span id="planStatusText" class="text-gray-600 dark:text-gray-400">Basic</span></p>
-                            <p class="text-xs text-gray-500" id="nextBillingDate">Upgrade to premium for support and more features.</p>
-                        </div>
+                        <button disabled class="w-full py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-gray-50 cursor-not-allowed">
+                            Current Plan
+                        </button>
                     </div>
 
-                    <!-- Payment Options -->
-                    <div class="bg-white dark:bg-dark-card rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 flex flex-col justify-between">
-                        <div>
-                            <h2 class="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">Make a Payment</h2>
-                            <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">Keep your account active by paying for the upcoming month, or pay in advance to avoid interruptions.</p>
-
-                            <div class="space-y-4">
-                                <label class="flex items-center p-3 border rounded-md cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors border-blue-500 bg-blue-50 dark:bg-blue-900/20">
-                                    <input type="radio" name="paymentAmount" value="12" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300" checked>
-                                    <span class="ml-3 flex flex-col">
-                                        <span class="block text-sm font-medium text-gray-900 dark:text-white">Pay 1 Month</span>
-                                        <span class="block text-sm text-gray-500 dark:text-gray-400">R12.00</span>
-                                    </span>
-                                </label>
-
-                                <label class="flex items-center p-3 border border-gray-200 dark:border-gray-700 rounded-md cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
-                                    <input type="radio" name="paymentAmount" value="36" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300">
-                                    <span class="ml-3 flex flex-col">
-                                        <span class="block text-sm font-medium text-gray-900 dark:text-white">Pay 3 Months (Advance)</span>
-                                        <span class="block text-sm text-gray-500 dark:text-gray-400">R36.00</span>
-                                    </span>
-                                </label>
-
-                                <label class="flex items-center p-3 border border-gray-200 dark:border-gray-700 rounded-md cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
-                                    <input type="radio" name="paymentAmount" value="120" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300">
-                                    <span class="ml-3 flex flex-col">
-                                        <span class="block text-sm font-medium text-gray-900 dark:text-white">Pay 1 Year (10% Discount)</span>
-                                        <span class="block text-sm text-gray-500 dark:text-gray-400">R120.00</span>
-                                    </span>
-                                </label>
-                            </div>
+                    <!-- Pro Plan -->
+                    <div class="bg-white dark:bg-dark-card rounded-lg shadow-md border-2 border-blue-500 p-6 flex flex-col relative transform hover:scale-105 transition-transform duration-200">
+                        <div class="absolute top-0 right-0 transform translate-x-2 -translate-y-3">
+                            <span class="bg-blue-500 text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide">Popular</span>
                         </div>
-
-                        <div class="mt-6">
-                            <button id="payPlanBtn" onclick="app.paySubscription()" class="w-full flex justify-center items-center py-2.5 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                                <i class="fas fa-lock mr-2"></i> Secure Payment with Yoco
-                            </button>
+                        <div class="mb-4">
+                            <h3 class="text-xl font-semibold text-gray-900 dark:text-white">Pro</h3>
+                            <p class="text-sm text-gray-500 mt-1">For growing businesses.</p>
                         </div>
+                        <div class="mb-6">
+                            <span class="text-4xl font-bold text-gray-900 dark:text-white" id="price-pro">R29</span>
+                            <span class="text-gray-500" id="period-pro">/mo</span>
+                        </div>
+                        <ul class="space-y-3 mb-8 flex-1 text-sm text-gray-600 dark:text-gray-400">
+                            <li class="flex items-start"><i class="fas fa-check text-blue-500 mt-1 mr-2 w-4"></i> <span class="font-medium text-gray-900 dark:text-white">Up to 25 Clients</span></li>
+                            <li class="flex items-start"><i class="fas fa-check text-blue-500 mt-1 mr-2 w-4"></i> <span class="font-medium text-gray-900 dark:text-white">Up to 25 Products</span></li>
+                            <li class="flex items-start"><i class="fas fa-check text-blue-500 mt-1 mr-2 w-4"></i> <span class="font-medium text-gray-900 dark:text-white">Up to 25 Invoices/Quotes</span></li>
+                            <li class="flex items-start"><i class="fas fa-check text-green-500 mt-1 mr-2 w-4"></i> <span>Contracts & Licenses</span></li>
+                            <li class="flex items-start"><i class="fas fa-check text-green-500 mt-1 mr-2 w-4"></i> <span>Custom Branding</span></li>
+                        </ul>
+                        <button onclick="app.paySubscription('Pro')" class="w-full py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                            <i class="fas fa-lock mr-2"></i> Subscribe Pro
+                        </button>
+                    </div>
+
+                    <!-- Premium Plan -->
+                    <div class="bg-gray-900 rounded-lg shadow-sm border border-gray-800 p-6 flex flex-col text-white">
+                        <div class="mb-4">
+                            <h3 class="text-xl font-semibold text-white">Premium</h3>
+                            <p class="text-sm text-gray-400 mt-1">Unlimited everything.</p>
+                        </div>
+                        <div class="mb-6">
+                            <span class="text-4xl font-bold text-white" id="price-premium">R79</span>
+                            <span class="text-gray-400" id="period-premium">/mo</span>
+                        </div>
+                        <ul class="space-y-3 mb-8 flex-1 text-sm text-gray-300">
+                            <li class="flex items-start"><i class="fas fa-infinity text-yellow-400 mt-1 mr-2 w-4"></i> <span class="font-medium text-white">Unlimited Clients</span></li>
+                            <li class="flex items-start"><i class="fas fa-infinity text-yellow-400 mt-1 mr-2 w-4"></i> <span class="font-medium text-white">Unlimited Products</span></li>
+                            <li class="flex items-start"><i class="fas fa-infinity text-yellow-400 mt-1 mr-2 w-4"></i> <span class="font-medium text-white">Unlimited Invoices & Quotes</span></li>
+                            <li class="flex items-start"><i class="fas fa-check text-green-400 mt-1 mr-2 w-4"></i> <span>Contracts & Licenses</span></li>
+                            <li class="flex items-start"><i class="fas fa-check text-green-400 mt-1 mr-2 w-4"></i> <span>Custom Branding</span></li>
+                            <li class="flex items-start"><i class="fas fa-star text-yellow-400 mt-1 mr-2 w-4"></i> <span>Priority Support</span></li>
+                        </ul>
+                        <button onclick="app.paySubscription('Premium')" class="w-full py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-gray-900 bg-white hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-white">
+                            <i class="fas fa-lock mr-2"></i> Subscribe Premium
+                        </button>
                     </div>
                 </div>
             </section>
