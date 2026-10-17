@@ -70,6 +70,39 @@ const app = {
         }
     },
 
+    updateNavLocks() {
+        const lockContainers = document.querySelectorAll('.lock-container');
+        lockContainers.forEach(container => {
+            if (this.userPlan === 'Premium') {
+                container.innerHTML = '';
+            } else {
+                container.innerHTML = '<i class="fas fa-lock text-gray-400 text-xs"></i>';
+            }
+        });
+    },
+
+    handleLockedSection(sectionId, event) {
+        if (event) event.preventDefault();
+
+        if (this.userPlan === 'Premium') {
+            this.showSection(sectionId);
+        } else {
+            Swal.fire({
+                icon: 'lock',
+                title: 'Premium Feature',
+                text: `The ${sectionId} module is locked. Upgrade to Premium to unlock this and other advanced features.`,
+                confirmButtonText: 'View Plans',
+                confirmButtonColor: '#2563eb',
+                showCancelButton: true,
+                cancelButtonText: 'Cancel'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    this.showSection('plan');
+                }
+            });
+        }
+    },
+
     showSection(sectionId) {
         // Hide all sections
         const sections = ['dashboard', 'clients', 'products', 'licenses', 'quotations', 'invoices', 'payments', 'contracts', 'plan', 'settings'];
@@ -271,6 +304,7 @@ const app = {
                 const badge = document.getElementById('planBadge');
                 const price = document.getElementById('planPriceDisplay');
                 const status = document.getElementById('planStatusText');
+                const featuresList = document.getElementById('planFeaturesList');
 
                 if (sub.plan === 'Premium') {
                     if (badge) {
@@ -288,6 +322,17 @@ const app = {
                             status.innerText = "Active";
                         }
                         if (nbDate) nbDate.innerText = "Next billing date: " + endDate.toLocaleDateString();
+
+                        if (featuresList) {
+                            featuresList.innerHTML = `
+                                <li class="flex items-center"><i class="fas fa-check text-green-500 mr-2"></i> Unlimited Clients</li>
+                                <li class="flex items-center"><i class="fas fa-check text-green-500 mr-2"></i> Unlimited Products</li>
+                                <li class="flex items-center"><i class="fas fa-check text-green-500 mr-2"></i> Unlimited Invoices & Quotations</li>
+                                <li class="flex items-center"><i class="fas fa-check text-green-500 mr-2"></i> Custom PDF Branding</li>
+                                <li class="flex items-center"><i class="fas fa-check text-green-500 mr-2"></i> Contracts & Licenses</li>
+                                <li class="flex items-center"><i class="fas fa-check text-green-500 mr-2"></i> Advanced Reporting</li>
+                            `;
+                        }
                     } else {
                         if (status) {
                             status.className = "text-red-600";
@@ -307,6 +352,15 @@ const app = {
                         status.innerText = "Basic";
                     }
                     if (nbDate) nbDate.innerText = "Upgrade to premium for support and more features.";
+                    if (featuresList) {
+                        featuresList.innerHTML = `
+                            <li class="flex items-center"><i class="fas fa-info-circle text-blue-500 mr-2"></i> Up to 5 Clients</li>
+                            <li class="flex items-center"><i class="fas fa-info-circle text-blue-500 mr-2"></i> Up to 5 Products</li>
+                            <li class="flex items-center"><i class="fas fa-info-circle text-blue-500 mr-2"></i> Up to 10 Invoices & Quotations / month</li>
+                            <li class="flex items-center"><i class="fas fa-times text-red-500 mr-2"></i> Custom PDF Branding (Premium)</li>
+                            <li class="flex items-center"><i class="fas fa-times text-red-500 mr-2"></i> Contracts & Licenses (Premium)</li>
+                        `;
+                    }
                 }
             }
         } catch(e) {
