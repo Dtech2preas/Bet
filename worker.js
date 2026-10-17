@@ -312,6 +312,10 @@ export default {
                  delete body.brandColor;
              }
 
+             if (plan !== 'Premium') {
+                 delete body.pdfTemplate;
+             }
+
              const index = settings.findIndex(s => s.business_id === business_id);
              if (index === -1) {
                  settings.push({ ...body, business_id });
