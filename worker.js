@@ -544,13 +544,47 @@ export default {
         const invoices = allInvoices.filter(i => i.business_id === business_id);
         const totalRevenue = invoices.filter(i => i.status === 'Paid').reduce((sum, inv) => sum + (Number(inv.total) || 0), 0);
 
-        // Very basic monthly revenue estimation (current month)
-        const currentMonth = new Date().getMonth();
-        const currentYear = new Date().getFullYear();
-        const monthlyRevenue = invoices.filter(i => {
-            const d = new Date(i.dateAdded);
-            return i.status === 'Paid' && d.getMonth() === currentMonth && d.getFullYear() === currentYear;
-        }).reduce((sum, inv) => sum + (Number(inv.total) || 0), 0);
+        // Today, This Week, This Month, Last Month, This Year
+        const now = new Date();
+        const today = now.toDateString();
+        const startOfWeek = new Date(now);
+        startOfWeek.setDate(now.getDate() - now.getDay()); // Sunday as start of week
+        startOfWeek.setHours(0, 0, 0, 0);
+
+        const currentMonth = now.getMonth();
+        const currentYear = now.getFullYear();
+
+        const lastMonthDate = new Date(now);
+        lastMonthDate.setDate(1); // Set to 1st to avoid rollover bugs on the 31st
+        lastMonthDate.setMonth(currentMonth - 1);
+        const lastMonth = lastMonthDate.getMonth();
+        const lastMonthYear = lastMonthDate.getFullYear();
+
+        let todayRevenue = 0;
+        let weekRevenue = 0;
+        let monthlyRevenue = 0;
+        let lastMonthRevenue = 0;
+        let yearRevenue = 0;
+
+        invoices.filter(i => i.status === 'Paid').forEach(inv => {
+            const amount = Number(inv.total) || 0;
+            const d = new Date(inv.dateAdded);
+
+            // Today
+            if (d.toDateString() === today) todayRevenue += amount;
+
+            // This week
+            if (d >= startOfWeek && d <= now) weekRevenue += amount;
+
+            // This month
+            if (d.getMonth() === currentMonth && d.getFullYear() === currentYear) monthlyRevenue += amount;
+
+            // Last month
+            if (d.getMonth() === lastMonth && d.getFullYear() === lastMonthYear) lastMonthRevenue += amount;
+
+            // This year
+            if (d.getFullYear() === currentYear) yearRevenue += amount;
+        });
 
         // Calculate revenue for the last 6 months for the chart
         const chartData = {
@@ -579,8 +613,12 @@ export default {
           stats: {
             totalClients: clients.length,
             activeLicenses: activeLicenses,
-            monthlyRevenue: monthlyRevenue,
-            totalRevenue: totalRevenue
+            todayRevenue,
+            weekRevenue,
+            monthlyRevenue,
+            lastMonthRevenue,
+            yearRevenue,
+            totalRevenue
           },
           chartData: chartData
         });

@@ -100,6 +100,20 @@ const app = {
         } else {
             exportBtns.forEach(btn => btn.classList.add('hidden'));
         }
+
+        const proPremiumStats = document.querySelectorAll('.stat-pro-premium');
+        if (this.userPlan === 'Pro' || this.userPlan === 'Premium') {
+            proPremiumStats.forEach(el => el.classList.remove('hidden'));
+        } else {
+            proPremiumStats.forEach(el => el.classList.add('hidden'));
+        }
+
+        const premiumStats = document.querySelectorAll('.stat-premium');
+        if (this.userPlan === 'Premium') {
+            premiumStats.forEach(el => el.classList.remove('hidden'));
+        } else {
+            premiumStats.forEach(el => el.classList.add('hidden'));
+        }
     },
 
     handleLockedSection(sectionId, event) {
@@ -161,6 +175,46 @@ const app = {
             if (sidebar && !sidebar.classList.contains('-translate-x-full')) {
                 this.toggleSidebar();
             }
+        }
+    },
+
+    async exportData() {
+        if (this.userPlan !== 'Premium') {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Premium Feature',
+                text: 'Exporting data is available on the Premium plan.'
+            });
+            return;
+        }
+
+        try {
+            const data = await API.request('/api/dashboard');
+            if (data.success && data.stats) {
+                const stats = data.stats;
+                let csvContent = `Metric,Value\n`;
+                csvContent += `Total Clients,${stats.totalClients}\n`;
+                csvContent += `Active Licenses,${stats.activeLicenses}\n`;
+                csvContent += `Today Revenue,${stats.todayRevenue || 0}\n`;
+                csvContent += `This Week Revenue,${stats.weekRevenue || 0}\n`;
+                csvContent += `This Month Revenue,${stats.monthlyRevenue || 0}\n`;
+                csvContent += `Last Month Revenue,${stats.lastMonthRevenue || 0}\n`;
+                csvContent += `This Year Revenue,${stats.yearRevenue || 0}\n`;
+                csvContent += `Total Revenue,${stats.totalRevenue || 0}\n`;
+
+                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement("a");
+                link.setAttribute("href", url);
+                link.setAttribute("download", `dashboard_export_${new Date().toISOString().split('T')[0]}.csv`);
+                link.style.visibility = 'hidden';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
+        } catch (error) {
+            console.error('Failed to export dashboard data', error);
+            Swal.fire('Error', 'Failed to export data', 'error');
         }
     },
 
@@ -259,7 +313,7 @@ const app = {
     },
 
     initDarkMode() {
-        if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        if (localStorage.theme === 'dark') {
             document.documentElement.classList.add('dark');
             document.getElementById('theme-icon').classList.replace('fa-moon', 'fa-sun');
         } else {
@@ -495,8 +549,12 @@ async paySubscription(planTier) {
                 document.getElementById('stat-clients').innerText = data.stats.totalClients;
                 document.getElementById('stat-licenses').innerText = data.stats.activeLicenses;
                 // Formatting currency
-                document.getElementById('stat-monthly-rev').innerText = 'R ' + data.stats.monthlyRevenue.toLocaleString();
-                document.getElementById('stat-total-rev').innerText = 'R ' + data.stats.totalRevenue.toLocaleString();
+                if (document.getElementById('stat-today-rev')) document.getElementById('stat-today-rev').innerText = 'R ' + (data.stats.todayRevenue || 0).toLocaleString();
+                if (document.getElementById('stat-week-rev')) document.getElementById('stat-week-rev').innerText = 'R ' + (data.stats.weekRevenue || 0).toLocaleString();
+                if (document.getElementById('stat-monthly-rev')) document.getElementById('stat-monthly-rev').innerText = 'R ' + (data.stats.monthlyRevenue || 0).toLocaleString();
+                if (document.getElementById('stat-last-month-rev')) document.getElementById('stat-last-month-rev').innerText = 'R ' + (data.stats.lastMonthRevenue || 0).toLocaleString();
+                if (document.getElementById('stat-year-rev')) document.getElementById('stat-year-rev').innerText = 'R ' + (data.stats.yearRevenue || 0).toLocaleString();
+                if (document.getElementById('stat-total-rev')) document.getElementById('stat-total-rev').innerText = 'R ' + (data.stats.totalRevenue || 0).toLocaleString();
 
                 if (data.stats.chartData) {
                     this.renderChart(data.stats.chartData);
