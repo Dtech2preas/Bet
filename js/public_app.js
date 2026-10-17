@@ -469,8 +469,40 @@ async paySubscription(planTier) {
                 }
 
                 document.getElementById('settingsAccountHolder').value = response.settings.accountHolder || '';
-                document.getElementById('settingsBank').value = response.settings.bank || '';
-                document.getElementById('settingsAccountType').value = response.settings.accountType || '';
+
+
+                // Set bank value correctly considering "Other"
+                const bankSelect = document.getElementById('settingsBank');
+                const bankOther = document.getElementById('settingsBankOther');
+                const knownBanks = ['FNB', 'Standard Bank', 'Absa', 'Nedbank', 'Capitec', 'Investec', 'TymeBank', 'Discovery Bank'];
+
+                if (response.settings.bank) {
+                    if (knownBanks.includes(response.settings.bank)) {
+                        bankSelect.value = response.settings.bank;
+                        bankOther.classList.add('hidden');
+                    } else {
+                        bankSelect.value = 'Other';
+                        bankOther.classList.remove('hidden');
+                        bankOther.value = response.settings.bank;
+                    }
+                } else {
+                    bankSelect.value = '';
+                }
+
+                const typeSelect = document.getElementById('settingsAccountType');
+                const typeOther = document.getElementById('settingsAccountTypeOther');
+                const knownTypes = ['Current/Cheque', 'Savings', 'Transmission'];
+                if (response.settings.accountType) {
+                    if (knownTypes.includes(response.settings.accountType)) {
+                        typeSelect.value = response.settings.accountType;
+                        typeOther.classList.add('hidden');
+                    } else {
+                        typeSelect.value = 'Other';
+                        typeOther.classList.remove('hidden');
+                        typeOther.value = response.settings.accountType;
+                    }
+                }
+
                 document.getElementById('settingsAccountNumber').value = response.settings.accountNumber || '';
                 document.getElementById('settingsBranchCode').value = response.settings.branchCode || '';
             }
@@ -499,7 +531,7 @@ async paySubscription(planTier) {
                     reader.readAsDataURL(logoFile);
                 });
 
-                const uploadResponse = await API.request('/api/upload', 'POST', { image: imageBase64 });
+                const uploadResponse = await API.request('/api/upload', { method: 'POST', body: JSON.stringify({ image: imageBase64 }) });
                 if (uploadResponse.success && uploadResponse.url) {
                     logoUrl = uploadResponse.url;
                     document.getElementById('settingsLogoUrl').value = logoUrl;
@@ -524,8 +556,8 @@ async paySubscription(planTier) {
                 address: document.getElementById('settingsAddress').value,
                 brandColor: document.getElementById('settingsBrandColor') ? document.getElementById('settingsBrandColor').value : '#2563eb',
                 accountHolder: document.getElementById('settingsAccountHolder').value,
-                bank: document.getElementById('settingsBank').value,
-                accountType: document.getElementById('settingsAccountType').value,
+                bank: document.getElementById('settingsBank').value === 'Other' ? document.getElementById('settingsBankOther').value : document.getElementById('settingsBank').value,
+                accountType: document.getElementById('settingsAccountType').value === 'Other' ? document.getElementById('settingsAccountTypeOther').value : document.getElementById('settingsAccountType').value,
                 accountNumber: document.getElementById('settingsAccountNumber').value,
                 branchCode: document.getElementById('settingsBranchCode').value,
             };

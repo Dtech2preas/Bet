@@ -102,7 +102,7 @@ const paymentsManager = {
             title: title,
             html: `
                 <div class="text-left text-sm space-y-3 max-h-[70vh] overflow-y-auto pr-2">
-                    <div><label class="font-medium">Invoice *</label><select id="swal-pay-inv" class="swal2-input mt-1 w-full m-0" ${isEdit ? 'disabled' : ''}>${invoiceOptions}</select></div>
+                    <div><label class="font-medium">Invoice *</label><p class="text-xs text-gray-500 mb-1">Which invoice is this paying?</p><select id="swal-pay-inv" class="swal2-input mt-1 w-full m-0" ${isEdit ? 'disabled' : ''}>${invoiceOptions}</select></div>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
                         <div><label class="font-medium">Amount Paid *</label><input id="swal-pay-amount" type="number" class="swal2-input mt-1 w-full m-0" value="${p.total || p.amount || ''}" placeholder="0.00"></div>
