@@ -452,9 +452,13 @@
                             <input type="text" id="settingsBusinessName" required class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm px-3 py-2 border focus:border-dtech-500 focus:ring-dtech-500 sm:text-sm">
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Logo URL</label>
-                            <input type="url" id="settingsLogoUrl" placeholder="https://example.com/logo.png" class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm px-3 py-2 border focus:border-dtech-500 focus:ring-dtech-500 sm:text-sm">
-                            <p class="text-xs text-gray-500 mt-1">Provide a public URL to your company logo.</p>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Company Logo</label>
+                            <input type="file" id="settingsLogoFile" accept="image/*" class="mt-1 block w-full text-sm text-gray-500 dark:text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-dtech-50 file:text-dtech-700 hover:file:bg-dtech-100 dark:file:bg-gray-700 dark:file:text-gray-300">
+                            <input type="hidden" id="settingsLogoUrl">
+                            <p class="text-xs text-gray-500 mt-1">Upload a picture of your company logo. It will be converted into a URL.</p>
+                            <div id="logoPreviewContainer" class="mt-2 hidden">
+                                <img id="logoPreview" src="" alt="Logo Preview" class="h-16 object-contain">
+                            </div>
                         </div>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>

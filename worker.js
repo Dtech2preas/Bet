@@ -60,7 +60,7 @@ async function checkLimits(business_id, env, collectionName, items) {
 
     const limits = {
         'Free': { clients: 5, products: 5, documents: 10, contracts: false },
-        'Pro': { clients: 25, products: 25, documents: 25, contracts: true }
+        'Pro': { clients: 25, products: 25, documents: 40, contracts: true }
     };
 
     // Default to Free if plan is somehow unrecognized
@@ -489,6 +489,37 @@ export default {
 
           await env.DTECH_KV.put('subscriptions', JSON.stringify(subscriptions));
           return jsonResponse({ success: true, subscription: newSub });
+      }
+    }
+
+    // /api/upload
+    if (path === '/api/upload' && request.method === 'POST') {
+      try {
+        const body = await request.json();
+        const { image } = body;
+
+        if (!image) {
+            return jsonResponse({ success: false, message: 'No image data provided' }, 400);
+        }
+
+        const API_KEY = env.PIC_API || '6b71f92e47c0b0f4cdba34e9e03d42e6'; // fallback ImgBB API key if not set
+        const formData = new FormData();
+        formData.append('image', image);
+
+        const response = await fetch(`https://api.imgbb.com/1/upload?key=${API_KEY}`, {
+            method: 'POST',
+            body: formData
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            return jsonResponse({ success: true, url: result.data.url });
+        } else {
+            return jsonResponse({ success: false, message: result.error?.message || 'ImgBB upload failed' }, 500);
+        }
+      } catch (e) {
+          return jsonResponse({ success: false, message: e.message }, 500);
       }
     }
 
