@@ -115,7 +115,7 @@ const invoicesManager = {
                 <div class="text-left text-sm space-y-3 max-h-[70vh] overflow-y-auto pr-2">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
                         <div><label class="font-medium">Client *</label><select id="swal-i-client" class="swal2-input mt-1 w-full m-0"><option value="" disabled ${!isEdit?'selected':''}>Select Client</option>${clientOptions}</select></div>
-                        <div><label class="font-medium">Related Quotation</label><select id="swal-i-quote" class="swal2-input mt-1 w-full m-0">${quotesOptions}</select></div>
+                        <div><label class="font-medium">Related Quotation</label><p class="text-xs text-gray-500 mb-1">Autofills details if selected.</p><select id="swal-i-quote" class="swal2-input mt-1 w-full m-0">${quotesOptions}</select></div>
                     </div>
 
 
@@ -128,8 +128,8 @@ const invoicesManager = {
 
                     <h4 class="font-semibold border-b pb-1 mt-4">Financials & Terms</h4>
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
-                        <div><label class="font-medium">Discount (%)</label><input id="swal-i-discount" type="number" class="swal2-input mt-1 w-full m-0" value="${i.discount || 0}" placeholder="0"></div>
-                        <div><label class="font-medium">VAT (%)</label><input id="swal-i-vat" type="number" class="swal2-input mt-1 w-full m-0" value="${i.vat || 15}" placeholder="15"></div>
+                        <div><label class="font-medium">Discount (%)</label><p class="text-xs text-gray-500 mb-1">Leave 0 if none.</p><input id="swal-i-discount" type="number" class="swal2-input mt-1 w-full m-0" value="${i.discount || 0}" placeholder="0"></div>
+                        <div><label class="font-medium">VAT (%)</label><p class="text-xs text-gray-500 mb-1">Enter 0 if non-VAT vendor.</p><input id="swal-i-vat" type="number" class="swal2-input mt-1 w-full m-0" value="${i.vat || 15}" placeholder="15"></div>
                         <div><label class="font-medium">Status</label><select id="swal-i-status" class="swal2-input mt-1 w-full m-0"><option value="Unpaid" ${i.status==='Unpaid'?'selected':''}>Unpaid</option><option value="Paid" ${i.status==='Paid'?'selected':''}>Paid</option><option value="Overdue" ${i.status==='Overdue'?'selected':''}>Overdue</option><option value="Cancelled" ${i.status==='Cancelled'?'selected':''}>Cancelled</option></select></div>
                     </div>
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-2">

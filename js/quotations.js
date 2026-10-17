@@ -98,7 +98,7 @@ const quotationsManager = {
                 <div class="text-left text-sm space-y-3 max-h-[70vh] overflow-y-auto pr-2">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
                         <div><label class="font-medium">Client *</label><select id="swal-q-client" class="swal2-input mt-1 w-full m-0"><option value="" disabled ${!isEdit?'selected':''}>Select Client</option>${clientOptions}</select></div>
-                        <div><label class="font-medium">Quotation Title</label><input id="swal-q-title" class="swal2-input mt-1 w-full m-0" value="${q.title || ''}" placeholder="e.g. Website Redesign"></div>
+                        <div><label class="font-medium">Quotation Title</label><p class="text-xs text-gray-500 mb-1">A short description of the project.</p><input id="swal-q-title" class="swal2-input mt-1 w-full m-0" value="${q.title || ''}" placeholder="e.g. Website Redesign"></div>
                     </div>
 
 
@@ -112,8 +112,8 @@ const quotationsManager = {
                     <h4 class="font-semibold border-b pb-1 mt-4">Financials & Terms</h4>
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
                         <div><label class="font-medium">Currency</label><input id="swal-q-currency" class="swal2-input mt-1 w-full m-0" value="${q.currency || 'ZAR'}" placeholder="ZAR"></div>
-                        <div><label class="font-medium">Discount (%)</label><input id="swal-q-discount" type="number" class="swal2-input mt-1 w-full m-0" value="${q.discount || 0}" placeholder="0"></div>
-                        <div><label class="font-medium">VAT (%)</label><input id="swal-q-vat" type="number" class="swal2-input mt-1 w-full m-0" value="${q.vat || 15}" placeholder="15"></div>
+                        <div><label class="font-medium">Discount (%)</label><p class="text-xs text-gray-500 mb-1">Leave at 0 if no discount.</p><input id="swal-q-discount" type="number" class="swal2-input mt-1 w-full m-0" value="${q.discount || 0}" placeholder="0"></div>
+                        <div><label class="font-medium">VAT (%)</label><p class="text-xs text-gray-500 mb-1">Standard rate is 15%.</p><input id="swal-q-vat" type="number" class="swal2-input mt-1 w-full m-0" value="${q.vat || 15}" placeholder="15"></div>
                     </div>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
                         <div><label class="font-medium">Valid Until</label><input type="date" id="swal-q-valid" class="swal2-input mt-1 w-full m-0" value="${validStr}"></div>
