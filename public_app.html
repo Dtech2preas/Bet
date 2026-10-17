@@ -250,9 +250,14 @@
             <section id="section-clients" class="hidden">
                 <div class="flex justify-between items-center mb-6">
                     <h1 class="text-2xl font-semibold">Clients</h1>
-                    <button onclick="clientsManager.openModal()" class="bg-dtech-600 hover:bg-dtech-700 text-white px-4 py-2 rounded-md shadow-sm text-sm font-medium transition-colors">
-                        <i class="fas fa-plus mr-2"></i> Add Client
-                    </button>
+                    <div class="flex space-x-2">
+                        <button onclick="app.exportCSV('clients')" class="export-btn bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-200 px-4 py-2 rounded-md shadow-sm text-sm font-medium transition-colors hidden">
+                            <i class="fas fa-download mr-2"></i> Export CSV
+                        </button>
+                        <button onclick="clientsManager.openModal()" class="bg-dtech-600 hover:bg-dtech-700 text-white px-4 py-2 rounded-md shadow-sm text-sm font-medium transition-colors">
+                            <i class="fas fa-plus mr-2"></i> Add Client
+                        </button>
+                    </div>
                 </div>
 
                 <!-- Client Content injected here via JS -->
@@ -300,9 +305,14 @@
             <section id="section-invoices" class="hidden">
                 <div class="flex justify-between items-center mb-6">
                     <h1 class="text-2xl font-semibold">Invoices</h1>
-                    <button onclick="invoicesManager.openModal()" class="bg-dtech-600 hover:bg-dtech-700 text-white px-4 py-2 rounded-md shadow-sm text-sm font-medium transition-colors">
-                        <i class="fas fa-plus mr-2"></i> Create Invoice
-                    </button>
+                    <div class="flex space-x-2">
+                        <button onclick="app.exportCSV('invoices')" class="export-btn bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-200 px-4 py-2 rounded-md shadow-sm text-sm font-medium transition-colors hidden">
+                            <i class="fas fa-download mr-2"></i> Export CSV
+                        </button>
+                        <button onclick="invoicesManager.openModal()" class="bg-dtech-600 hover:bg-dtech-700 text-white px-4 py-2 rounded-md shadow-sm text-sm font-medium transition-colors">
+                            <i class="fas fa-plus mr-2"></i> Create Invoice
+                        </button>
+                    </div>
                 </div>
                 <div id="invoices-container"><div class="text-center py-10"><i class="fas fa-spinner fa-spin text-3xl text-dtech-500"></i></div></div>
             </section>
@@ -311,9 +321,14 @@
             <section id="section-payments" class="hidden">
                 <div class="flex justify-between items-center mb-6">
                     <h1 class="text-2xl font-semibold">Payments</h1>
-                    <button onclick="paymentsManager.openModal()" class="bg-dtech-600 hover:bg-dtech-700 text-white px-4 py-2 rounded-md shadow-sm text-sm font-medium transition-colors">
-                        <i class="fas fa-plus mr-2"></i> Record Payment
-                    </button>
+                    <div class="flex space-x-2">
+                        <button onclick="app.exportCSV('payments')" class="export-btn bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-200 px-4 py-2 rounded-md shadow-sm text-sm font-medium transition-colors hidden">
+                            <i class="fas fa-download mr-2"></i> Export CSV
+                        </button>
+                        <button onclick="paymentsManager.openModal()" class="bg-dtech-600 hover:bg-dtech-700 text-white px-4 py-2 rounded-md shadow-sm text-sm font-medium transition-colors">
+                            <i class="fas fa-plus mr-2"></i> Record Payment
+                        </button>
+                    </div>
                 </div>
                 <div id="payments-container"><div class="text-center py-10"><i class="fas fa-spinner fa-spin text-3xl text-dtech-500"></i></div></div>
             </section>
@@ -382,6 +397,7 @@
                             <li class="flex items-start"><i class="fas fa-check text-green-500 mt-1 mr-2 w-4"></i> <span>Up to 10 Invoices/Quotes per month</span></li>
                             <li class="flex items-start"><i class="fas fa-times text-red-400 mt-1 mr-2 w-4"></i> <span class="line-through text-gray-400">Contracts & Licenses</span></li>
                             <li class="flex items-start"><i class="fas fa-times text-red-400 mt-1 mr-2 w-4"></i> <span class="line-through text-gray-400">Custom Branding</span></li>
+                            <li class="flex items-start"><i class="fas fa-info-circle text-blue-400 mt-1 mr-2 w-4"></i> <span>D-TECH Watermark included</span></li>
                         </ul>
                         <button disabled class="w-full py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-gray-50 cursor-not-allowed">
                             Current Plan
@@ -407,6 +423,7 @@
                             <li class="flex items-start"><i class="fas fa-check text-blue-500 mt-1 mr-2 w-4"></i> <span class="font-medium text-gray-900 dark:text-white">Up to 25 Invoices/Quotes</span></li>
                             <li class="flex items-start"><i class="fas fa-check text-green-500 mt-1 mr-2 w-4"></i> <span>Contracts & Licenses</span></li>
                             <li class="flex items-start"><i class="fas fa-check text-green-500 mt-1 mr-2 w-4"></i> <span>Custom Branding</span></li>
+                            <li class="flex items-start"><i class="fas fa-info-circle text-blue-400 mt-1 mr-2 w-4"></i> <span>D-TECH Watermark included</span></li>
                         </ul>
                         <button onclick="app.paySubscription('Pro')" class="w-full py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
                             <i class="fas fa-lock mr-2"></i> Subscribe Pro
@@ -429,7 +446,9 @@
                             <li class="flex items-start"><i class="fas fa-infinity text-yellow-400 mt-1 mr-2 w-4"></i> <span class="font-medium text-white">Unlimited Invoices & Quotes</span></li>
                             <li class="flex items-start"><i class="fas fa-check text-green-400 mt-1 mr-2 w-4"></i> <span>Contracts & Licenses</span></li>
                             <li class="flex items-start"><i class="fas fa-check text-green-400 mt-1 mr-2 w-4"></i> <span>Custom Branding</span></li>
-                            <li class="flex items-start"><i class="fas fa-star text-yellow-400 mt-1 mr-2 w-4"></i> <span>Priority Support</span></li>
+                            <li class="flex items-start"><i class="fas fa-star text-yellow-400 mt-1 mr-2 w-4"></i> <span>Custom Document Templates</span></li>
+                            <li class="flex items-start"><i class="fas fa-star text-yellow-400 mt-1 mr-2 w-4"></i> <span>Export Reports (CSV/Excel)</span></li>
+                            <li class="flex items-start"><i class="fas fa-star text-yellow-400 mt-1 mr-2 w-4"></i> <span>No D-TECH Watermark</span></li>
                         </ul>
                         <button onclick="app.paySubscription('Premium')" class="w-full py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-gray-900 bg-white hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-white">
                             <i class="fas fa-lock mr-2"></i> Subscribe Premium
@@ -501,6 +520,17 @@
                                     if(display) display.textContent = e.target.value;
                                 });
                             </script>
+                        </div>
+                        <div>
+                            <label class="flex items-center text-sm font-medium text-gray-700 dark:text-gray-300">
+                                PDF Template Style
+                                <span class="premium-lock-icon hidden ml-2" title="Requires Premium Plan"><i class="fas fa-lock text-gray-400 text-xs"></i></span>
+                            </label>
+                            <select id="settingsPdfTemplate" class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm px-3 py-2 border focus:border-dtech-500 focus:ring-dtech-500 sm:text-sm">
+                                <option value="Standard">Standard</option>
+                                <option value="Modern">Modern (Premium)</option>
+                            </select>
+                            <p class="text-xs text-gray-500 mt-1">Choose the layout style for your generated PDFs.</p>
                         </div>
 
                         <h2 class="text-lg font-medium text-gray-900 dark:text-gray-100 border-b dark:border-gray-700 pb-2 mt-8">Banking Details</h2>

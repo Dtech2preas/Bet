@@ -79,6 +79,27 @@ const app = {
                 container.innerHTML = '<i class="fas fa-lock text-gray-400 text-xs"></i>';
             }
         });
+
+        const templateSelect = document.getElementById('settingsPdfTemplate');
+        const premiumLockIcons = document.querySelectorAll('.premium-lock-icon');
+
+        if (templateSelect) {
+            if (this.userPlan === 'Premium') {
+                templateSelect.disabled = false;
+                premiumLockIcons.forEach(icon => icon.classList.add('hidden'));
+            } else {
+                templateSelect.disabled = true;
+                templateSelect.value = 'Standard';
+                premiumLockIcons.forEach(icon => icon.classList.remove('hidden'));
+            }
+        }
+
+        const exportBtns = document.querySelectorAll('.export-btn');
+        if (this.userPlan === 'Premium') {
+            exportBtns.forEach(btn => btn.classList.remove('hidden'));
+        } else {
+            exportBtns.forEach(btn => btn.classList.add('hidden'));
+        }
     },
 
     handleLockedSection(sectionId, event) {
@@ -141,6 +162,54 @@ const app = {
                 this.toggleSidebar();
             }
         }
+    },
+
+    async exportCSV(type) {
+        if (this.userPlan !== 'Premium') return;
+
+        let data = [];
+        let filename = `${type}_export_${new Date().toISOString().split('T')[0]}.csv`;
+
+        if (type === 'clients' && typeof clientsManager !== 'undefined') {
+            data = clientsManager.clients;
+        } else if (type === 'invoices' && typeof invoicesManager !== 'undefined') {
+            data = invoicesManager.invoices;
+        } else if (type === 'payments' && typeof paymentsManager !== 'undefined') {
+            data = paymentsManager.payments;
+        }
+
+        if (!data || data.length === 0) {
+            Swal.fire({icon: 'info', title: 'Nothing to export', text: 'No records found to export.'});
+            return;
+        }
+
+        const escapeCSV = (str) => {
+            if (str === null || str === undefined) return '';
+            const s = String(str);
+            if (s.includes(',') || s.includes('"') || s.includes('\n')) {
+                return `"${s.replace(/"/g, '""')}"`;
+            }
+            return s;
+        };
+
+        const headers = Object.keys(data[0]).filter(k => typeof data[0][k] !== 'object');
+
+        let csvContent = headers.map(escapeCSV).join(',') + '\n';
+
+        data.forEach(row => {
+            const rowArr = headers.map(header => escapeCSV(row[header]));
+            csvContent += rowArr.join(',') + '\n';
+        });
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.setAttribute("href", url);
+        link.setAttribute("download", filename);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
     },
 
     renderChart(chartData) {
@@ -468,6 +537,11 @@ async paySubscription(planTier) {
                     if(colorDisplay) colorDisplay.textContent = response.settings.brandColor;
                 }
 
+                if (response.settings.pdfTemplate) {
+                    const templateSelect = document.getElementById('settingsPdfTemplate');
+                    if (templateSelect) templateSelect.value = response.settings.pdfTemplate;
+                }
+
                 document.getElementById('settingsAccountHolder').value = response.settings.accountHolder || '';
 
 
@@ -555,6 +629,7 @@ async paySubscription(planTier) {
                 website: document.getElementById('settingsWebsite').value,
                 address: document.getElementById('settingsAddress').value,
                 brandColor: document.getElementById('settingsBrandColor') ? document.getElementById('settingsBrandColor').value : '#2563eb',
+                pdfTemplate: document.getElementById('settingsPdfTemplate') ? document.getElementById('settingsPdfTemplate').value : 'Standard',
                 accountHolder: document.getElementById('settingsAccountHolder').value,
                 bank: document.getElementById('settingsBank').value === 'Other' ? document.getElementById('settingsBankOther').value : document.getElementById('settingsBank').value,
                 accountType: document.getElementById('settingsAccountType').value === 'Other' ? document.getElementById('settingsAccountTypeOther').value : document.getElementById('settingsAccountType').value,

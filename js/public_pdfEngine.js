@@ -87,22 +87,44 @@ const pdfEngine = {
                 img.onerror = resolve;
                 img.src = logoData;
             });
-            doc.addImage(logoData, 'PNG', 14, 15, logoWidth, logoHeight);
+
+            let logoX = 14;
+            if (settings.userPlan === 'Premium' && settings.pdfTemplate === 'Modern') {
+                logoX = 196 - logoWidth; // align right
+            }
+
+            doc.addImage(logoData, 'PNG', logoX, 15, logoWidth, logoHeight);
             logoBottomY = 15 + logoHeight;
         } else {
             doc.setFontSize(22);
             doc.setTextColor(...primaryColor);
             doc.setFont('helvetica', 'bold');
-            doc.text(businessName, 14, 25);
+            let txtX = 14;
+            if (settings.userPlan === 'Premium' && settings.pdfTemplate === 'Modern') {
+                txtX = 196;
+                doc.text(businessName, txtX, 25, { align: 'right' });
+            } else {
+                doc.text(businessName, txtX, 25);
+            }
             logoBottomY = 28;
         }
 
         // Document Type & Meta (Moved below logo on the left)
         let metaY = logoBottomY + 8;
+
+        let metaAlign = 'left';
+        let metaX = 14;
+
+        if (settings.userPlan === 'Premium' && settings.pdfTemplate === 'Modern') {
+            metaAlign = 'right';
+            metaX = 196;
+            metaY = 18;
+        }
+
         doc.setFontSize(18);
         doc.setTextColor(0, 0, 0);
         doc.setFont('helvetica', 'bold');
-        doc.text(type.toUpperCase(), 14, metaY);
+        doc.text(type.toUpperCase(), metaX, metaY, { align: metaAlign });
 
         metaY += 6;
         doc.setFontSize(10);
@@ -110,30 +132,40 @@ const pdfEngine = {
         doc.setFont('helvetica', 'normal');
 
         if (data.reference) {
-            doc.text(`Ref: ${data.reference}`, 14, metaY);
+            doc.text(`Ref: ${data.reference}`, metaX, metaY, { align: metaAlign });
             metaY += 5;
         }
         if (data.date) {
-            doc.text(`Date: ${new Date(data.date).toLocaleDateString()}`, 14, metaY);
+            doc.text(`Date: ${new Date(data.date).toLocaleDateString()}`, metaX, metaY, { align: metaAlign });
             metaY += 5;
         }
 
         // --- CLIENT DETAILS (Moved to Top Right) ---
         let clientY = 18;
+
+        let clientAlign = 'right';
+        let clientX = 196;
+
+        if (settings.userPlan === 'Premium' && settings.pdfTemplate === 'Modern') {
+            clientAlign = 'left';
+            clientX = 14;
+            clientY = Math.max(metaY, clientY) + 10;
+        }
+
         doc.setFontSize(12);
         doc.setTextColor(0, 0, 0);
         doc.setFont('helvetica', 'bold');
-        doc.text("Prepared For:", 196, clientY, { align: 'right' });
+        doc.text("Prepared For:", clientX, clientY, { align: clientAlign });
 
         clientY += 6;
         doc.setFontSize(10);
         doc.setFont('helvetica', 'normal');
         const client = data.client || {};
-        doc.text(client.companyName || 'Unknown Client', 196, clientY, { align: 'right' });
+        doc.text(client.companyName || 'Unknown Client', clientX, clientY, { align: clientAlign });
         clientY += 5;
-        if (client.contactPerson) { doc.text(client.contactPerson, 196, clientY, { align: 'right' }); clientY += 5; }
-        if (client.email) { doc.text(client.email, 196, clientY, { align: 'right' }); clientY += 5; }
-        if (client.phone) { doc.text(client.phone, 196, clientY, { align: 'right' }); clientY += 5; }
+        if (client.contactPerson) { doc.text(client.contactPerson, clientX, clientY, { align: clientAlign }); clientY += 5; }
+        if (client.email) { doc.text(client.email, clientX, clientY, { align: clientAlign }); clientY += 5; }
+        if (client.phone) { doc.text(client.phone, clientX, clientY, { align: clientAlign }); clientY += 5; }
 
         // Optional Document Details section (Quote Details / Invoice Details)
         if (data.validUntil || data.paymentTerms || data.expectedStartDate || data.deliveryTime) {
@@ -141,24 +173,24 @@ const pdfEngine = {
             doc.setFontSize(10);
             doc.setTextColor(0, 0, 0);
             doc.setFont('helvetica', 'bold');
-            doc.text(`${type} Details:`, 196, clientY, { align: 'right' });
+            doc.text(`${type} Details:`, clientX, clientY, { align: clientAlign });
             clientY += 5;
 
             doc.setFont('helvetica', 'normal');
             if (data.validUntil) {
-                doc.text(`Valid Until: ${new Date(data.validUntil).toLocaleDateString()}`, 196, clientY, { align: 'right' });
+                doc.text(`Valid Until: ${new Date(data.validUntil).toLocaleDateString()}`, clientX, clientY, { align: clientAlign });
                 clientY += 5;
             }
             if (data.paymentTerms) {
-                doc.text(`Payment Terms: ${data.paymentTerms}`, 196, clientY, { align: 'right' });
+                doc.text(`Payment Terms: ${data.paymentTerms}`, clientX, clientY, { align: clientAlign });
                 clientY += 5;
             }
             if (data.expectedStartDate) {
-                doc.text(`Project Start: ${new Date(data.expectedStartDate).toLocaleDateString()}`, 196, clientY, { align: 'right' });
+                doc.text(`Project Start: ${new Date(data.expectedStartDate).toLocaleDateString()}`, clientX, clientY, { align: clientAlign });
                 clientY += 5;
             }
             if (data.deliveryTime) {
-                doc.text(`Delivery Time: ${data.deliveryTime}`, 196, clientY, { align: 'right' });
+                doc.text(`Delivery Time: ${data.deliveryTime}`, clientX, clientY, { align: clientAlign });
                 clientY += 5;
             }
         }
@@ -178,12 +210,20 @@ const pdfEngine = {
                 `R ${(Number(item.price) * Number(item.quantity)).toFixed(2)}`
             ]);
 
+            let theme = 'striped';
+            let headStyles = { fillColor: primaryColor, textColor: 255 };
+
+            if (settings.userPlan === 'Premium' && settings.pdfTemplate === 'Modern') {
+                theme = 'grid';
+                headStyles = { fillColor: [240, 240, 240], textColor: 0, lineWidth: 0.1, lineColor: 200 };
+            }
+
             doc.autoTable({
                 startY: finalY,
                 head: [['Description', 'Unit Price', 'Qty', 'Total']],
                 body: tableData,
-                theme: 'striped',
-                headStyles: { fillColor: primaryColor, textColor: 255 },
+                theme: theme,
+                headStyles: headStyles,
                 alternateRowStyles: { fillColor: [249, 250, 251] },
                 margin: { left: 14, right: 14 }
             });
@@ -320,6 +360,13 @@ const pdfEngine = {
             doc.setTextColor(156, 163, 175);
             doc.text(`${businessName} | Generated automatically by CRM`, 14, 285);
             doc.text(`Page ${i} of ${pageCount}`, 196, 285, { align: 'right' });
+
+            // D-TECH Watermark for Free and Pro plans
+            if (settings.userPlan !== 'Premium') {
+                doc.setFontSize(7);
+                doc.setTextColor(200, 200, 200);
+                doc.text("This document was generated by management.dtech-services.co.za", doc.internal.pageSize.getWidth() / 2, 292, { align: 'center' });
+            }
         }
 
         return doc;
