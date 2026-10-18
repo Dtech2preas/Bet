@@ -89,9 +89,6 @@ const pdfEngine = {
             });
 
             let logoX = 14;
-            if (settings.userPlan === 'Premium' && settings.pdfTemplate === 'Modern') {
-                logoX = 196 - logoWidth; // align right
-            }
 
             doc.addImage(logoData, 'PNG', logoX, 15, logoWidth, logoHeight);
             logoBottomY = 15 + logoHeight;
@@ -100,12 +97,7 @@ const pdfEngine = {
             doc.setTextColor(...primaryColor);
             doc.setFont('helvetica', 'bold');
             let txtX = 14;
-            if (settings.userPlan === 'Premium' && settings.pdfTemplate === 'Modern') {
-                txtX = 196;
-                doc.text(businessName, txtX, 25, { align: 'right' });
-            } else {
-                doc.text(businessName, txtX, 25);
-            }
+            doc.text(businessName, txtX, 25);
             logoBottomY = 28;
         }
 
@@ -114,12 +106,6 @@ const pdfEngine = {
 
         let metaAlign = 'left';
         let metaX = 14;
-
-        if (settings.userPlan === 'Premium' && settings.pdfTemplate === 'Modern') {
-            metaAlign = 'right';
-            metaX = 196;
-            metaY = 18;
-        }
 
         doc.setFontSize(18);
         doc.setTextColor(0, 0, 0);
@@ -145,12 +131,6 @@ const pdfEngine = {
 
         let clientAlign = 'right';
         let clientX = 196;
-
-        if (settings.userPlan === 'Premium' && settings.pdfTemplate === 'Modern') {
-            clientAlign = 'left';
-            clientX = 14;
-            clientY = Math.max(metaY, clientY) + 10;
-        }
 
         doc.setFontSize(12);
         doc.setTextColor(0, 0, 0);
@@ -358,7 +338,10 @@ const pdfEngine = {
             doc.setPage(i);
             doc.setFontSize(8);
             doc.setTextColor(156, 163, 175);
-            doc.text(`${businessName} | Generated automatically by CRM`, 14, 285);
+
+            if (settings.userPlan !== 'Premium') {
+                doc.text(`${businessName} | Generated automatically by CRM`, 14, 285);
+            }
             doc.text(`Page ${i} of ${pageCount}`, 196, 285, { align: 'right' });
 
             // D-TECH Watermark for Free and Pro plans
