@@ -267,7 +267,16 @@
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     <!-- Chart -->
                     <div class="lg:col-span-2 bg-white dark:bg-dark-card p-6 rounded-lg shadow-sm border border-gray-100 dark:border-dark-border">
-                        <h3 class="text-lg font-medium mb-4">Revenue Overview (Last 6 Months)</h3>
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-lg font-medium">Revenue Overview</h3>
+                            <select id="chartFilter" class="rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm focus:border-dtech-500 sm:text-sm px-2 py-1" onchange="app.updateChartFilter()">
+                                <option value="30_days">Last 30 Days</option>
+                                <option value="today" class="filter-pro-premium hidden">Today</option>
+                                <option value="yesterday" class="filter-pro-premium hidden">Yesterday</option>
+                                <option value="6_months" class="filter-pro-premium hidden">Last 6 Months</option>
+                                <option value="total" class="filter-premium hidden">Total Revenue</option>
+                            </select>
+                        </div>
                         <div class="h-64 w-full">
                             <canvas id="revenueChart"></canvas>
                         </div>
@@ -457,8 +466,8 @@
                             <li class="flex items-start"><i class="fas fa-times text-red-400 mt-1 mr-2 w-4"></i> <span class="line-through text-gray-400">Custom Branding</span></li>
                             <li class="flex items-start"><i class="fas fa-info-circle text-blue-400 mt-1 mr-2 w-4"></i> <span>D-TECH Watermark included</span></li>
                         </ul>
-                        <button disabled class="w-full py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-gray-50 cursor-not-allowed">
-                            Current Plan
+                        <button id="btn-plan-free" class="w-full py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-gray-50 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500">
+                            Subscribe Free
                         </button>
                     </div>
 
@@ -483,7 +492,7 @@
                             <li class="flex items-start"><i class="fas fa-check text-green-500 mt-1 mr-2 w-4"></i> <span>Custom Branding</span></li>
                             <li class="flex items-start"><i class="fas fa-info-circle text-blue-400 mt-1 mr-2 w-4"></i> <span>D-TECH Watermark included</span></li>
                         </ul>
-                        <button onclick="app.paySubscription('Pro')" class="w-full py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        <button id="btn-plan-pro" onclick="app.paySubscription('Pro')" class="w-full py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
                             <i class="fas fa-lock mr-2"></i> Subscribe Pro
                         </button>
                     </div>
@@ -508,7 +517,7 @@
                             <li class="flex items-start"><i class="fas fa-star text-yellow-400 mt-1 mr-2 w-4"></i> <span>Export Reports (CSV/Excel)</span></li>
                             <li class="flex items-start"><i class="fas fa-star text-yellow-400 mt-1 mr-2 w-4"></i> <span>No D-TECH Watermark</span></li>
                         </ul>
-                        <button onclick="app.paySubscription('Premium')" class="w-full py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-gray-900 bg-white hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-white">
+                        <button id="btn-plan-premium" onclick="app.paySubscription('Premium')" class="w-full py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-gray-900 bg-white hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-white">
                             <i class="fas fa-lock mr-2"></i> Subscribe Premium
                         </button>
                     </div>

@@ -114,6 +114,29 @@ const app = {
         } else {
             premiumStats.forEach(el => el.classList.add('hidden'));
         }
+
+        const filterProPremium = document.querySelectorAll('.filter-pro-premium');
+        if (this.userPlan === 'Pro' || this.userPlan === 'Premium') {
+            filterProPremium.forEach(el => el.classList.remove('hidden'));
+        } else {
+            filterProPremium.forEach(el => el.classList.add('hidden'));
+            // Reset to default if current selection is not allowed
+            const chartFilter = document.getElementById('chartFilter');
+            if(chartFilter && chartFilter.value !== '30_days' && this.userPlan === 'Free') {
+                chartFilter.value = '30_days';
+            }
+        }
+
+        const filterPremium = document.querySelectorAll('.filter-premium');
+        if (this.userPlan === 'Premium') {
+            filterPremium.forEach(el => el.classList.remove('hidden'));
+        } else {
+            filterPremium.forEach(el => el.classList.add('hidden'));
+            const chartFilter = document.getElementById('chartFilter');
+            if (chartFilter && chartFilter.value === 'total' && this.userPlan !== 'Premium') {
+                chartFilter.value = '30_days';
+            }
+        }
     },
 
     handleLockedSection(sectionId, event) {
@@ -477,6 +500,27 @@ async paySubscription(planTier) {
                 const status = document.getElementById('planStatusText');
                 const featuresList = document.getElementById('planFeaturesList');
 
+                const btnPlanFree = document.getElementById('btn-plan-free');
+                const btnPlanPro = document.getElementById('btn-plan-pro');
+                const btnPlanPremium = document.getElementById('btn-plan-premium');
+
+                // Reset all plan buttons
+                if(btnPlanFree) {
+                    btnPlanFree.disabled = false;
+                    btnPlanFree.innerHTML = 'Subscribe Free';
+                    btnPlanFree.className = "w-full py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-gray-50 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500";
+                }
+                if(btnPlanPro) {
+                    btnPlanPro.disabled = false;
+                    btnPlanPro.innerHTML = '<i class="fas fa-lock mr-2"></i> Subscribe Pro';
+                    btnPlanPro.className = "w-full py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500";
+                }
+                if(btnPlanPremium) {
+                    btnPlanPremium.disabled = false;
+                    btnPlanPremium.innerHTML = '<i class="fas fa-lock mr-2"></i> Subscribe Premium';
+                    btnPlanPremium.className = "w-full py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-gray-900 bg-white hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-white";
+                }
+
                 if (sub.plan === 'Premium') {
                     if (badge) {
                         badge.className = "bg-gray-900 text-white text-xs font-semibold mr-2 px-2.5 py-0.5 rounded";
@@ -499,6 +543,12 @@ async paySubscription(planTier) {
                             status.innerText = "Expired";
                         }
                         if (nbDate) nbDate.innerText = "Your subscription has expired. Please renew.";
+                    }
+
+                    if(btnPlanPremium) {
+                        btnPlanPremium.disabled = true;
+                        btnPlanPremium.innerHTML = 'Current Plan';
+                        btnPlanPremium.className = "w-full py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-gray-500 bg-gray-200 cursor-not-allowed";
                     }
                 } else if (sub.plan === 'Pro') {
                     if (badge) {
@@ -523,6 +573,12 @@ async paySubscription(planTier) {
                         }
                         if (nbDate) nbDate.innerText = "Your subscription has expired. Please renew.";
                     }
+
+                    if(btnPlanPro) {
+                        btnPlanPro.disabled = true;
+                        btnPlanPro.innerHTML = 'Current Plan';
+                        btnPlanPro.className = "w-full py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-gray-700 bg-blue-100 cursor-not-allowed";
+                    }
                 } else {
                     // Free Plan defaults
                     if (badge) {
@@ -535,6 +591,12 @@ async paySubscription(planTier) {
                         status.innerText = "Basic";
                     }
                     if (nbDate) nbDate.innerText = "Upgrade your plan for higher limits and features.";
+
+                    if(btnPlanFree) {
+                        btnPlanFree.disabled = true;
+                        btnPlanFree.innerHTML = 'Current Plan';
+                        btnPlanFree.className = "w-full py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-gray-50 cursor-not-allowed";
+                    }
                 }
             }
         } catch(e) {
@@ -542,9 +604,14 @@ async paySubscription(planTier) {
         }
     },
 
-    async loadDashboardData() {
+    updateChartFilter() {
+        const filter = document.getElementById('chartFilter').value;
+        this.loadDashboardData(filter);
+    },
+
+    async loadDashboardData(filter = '30_days') {
         try {
-            const data = await API.request('/api/dashboard');
+            const data = await API.request(`/api/dashboard?filter=${filter}`);
             if (data.success && data.stats) {
                 document.getElementById('stat-clients').innerText = data.stats.totalClients;
                 document.getElementById('stat-licenses').innerText = data.stats.activeLicenses;

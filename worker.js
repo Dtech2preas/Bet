@@ -541,6 +541,9 @@ export default {
 
     // /api/dashboard
     if (path === '/api/dashboard' && request.method === 'GET') {
+      const url = new URL(request.url);
+      const chartFilter = url.searchParams.get('filter') || '30_days';
+
       try {
         const clientsData = await env.DTECH_KV.get('clients');
         const allClients = clientsData ? JSON.parse(clientsData) : [];
@@ -598,26 +601,60 @@ export default {
             if (d.getFullYear() === currentYear) yearRevenue += amount;
         });
 
-        // Calculate revenue for the last 6 months for the chart
         const chartData = {
           labels: [],
           data: []
         };
 
-        for (let i = 5; i >= 0; i--) {
-          const d = new Date();
-          d.setDate(1); // Prevent date wrapping edge case on 31st of months
-          d.setMonth(d.getMonth() - i);
-          const month = d.toLocaleString('default', { month: 'short' });
-          const year = d.getFullYear();
-          chartData.labels.push(`${month} ${year}`);
+        const paidInvoices = invoices.filter(inv => inv.status === 'Paid');
 
-          const monthRev = invoices.filter(inv => {
-            const invDate = new Date(inv.dateAdded);
-            return inv.status === 'Paid' && invDate.getMonth() === d.getMonth() && invDate.getFullYear() === year;
+        if (chartFilter === '30_days') {
+          for (let i = 29; i >= 0; i--) {
+            const d = new Date();
+            d.setDate(d.getDate() - i);
+            chartData.labels.push(d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }));
+
+            const dayRev = paidInvoices.filter(inv => {
+              const invDate = new Date(inv.dateAdded);
+              return invDate.toDateString() === d.toDateString();
+            }).reduce((sum, inv) => sum + (Number(inv.total) || 0), 0);
+
+            chartData.data.push(dayRev);
+          }
+        } else if (chartFilter === 'today') {
+          chartData.labels.push('Today');
+          chartData.data.push(todayRevenue);
+        } else if (chartFilter === 'yesterday') {
+          const yesterday = new Date();
+          yesterday.setDate(yesterday.getDate() - 1);
+          const yesterdayStr = yesterday.toDateString();
+
+          let yRev = paidInvoices.filter(inv => {
+              const invDate = new Date(inv.dateAdded);
+              return invDate.toDateString() === yesterdayStr;
           }).reduce((sum, inv) => sum + (Number(inv.total) || 0), 0);
 
-          chartData.data.push(monthRev);
+          chartData.labels.push('Yesterday');
+          chartData.data.push(yRev);
+        } else if (chartFilter === '6_months') {
+          for (let i = 5; i >= 0; i--) {
+            const d = new Date();
+            d.setDate(1);
+            d.setMonth(d.getMonth() - i);
+            const month = d.toLocaleString('default', { month: 'short' });
+            const year = d.getFullYear();
+            chartData.labels.push(`${month} ${year}`);
+
+            const monthRev = paidInvoices.filter(inv => {
+              const invDate = new Date(inv.dateAdded);
+              return invDate.getMonth() === d.getMonth() && invDate.getFullYear() === year;
+            }).reduce((sum, inv) => sum + (Number(inv.total) || 0), 0);
+
+            chartData.data.push(monthRev);
+          }
+        } else if (chartFilter === 'total') {
+          chartData.labels.push('Total Revenue');
+          chartData.data.push(totalRevenue);
         }
 
         return jsonResponse({
