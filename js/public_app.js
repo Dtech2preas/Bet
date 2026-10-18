@@ -477,7 +477,38 @@ async paySubscription(planTier) {
                 const status = document.getElementById('planStatusText');
                 const featuresList = document.getElementById('planFeaturesList');
 
+                const btnFree = document.getElementById('btn-sub-free');
+                const btnPro = document.getElementById('btn-sub-pro');
+                const btnPremium = document.getElementById('btn-sub-premium');
+
+                if (btnFree) {
+                    btnFree.innerText = 'Current Plan';
+                    btnFree.disabled = true;
+                    btnFree.className = 'w-full py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-gray-50 cursor-not-allowed';
+                }
+                if (btnPro) {
+                    btnPro.innerHTML = '<i class="fas fa-lock mr-2"></i> Subscribe Pro';
+                    btnPro.disabled = false;
+                    btnPro.className = 'w-full py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500';
+                }
+                if (btnPremium) {
+                    btnPremium.innerHTML = '<i class="fas fa-lock mr-2"></i> Subscribe Premium';
+                    btnPremium.disabled = false;
+                    btnPremium.className = 'w-full py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-gray-900 bg-white hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-white';
+                }
+
                 if (sub.plan === 'Premium') {
+                    if (btnPremium) {
+                        btnPremium.innerText = 'Current Plan';
+                        btnPremium.disabled = true;
+                        btnPremium.className = 'w-full py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-gray-50 cursor-not-allowed';
+                    }
+                    if (btnFree) {
+                        btnFree.innerText = 'Subscribe Free';
+                        btnFree.disabled = false;
+                        btnFree.className = 'w-full py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50';
+                    }
+
                     if (badge) {
                         badge.className = "bg-gray-900 text-white text-xs font-semibold mr-2 px-2.5 py-0.5 rounded";
                         badge.innerText = "Premium";
@@ -501,6 +532,17 @@ async paySubscription(planTier) {
                         if (nbDate) nbDate.innerText = "Your subscription has expired. Please renew.";
                     }
                 } else if (sub.plan === 'Pro') {
+                    if (btnPro) {
+                        btnPro.innerText = 'Current Plan';
+                        btnPro.disabled = true;
+                        btnPro.className = 'w-full py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-gray-50 cursor-not-allowed';
+                    }
+                    if (btnFree) {
+                        btnFree.innerText = 'Subscribe Free';
+                        btnFree.disabled = false;
+                        btnFree.className = 'w-full py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50';
+                    }
+
                     if (badge) {
                         badge.className = "bg-blue-100 text-blue-800 text-xs font-semibold mr-2 px-2.5 py-0.5 rounded dark:bg-blue-200 dark:text-blue-800";
                         badge.innerText = "Pro";
