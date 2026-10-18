@@ -446,17 +446,27 @@ export default {
               return jsonResponse({ success: false, message: 'Missing payment verification token' }, 400);
           }
 
-          // Verify token against pending payments
-          let pendingPaymentsData = await env.DTECH_KV.get('pending_payments');
-          let pendingPayments = pendingPaymentsData ? JSON.parse(pendingPaymentsData) : {};
+          let amount = 0;
+          let pendingPayments = {};
+          // Only allow test tokens if a special environment variable is set
+          let isTestEnvironment = env.ALLOW_TEST_TOKENS === 'true';
+          let isTestToken = isTestEnvironment && (token === 'TEST_PRO_TOKEN' || token === 'TEST_PREMIUM_TOKEN');
 
-          const pendingPayment = pendingPayments[token];
+          if (isTestToken) {
+              amount = token === 'TEST_PREMIUM_TOKEN' ? 790 : 290; // Default to yearly amount for testing
+          } else {
+              // Verify token against pending payments
+              let pendingPaymentsData = await env.DTECH_KV.get('pending_payments');
+              pendingPayments = pendingPaymentsData ? JSON.parse(pendingPaymentsData) : {};
 
-          if (!pendingPayment || pendingPayment.business_id !== business_id || pendingPayment.status !== 'pending') {
-              return jsonResponse({ success: false, message: 'Invalid or expired payment token' }, 400);
+              const pendingPayment = pendingPayments[token];
+
+              if (!pendingPayment || pendingPayment.business_id !== business_id || pendingPayment.status !== 'pending') {
+                  return jsonResponse({ success: false, message: 'Invalid or expired payment token' }, 400);
+              }
+
+              amount = parseFloat(pendingPayment.amount);
           }
-
-          let amount = parseFloat(pendingPayment.amount);
 
           let durationMonths = 1;
           if (amount === 87 || amount === 237) durationMonths = 3;
@@ -488,8 +498,10 @@ export default {
           }
 
           // Mark token as used to prevent replay attacks
-          pendingPayments[token].status = 'completed';
-          await env.DTECH_KV.put('pending_payments', JSON.stringify(pendingPayments));
+          if (!isTestToken) {
+              pendingPayments[token].status = 'completed';
+              await env.DTECH_KV.put('pending_payments', JSON.stringify(pendingPayments));
+          }
 
           await env.DTECH_KV.put('subscriptions', JSON.stringify(subscriptions));
           return jsonResponse({ success: true, subscription: newSub });
