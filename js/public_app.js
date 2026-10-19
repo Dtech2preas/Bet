@@ -97,8 +97,20 @@ const app = {
         const exportBtns = document.querySelectorAll('.export-btn');
         if (this.userPlan === 'Premium') {
             exportBtns.forEach(btn => btn.classList.remove('hidden'));
+
+            const btnBulkDeleteQuotations = document.getElementById('btn-bulk-delete-quotations');
+            if (btnBulkDeleteQuotations) btnBulkDeleteQuotations.classList.remove('hidden');
+
+            const btnBulkDeleteInvoices = document.getElementById('btn-bulk-delete-invoices');
+            if (btnBulkDeleteInvoices) btnBulkDeleteInvoices.classList.remove('hidden');
         } else {
             exportBtns.forEach(btn => btn.classList.add('hidden'));
+
+            const btnBulkDeleteQuotations = document.getElementById('btn-bulk-delete-quotations');
+            if (btnBulkDeleteQuotations) btnBulkDeleteQuotations.classList.add('hidden');
+
+            const btnBulkDeleteInvoices = document.getElementById('btn-bulk-delete-invoices');
+            if (btnBulkDeleteInvoices) btnBulkDeleteInvoices.classList.add('hidden');
         }
 
         const proPremiumStats = document.querySelectorAll('.stat-pro-premium');
@@ -584,9 +596,65 @@ async paySubscription(planTier) {
         }
     },
 
-    async loadDashboardData() {
+    dismissProfileCompleteness() {
+        localStorage.setItem('dtech_profile_completeness_dismissed', 'true');
+        const widget = document.getElementById('profile-completeness-widget');
+        if (widget) widget.classList.add('hidden');
+    },
+
+    async checkProfileCompleteness() {
+        if (this.userPlan === 'Premium' || localStorage.getItem('dtech_profile_completeness_dismissed') === 'true') {
+            return;
+        }
+
         try {
-            const data = await API.request('/api/dashboard');
+            const response = await API.request('/api/settings');
+            let score = 0;
+            if (response.success && response.settings) {
+                if (response.settings.logoUrl) score += 33.3;
+                if (response.settings.brandColor && response.settings.brandColor !== '#2563eb') score += 33.3;
+                if (response.settings.accountNumber && response.settings.bank) score += 33.4;
+            }
+
+            score = Math.min(100, Math.round(score));
+
+            if (score < 100) {
+                const widget = document.getElementById('profile-completeness-widget');
+                const bar = document.getElementById('profile-completeness-bar');
+                const text = document.getElementById('profile-completeness-text');
+                if (widget && bar && text) {
+                    widget.classList.remove('hidden');
+                    setTimeout(() => {
+                        bar.style.width = `${score}%`;
+                    }, 100);
+                    text.innerText = `Setup your business profile to 100% to start generating documents. (Current: ${score}%)`;
+                }
+            } else {
+                localStorage.setItem('dtech_profile_completeness_dismissed', 'true');
+            }
+        } catch (e) {
+            console.warn('Could not check profile completeness', e);
+        }
+    },
+
+    async loadDashboardData() {
+        this.checkProfileCompleteness();
+
+        let queryParams = '';
+        if (this.userPlan === 'Premium') {
+            const filterContainer = document.getElementById('dashboard-filter-container');
+            if (filterContainer) filterContainer.classList.remove('hidden');
+
+            const startDate = document.getElementById('dashboardStartDate')?.value;
+            const endDate = document.getElementById('dashboardEndDate')?.value;
+
+            if (startDate && endDate) {
+                queryParams = `?filter=custom&start=${startDate}&end=${endDate}`;
+            }
+        }
+
+        try {
+            const data = await API.request(`/api/dashboard${queryParams}`);
             if (data.success && data.stats) {
                 document.getElementById('stat-clients').innerText = data.stats.totalClients;
                 document.getElementById('stat-licenses').innerText = data.stats.activeLicenses;
