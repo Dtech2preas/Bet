@@ -412,13 +412,19 @@ async paySubscription(planTier) {
                 method: 'POST',
                 body: JSON.stringify({
                     amount: amount,
-                    type: 'subscription'
+                    type: 'subscription',
+                    platform: window.Capacitor && window.Capacitor.isNativePlatform() ? 'capacitor' : 'web'
                 })
             });
 
             if (response.success && response.redirectUrl) {
                 // Redirect user to Yoco Checkout
-                window.location.href = response.redirectUrl;
+                if (window.Capacitor && window.Capacitor.isNativePlatform()) {
+                    const { Browser } = window.Capacitor.Plugins;
+                    await Browser.open({ url: response.redirectUrl });
+                } else {
+                    window.location.href = response.redirectUrl;
+                }
             } else {
                 throw new Error(response.message || 'Could not initiate payment');
             }
@@ -847,3 +853,27 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 });
+
+// Add Capacitor App Deep Link Listener to handle payment returns
+if (window.Capacitor) {
+    const { App } = window.Capacitor.Plugins;
+    App.addListener('appUrlOpen', async data => {
+        if (data.url.includes('?token=')) {
+            // Close the browser if it was opened
+            if (window.Capacitor.isNativePlatform()) {
+                const { Browser } = window.Capacitor.Plugins;
+                await Browser.close();
+            }
+
+            // Extract token and verify
+            const urlParams = new URL(data.url).searchParams;
+            const token = urlParams.get('token');
+            if (token) {
+                // Update the URL to include the token so checkPaymentStatus will see it
+                window.history.replaceState({}, document.title, window.location.pathname + '?payment=success&token=' + token);
+                // Trigger check
+                window.SubscriptionManager.checkPaymentStatus();
+            }
+        }
+    });
+}

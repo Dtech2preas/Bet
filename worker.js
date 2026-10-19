@@ -394,9 +394,9 @@ export default {
           currency: 'ZAR',
           name: `${businessName} - Subscription`,
           description: `${planTier} Plan - ${planDesc}`,
-          cancelUrl: request.headers.get('origin') + '/public_app.html?payment=cancelled',
-          successUrl: request.headers.get('origin') + '/public_app.html?payment=success&token=' + paymentToken,
-          failureUrl: request.headers.get('origin') + '/public_app.html?payment=failed',
+          cancelUrl: body.platform === 'capacitor' ? 'org.dtech.app://app?payment=cancelled' : request.headers.get('origin') + '/public_app.html?payment=cancelled',
+          successUrl: body.platform === 'capacitor' ? 'org.dtech.app://app?payment=success&token=' + paymentToken : request.headers.get('origin') + '/public_app.html?payment=success&token=' + paymentToken,
+          failureUrl: body.platform === 'capacitor' ? 'org.dtech.app://app?payment=failed' : request.headers.get('origin') + '/public_app.html?payment=failed',
           metadata: {
              business_id: business_id,
              business_name: businessName,

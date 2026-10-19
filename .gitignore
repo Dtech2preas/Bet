@@ -1,0 +1,22 @@
+node_modules/
+www/
+# app/android/
+# app/ios/
+app/dist/
+app/android/app/build/
+app/android/.gradle/
+app/android/.idea/
+app/ios/App/build/
+app/ios/App/Pods/
+app/android/capacitor-cordova-android-plugins/build/
+app/android/app/src/main/assets/
+.gradle/
+app/ios/App/App/public/
+app/android/app/build/
+app/android/.gradle/
+app/android/.idea/
+app/ios/App/build/
+app/ios/App/Pods/
+app/android/capacitor-cordova-android-plugins/build/
+app/android/app/src/main/assets/
+app/ios/App/App/public/

@@ -486,7 +486,13 @@ const pdfEngine = {
 
     async download(type, data, filename) {
         const doc = await this.generateDocument(type, data);
-        doc.save(filename || `${type}_${data.reference || Date.now()}.pdf`);
+        const cleanName = filename || `${type}_${data.reference || Date.now()}.pdf`;
+        if (window.Capacitor && window.Capacitor.isNativePlatform()) {
+            const base64 = doc.output('datauristring').split(',')[1];
+            saveFileNative(base64, cleanName);
+        } else {
+            doc.save(cleanName);
+        }
     },
 
     async preview(type, data) {
@@ -502,3 +508,24 @@ const pdfEngine = {
         }
     }
 };
+async function saveFileNative(base64Data, filename) {
+    try {
+        const { Filesystem, Share } = window.Capacitor.Plugins;
+
+        const savedFile = await Filesystem.writeFile({
+            path: filename,
+            data: base64Data,
+            directory: 'DOCUMENTS' // Capacitor Directory.Documents enum value
+        });
+
+        await Share.share({
+            title: 'Share PDF',
+            text: 'Here is the generated PDF.',
+            url: savedFile.uri,
+            dialogTitle: 'Share PDF'
+        });
+    } catch(e) {
+        console.error('Error saving native file', e);
+        if (window.Swal) Swal.fire('Error', 'Failed to save or share PDF natively', 'error');
+    }
+}
