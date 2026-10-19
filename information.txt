@@ -138,3 +138,39 @@ To bypass the need for a server-side storage bucket (like S3) and complex backen
 6. It uses absolute X,Y coordinates to draw text (Company Name, Dates, Totals).
 7. It uses the `jsPDF-AutoTable` plugin to dynamically generate the line items grid.
 8. A Blob URL is created and immediately downloaded to the user's machine, or opened in a new tab via `iframe` for preview.
+
+## 9. SaaS Subscriptions and Payment Integration
+The public SaaS application utilizes a 3-tier subscription model:
+*   **Free**: Limited to 5 clients/products, 10 invoices/quotes, with Contracts and Licenses locked. Watermarked PDFs.
+*   **Pro**: Expanded limits (25 clients, 40 invoices) with Contracts and Licenses unlocked. Watermarked PDFs.
+*   **Premium**: Unlimited usage, access to custom PDF templates (Corporate, Creative), CSV data exports, bulk actions, and no D-TECH watermarks.
+
+**Yoco Integration:**
+Payments for subscription upgrades are handled via the Yoco Checkout API.
+1. The frontend (`public_app.js`) initiates a checkout request to the worker (`/api/checkout`).
+2. The worker calls Yoco and returns a checkout URL.
+3. Upon successful payment, Yoco redirects to a callback URL which triggers the worker's `/api/subscription` endpoint.
+4. The worker validates a temporarily stored token from KV (`pending_payments`) and updates the user's plan and billing cycle.
+Testing can be bypassed by setting `ALLOW_TEST_TOKENS='true'` in the worker and using tokens like `TEST_PRO_TOKEN`.
+
+## 10. Native Mobile App (Capacitor)
+The repository contains an `app/` directory which wraps the vanilla web application using Capacitor for iOS and Android deployment.
+*   It intercepts Yoco checkout flows using `@capacitor/browser` and relies on deep linking (`org.dtech.app://`) for callbacks.
+*   PDF downloads are intercepted: Instead of standard web blob downloads, documents are converted to Base64 strings, saved natively using `@capacitor/filesystem`, and shared via `@capacitor/share`.
+
+## 11. Advanced Frontend Features
+*   **API Caching**: `js/api.js` implements an in-memory GET request cache that automatically invalidates on POST, PUT, or DELETE mutations.
+*   **Activity Logging**: Resource managers invoke `app.logActivity()` after successful API mutations to populate an audit trail/activity feed.
+*   **Dark Mode**: Bypasses OS preferences (`window.matchMedia`). The theme strictly relies on `localStorage.theme === 'dark'`.
+*   **Onboarding**: Public registration sets a `dtech_new_user` flag triggering a guided onboarding prompt. A Profile Completeness widget tracks setup progress for Free/Pro tiers.
+*   **Image Uploads**: Company logos are securely uploaded and converted to URLs using the ImgBB API via the `/api/upload` worker endpoint (secured by the `PIC_API` Cloudflare variable).
+
+## 12. Advanced Billing Logic
+*   **Auto-population**: Invoices created directly from Quotations automatically inherit and populate line items, discounts, and VAT.
+*   **Split Payments**: Creating an invoice with a "50% Deposit, 50% on Launch" term automatically splits the transaction. It modifies the current invoice to reflect a 50% deposit and silently creates a second invoice for the remaining balance.
+*   **VAT Logic**: Uses a 'backwards' (inclusive) calculation. If VAT is 0, breakdowns are removed, and a compliance label ("Non-VAT vendor") is displayed.
+
+## 13. Distinct PDF Engines
+The system utilizes two separate PDF engines due to its multi-tenant nature:
+*   **Internal (`js/pdfEngine.js`)**: Hardcoded with "THE D-TECH ECOSYSTEM" business and banking details.
+*   **Public SaaS (`js/public_pdfEngine.js`)**: Dynamically loads the tenant's specific business details, logo, and custom `brandColor` (converted from HEX to RGB for PDF rendering) from their settings. Premium users gain access to specialized layout templates and remove the default automation watermarks.
