@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">dtech</string>
+    <string name="title_activity_main">dtech</string>
+    <string name="package_name">org.dtech.app</string>
+    <string name="custom_url_scheme">org.dtech.app</string>
+</resources>
