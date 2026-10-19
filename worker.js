@@ -542,6 +542,11 @@ export default {
     // /api/dashboard
     if (path === '/api/dashboard' && request.method === 'GET') {
       try {
+        const url = new URL(request.url);
+        const filter = url.searchParams.get('filter');
+        const customStart = url.searchParams.get('start');
+        const customEnd = url.searchParams.get('end');
+
         const clientsData = await env.DTECH_KV.get('clients');
         const allClients = clientsData ? JSON.parse(clientsData) : [];
         const clients = allClients.filter(c => c.business_id === business_id);
@@ -553,7 +558,62 @@ export default {
 
         const invoicesData = await env.DTECH_KV.get('invoices');
         const allInvoices = invoicesData ? JSON.parse(invoicesData) : [];
-        const invoices = allInvoices.filter(i => i.business_id === business_id);
+        let invoices = allInvoices.filter(i => i.business_id === business_id);
+
+        let customChartData = null;
+
+        if (filter === 'custom' && customStart && customEnd) {
+            const startD = new Date(customStart);
+            const endD = new Date(customEnd);
+            endD.setHours(23, 59, 59, 999);
+
+            invoices = invoices.filter(inv => {
+                const d = new Date(inv.dateAdded);
+                return d >= startD && d <= endD;
+            });
+
+            // Rebuild chart data for custom range (grouping by day if small range, else month is too complex for simple UI so we do days)
+            customChartData = { labels: [], data: [] };
+
+            // Map dates
+            const daysDiff = Math.round((endD - startD) / (1000 * 60 * 60 * 24));
+
+            if (daysDiff <= 31) {
+                // Daily chart
+                let currentD = new Date(startD);
+                while (currentD <= endD) {
+                    const label = currentD.toLocaleDateString('default', { month: 'short', day: 'numeric' });
+                    customChartData.labels.push(label);
+
+                    const dayRev = invoices.filter(inv => {
+                        const d = new Date(inv.dateAdded);
+                        return inv.status === 'Paid' && d.toDateString() === currentD.toDateString();
+                    }).reduce((sum, inv) => sum + (Number(inv.total) || 0), 0);
+
+                    customChartData.data.push(dayRev);
+                    currentD.setDate(currentD.getDate() + 1);
+                }
+            } else {
+                 // Monthly chart for custom range
+                 let currentD = new Date(startD);
+                 currentD.setDate(1);
+
+                 while (currentD <= endD) {
+                    const month = currentD.toLocaleString('default', { month: 'short' });
+                    const year = currentD.getFullYear();
+                    customChartData.labels.push(`${month} ${year}`);
+
+                    const monthRev = invoices.filter(inv => {
+                        const d = new Date(inv.dateAdded);
+                        return inv.status === 'Paid' && d.getMonth() === currentD.getMonth() && d.getFullYear() === currentD.getFullYear();
+                    }).reduce((sum, inv) => sum + (Number(inv.total) || 0), 0);
+
+                    customChartData.data.push(monthRev);
+                    currentD.setMonth(currentD.getMonth() + 1);
+                 }
+            }
+        }
+
         const totalRevenue = invoices.filter(i => i.status === 'Paid').reduce((sum, inv) => sum + (Number(inv.total) || 0), 0);
 
         // Today, This Week, This Month, Last Month, This Year
@@ -632,7 +692,7 @@ export default {
             yearRevenue,
             totalRevenue
           },
-          chartData: chartData
+          chartData: customChartData || chartData
         });
       } catch (e) {
         return jsonResponse({ success: false, message: 'Failed to fetch dashboard' }, 500);

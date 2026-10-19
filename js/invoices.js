@@ -28,11 +28,15 @@ const invoicesManager = {
             return;
         }
 
+        const isPremium = app.userPlan === 'Premium';
+        const checkboxHeader = isPremium ? `<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase"><input type="checkbox" onclick="invoicesManager.toggleSelectAll(this)"></th>` : '';
+
         let html = `
             <div class="bg-white dark:bg-dark-card rounded-lg shadow-sm border border-gray-100 dark:border-dark-border overflow-hidden">
                 <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 block md:table">
                     <thead class="bg-gray-50 dark:bg-gray-800 hidden md:table-header-group">
                         <tr>
+                            ${checkboxHeader}
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Inv #</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Client</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total</th>
@@ -45,8 +49,10 @@ const invoicesManager = {
         this.invoices.forEach(inv => {
             const client = this.clients.find(c => c.id === inv.clientId);
             const statusColor = inv.status === 'Paid' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800';
+            const checkboxCell = isPremium ? `<td class="px-0 md:px-6 py-2 md:py-4 flex md:table-cell justify-start"><input type="checkbox" class="invoice-checkbox" value="${inv.id}"></td>` : '';
             html += `
                 <tr class="block md:table-row mb-4 md:mb-0 border-b md:border-0 p-4 md:p-0">
+                    ${checkboxCell}
                     <td class="px-0 md:px-6 py-2 md:py-4 flex md:table-cell justify-between items-center text-sm font-medium text-gray-900 dark:text-white">
                         <div class="md:hidden font-bold text-xs uppercase text-gray-500 mr-2">Inv #:</div>
                         <div class="text-right md:text-left">${inv.reference}</div>
@@ -325,5 +331,56 @@ const invoicesManager = {
             this.loadInvoices();
             app.loadDashboardData();
         }
+    },
+
+    toggleSelectAll(source) {
+        const checkboxes = document.querySelectorAll('.invoice-checkbox');
+        checkboxes.forEach(cb => cb.checked = source.checked);
+    },
+
+    async bulkDelete() {
+        const selected = Array.from(document.querySelectorAll('.invoice-checkbox:checked')).map(cb => cb.value);
+        if (selected.length === 0) return Swal.fire('Info', 'No invoices selected', 'info');
+
+        if (confirm(`Are you sure you want to delete ${selected.length} invoices?`)) {
+            Swal.fire({ title: 'Deleting...', allowOutsideClick: false, didOpen: () => { Swal.showLoading() }});
+            try {
+                for (const id of selected) {
+                    await API.request(`/api/invoices/${id}`, { method: 'DELETE' });
+                }
+                if (typeof app !== 'undefined' && app.logActivity) app.logActivity(`Bulk deleted ${selected.length} Invoices`);
+                await this.loadInvoices();
+                await app.loadDashboardData();
+                Swal.fire('Success', 'Invoices deleted', 'success');
+            } catch (e) {
+                Swal.fire('Error', e.message, 'error');
+            }
+        }
+    },
+
+    async bulkExport() {
+        const selected = Array.from(document.querySelectorAll('.invoice-checkbox:checked')).map(cb => cb.value);
+        if (selected.length === 0) return Swal.fire('Info', 'No invoices selected', 'info');
+
+        const selectedInvoices = this.invoices.filter(i => selected.includes(i.id));
+        if (selectedInvoices.length === 0) return;
+
+        let csv = "Invoice Number,Client,Status,Date,Subtotal,Discount,VAT,Total,Notes\n";
+        selectedInvoices.forEach(i => {
+            const client = this.clients.find(c => c.id === i.clientId);
+            const cName = client ? client.companyName.replace(/,/g, '') : 'Unknown';
+            const notes = (i.customerNotes || '').replace(/,/g, ' ').replace(/\n/g, ' ');
+            csv += `${i.reference},${cName},${i.status},${new Date(i.date).toLocaleDateString()},${i.subtotal},${i.discount || 0},${i.vatAmt || 0},${i.total},${notes}\n`;
+        });
+
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.setAttribute('hidden', '');
+        a.setAttribute('href', url);
+        a.setAttribute('download', `invoices_bulk_export_${new Date().toISOString().split('T')[0]}.csv`);
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
     }
 };

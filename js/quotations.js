@@ -28,11 +28,15 @@ const quotationsManager = {
             return;
         }
 
+        const isPremium = app.userPlan === 'Premium';
+        const checkboxHeader = isPremium ? `<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase"><input type="checkbox" onclick="quotationsManager.toggleSelectAll(this)"></th>` : '';
+
         let html = `
             <div class="bg-white dark:bg-dark-card rounded-lg shadow-sm border border-gray-100 dark:border-dark-border overflow-hidden">
                 <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 block md:table">
                     <thead class="bg-gray-50 dark:bg-gray-800 hidden md:table-header-group">
                         <tr>
+                            ${checkboxHeader}
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Quote #</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Client</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total</th>
@@ -44,8 +48,10 @@ const quotationsManager = {
         `;
         this.quotations.forEach(q => {
             const client = this.clients.find(c => c.id === q.clientId);
+            const checkboxCell = isPremium ? `<td class="px-0 md:px-6 py-2 md:py-4 flex md:table-cell justify-start"><input type="checkbox" class="quotation-checkbox" value="${q.id}"></td>` : '';
             html += `
                 <tr class="block md:table-row mb-4 md:mb-0 border-b md:border-0 p-4 md:p-0">
+                    ${checkboxCell}
                     <td class="px-0 md:px-6 py-2 md:py-4 flex md:table-cell justify-between items-center text-sm font-medium text-gray-900 dark:text-white">
                         <div class="md:hidden font-bold text-xs uppercase text-gray-500 mr-2">Quote #:</div>
                         <div class="text-right md:text-left">${q.reference}</div>
@@ -269,5 +275,55 @@ const quotationsManager = {
             if (typeof app !== 'undefined' && app.logActivity) app.logActivity(`Deleted Quotation`);
             this.loadQuotations();
         }
+    },
+
+    toggleSelectAll(source) {
+        const checkboxes = document.querySelectorAll('.quotation-checkbox');
+        checkboxes.forEach(cb => cb.checked = source.checked);
+    },
+
+    async bulkDelete() {
+        const selected = Array.from(document.querySelectorAll('.quotation-checkbox:checked')).map(cb => cb.value);
+        if (selected.length === 0) return Swal.fire('Info', 'No quotations selected', 'info');
+
+        if (confirm(`Are you sure you want to delete ${selected.length} quotations?`)) {
+            Swal.fire({ title: 'Deleting...', allowOutsideClick: false, didOpen: () => { Swal.showLoading() }});
+            try {
+                for (const id of selected) {
+                    await API.request(`/api/quotations/${id}`, { method: 'DELETE' });
+                }
+                if (typeof app !== 'undefined' && app.logActivity) app.logActivity(`Bulk deleted ${selected.length} Quotations`);
+                await this.loadQuotations();
+                Swal.fire('Success', 'Quotations deleted', 'success');
+            } catch (e) {
+                Swal.fire('Error', e.message, 'error');
+            }
+        }
+    },
+
+    async bulkExport() {
+        const selected = Array.from(document.querySelectorAll('.quotation-checkbox:checked')).map(cb => cb.value);
+        if (selected.length === 0) return Swal.fire('Info', 'No quotations selected', 'info');
+
+        const selectedQuotations = this.quotations.filter(q => selected.includes(q.id));
+        if (selectedQuotations.length === 0) return;
+
+        let csv = "Quotation Number,Client,Status,Date,Valid Until,Subtotal,Discount,VAT,Total,Notes\n";
+        selectedQuotations.forEach(q => {
+            const client = this.clients.find(c => c.id === q.clientId);
+            const cName = client ? client.companyName.replace(/,/g, '') : 'Unknown';
+            const notes = (q.customerNotes || '').replace(/,/g, ' ').replace(/\n/g, ' ');
+            csv += `${q.reference},${cName},${q.status},${new Date(q.date).toLocaleDateString()},${new Date(q.validUntil).toLocaleDateString()},${q.subtotal},${q.discount || 0},${q.vatAmt || 0},${q.total},${notes}\n`;
+        });
+
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.setAttribute('hidden', '');
+        a.setAttribute('href', url);
+        a.setAttribute('download', `quotations_bulk_export_${new Date().toISOString().split('T')[0]}.csv`);
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
     }
 };

@@ -73,6 +73,9 @@ const pdfEngine = {
         let logoHeight = 15;
         let logoBottomY = 30;
 
+        const isCorporate = settings.userPlan === 'Premium' && settings.pdfTemplate === 'Corporate';
+        const isCreative = settings.userPlan === 'Premium' && settings.pdfTemplate === 'Creative';
+
         if (logoData) {
             await new Promise((resolve) => {
                 const img = new Image();
@@ -87,100 +90,220 @@ const pdfEngine = {
                 img.onerror = resolve;
                 img.src = logoData;
             });
-
-            let logoX = 14;
-
-            doc.addImage(logoData, 'PNG', logoX, 15, logoWidth, logoHeight);
-            logoBottomY = 15 + logoHeight;
-        } else {
-            doc.setFontSize(22);
-            doc.setTextColor(...primaryColor);
-            doc.setFont('helvetica', 'bold');
-            let txtX = 14;
-            doc.text(businessName, txtX, 25);
-            logoBottomY = 28;
         }
 
-        // Document Type & Meta (Moved below logo on the left)
-        let metaY = logoBottomY + 8;
-
-        let metaAlign = 'left';
-        let metaX = 14;
-
-        doc.setFontSize(18);
-        doc.setTextColor(0, 0, 0);
-        doc.setFont('helvetica', 'bold');
-        doc.text(type.toUpperCase(), metaX, metaY, { align: metaAlign });
-
-        metaY += 6;
-        doc.setFontSize(10);
-        doc.setTextColor(...grayColor);
-        doc.setFont('helvetica', 'normal');
-
-        if (data.reference) {
-            doc.text(`Ref: ${data.reference}`, metaX, metaY, { align: metaAlign });
-            metaY += 5;
-        }
-        if (data.date) {
-            doc.text(`Date: ${new Date(data.date).toLocaleDateString()}`, metaX, metaY, { align: metaAlign });
-            metaY += 5;
-        }
-
-        // --- CLIENT DETAILS (Moved to Top Right) ---
-        let clientY = 18;
-
-        let clientAlign = 'right';
-        let clientX = 196;
-
-        doc.setFontSize(12);
-        doc.setTextColor(0, 0, 0);
-        doc.setFont('helvetica', 'bold');
-        doc.text("Prepared For:", clientX, clientY, { align: clientAlign });
-
-        clientY += 6;
-        doc.setFontSize(10);
-        doc.setFont('helvetica', 'normal');
+        let metaY, clientY, finalY;
         const client = data.client || {};
-        doc.text(client.companyName || 'Unknown Client', clientX, clientY, { align: clientAlign });
-        clientY += 5;
-        if (client.contactPerson) { doc.text(client.contactPerson, clientX, clientY, { align: clientAlign }); clientY += 5; }
-        if (client.email) { doc.text(client.email, clientX, clientY, { align: clientAlign }); clientY += 5; }
-        if (client.phone) { doc.text(client.phone, clientX, clientY, { align: clientAlign }); clientY += 5; }
 
-        // Optional Document Details section (Quote Details / Invoice Details)
-        if (data.validUntil || data.paymentTerms || data.expectedStartDate || data.deliveryTime) {
-            clientY += 4;
+        if (isCorporate) {
+            // Corporate Template Header: Full-width banner
+            doc.setFillColor(...primaryColor);
+            doc.rect(0, 0, doc.internal.pageSize.getWidth(), 45, 'F');
+
+            if (logoData) {
+                // Try to place logo on the left inside the banner
+                doc.addImage(logoData, 'PNG', 14, 12, logoWidth, logoHeight);
+            } else {
+                doc.setFontSize(22);
+                doc.setTextColor(255, 255, 255);
+                doc.setFont('helvetica', 'bold');
+                doc.text(businessName, 14, 25);
+            }
+
+            // Doc Type right-aligned inside banner
+            doc.setFontSize(22);
+            doc.setTextColor(255, 255, 255);
+            doc.setFont('helvetica', 'bold');
+            doc.text(type.toUpperCase(), 196, 25, { align: 'right' });
+
+            // Meta details right-aligned inside banner below doc type
             doc.setFontSize(10);
+            doc.setFont('helvetica', 'normal');
+            if (data.reference) {
+                doc.text(`Ref: ${data.reference}`, 196, 32, { align: 'right' });
+            }
+            if (data.date) {
+                doc.text(`Date: ${new Date(data.date).toLocaleDateString()}`, 196, 38, { align: 'right' });
+            }
+
+            // Client Info Box
+            clientY = 55;
+            doc.setFillColor(245, 245, 245);
+            doc.rect(14, 50, 85, 40, 'F');
+
+            doc.setFontSize(11);
             doc.setTextColor(0, 0, 0);
             doc.setFont('helvetica', 'bold');
-            doc.text(`${type} Details:`, clientX, clientY, { align: clientAlign });
-            clientY += 5;
+            doc.text("Prepared For:", 18, clientY);
 
+            clientY += 6;
+            doc.setFontSize(10);
             doc.setFont('helvetica', 'normal');
-            if (data.validUntil) {
-                doc.text(`Valid Until: ${new Date(data.validUntil).toLocaleDateString()}`, clientX, clientY, { align: clientAlign });
-                clientY += 5;
+            doc.text(client.companyName || 'Unknown Client', 18, clientY);
+            clientY += 5;
+            if (client.contactPerson) { doc.text(client.contactPerson, 18, clientY); clientY += 5; }
+            if (client.email) { doc.text(client.email, 18, clientY); clientY += 5; }
+            if (client.phone) { doc.text(client.phone, 18, clientY); clientY += 5; }
+
+            // Details Info Box (if exists)
+            if (data.validUntil || data.paymentTerms || data.expectedStartDate || data.deliveryTime) {
+                let detailY = 55;
+                doc.setFillColor(245, 245, 245);
+                doc.rect(111, 50, 85, 40, 'F');
+
+                doc.setFontSize(11);
+                doc.setTextColor(0, 0, 0);
+                doc.setFont('helvetica', 'bold');
+                doc.text(`${type} Details:`, 115, detailY);
+
+                detailY += 6;
+                doc.setFontSize(10);
+                doc.setFont('helvetica', 'normal');
+                if (data.validUntil) { doc.text(`Valid Until: ${new Date(data.validUntil).toLocaleDateString()}`, 115, detailY); detailY += 5; }
+                if (data.paymentTerms) { doc.text(`Payment Terms: ${data.paymentTerms}`, 115, detailY); detailY += 5; }
+                if (data.expectedStartDate) { doc.text(`Project Start: ${new Date(data.expectedStartDate).toLocaleDateString()}`, 115, detailY); detailY += 5; }
+                if (data.deliveryTime) { doc.text(`Delivery Time: ${data.deliveryTime}`, 115, detailY); detailY += 5; }
             }
-            if (data.paymentTerms) {
-                doc.text(`Payment Terms: ${data.paymentTerms}`, clientX, clientY, { align: clientAlign });
-                clientY += 5;
+
+            finalY = 100;
+
+        } else if (isCreative) {
+            // Creative Template Header
+            if (logoData) {
+                doc.addImage(logoData, 'PNG', 14, 15, logoWidth, logoHeight);
+                logoBottomY = 15 + logoHeight;
+            } else {
+                doc.setFontSize(26);
+                doc.setTextColor(0, 0, 0);
+                doc.setFont('helvetica', 'bold');
+                doc.text(businessName, 14, 25);
+                logoBottomY = 28;
             }
-            if (data.expectedStartDate) {
-                doc.text(`Project Start: ${new Date(data.expectedStartDate).toLocaleDateString()}`, clientX, clientY, { align: clientAlign });
-                clientY += 5;
+
+            // Elegant accent line under logo
+            doc.setDrawColor(...primaryColor);
+            doc.setLineWidth(1.5);
+            doc.line(14, logoBottomY + 5, 50, logoBottomY + 5);
+
+            metaY = logoBottomY + 15;
+            doc.setFontSize(28);
+            doc.setTextColor(...primaryColor);
+            doc.setFont('helvetica', 'bold');
+            doc.text(type.toUpperCase(), 14, metaY);
+
+            metaY += 8;
+            doc.setFontSize(11);
+            doc.setTextColor(...grayColor);
+            doc.setFont('helvetica', 'normal');
+            let metaTxt = "";
+            if (data.reference) metaTxt += `Ref: ${data.reference}   |   `;
+            if (data.date) metaTxt += `Date: ${new Date(data.date).toLocaleDateString()}`;
+            doc.text(metaTxt, 14, metaY);
+
+            // Client Info Box pushed down to give whitespace
+            clientY = metaY + 15;
+            doc.setFontSize(10);
+            doc.setTextColor(...grayColor);
+            doc.setFont('helvetica', 'bold');
+            doc.text("PREPARED FOR", 14, clientY);
+
+            clientY += 6;
+            doc.setFontSize(14);
+            doc.setTextColor(0, 0, 0);
+            doc.setFont('helvetica', 'bold');
+            doc.text(client.companyName || 'Unknown Client', 14, clientY);
+
+            clientY += 6;
+            doc.setFontSize(10);
+            doc.setFont('helvetica', 'normal');
+            doc.setTextColor(...grayColor);
+            if (client.contactPerson) { doc.text(client.contactPerson, 14, clientY); clientY += 5; }
+            if (client.email) { doc.text(client.email, 14, clientY); clientY += 5; }
+            if (client.phone) { doc.text(client.phone, 14, clientY); clientY += 5; }
+
+            if (data.validUntil || data.paymentTerms || data.expectedStartDate || data.deliveryTime) {
+                let detailY = metaY + 15;
+                doc.setFontSize(10);
+                doc.setTextColor(...grayColor);
+                doc.setFont('helvetica', 'bold');
+                doc.text("DETAILS", 115, detailY);
+
+                detailY += 6;
+                doc.setFontSize(10);
+                doc.setFont('helvetica', 'normal');
+                if (data.validUntil) { doc.text(`Valid Until: ${new Date(data.validUntil).toLocaleDateString()}`, 115, detailY); detailY += 5; }
+                if (data.paymentTerms) { doc.text(`Payment Terms: ${data.paymentTerms}`, 115, detailY); detailY += 5; }
+                if (data.expectedStartDate) { doc.text(`Project Start: ${new Date(data.expectedStartDate).toLocaleDateString()}`, 115, detailY); detailY += 5; }
+                if (data.deliveryTime) { doc.text(`Delivery Time: ${data.deliveryTime}`, 115, detailY); detailY += 5; }
             }
-            if (data.deliveryTime) {
-                doc.text(`Delivery Time: ${data.deliveryTime}`, clientX, clientY, { align: clientAlign });
-                clientY += 5;
+
+            finalY = Math.max(clientY, metaY + 40) + 15;
+
+        } else {
+            // STANDARD / DEFAULT TEMPLATE
+            if (logoData) {
+                doc.addImage(logoData, 'PNG', 14, 15, logoWidth, logoHeight);
+                logoBottomY = 15 + logoHeight;
+            } else {
+                doc.setFontSize(22);
+                doc.setTextColor(...primaryColor);
+                doc.setFont('helvetica', 'bold');
+                doc.text(businessName, 14, 25);
+                logoBottomY = 28;
             }
+
+            metaY = logoBottomY + 8;
+            doc.setFontSize(18);
+            doc.setTextColor(0, 0, 0);
+            doc.setFont('helvetica', 'bold');
+            doc.text(type.toUpperCase(), 14, metaY);
+
+            metaY += 6;
+            doc.setFontSize(10);
+            doc.setTextColor(...grayColor);
+            doc.setFont('helvetica', 'normal');
+
+            if (data.reference) { doc.text(`Ref: ${data.reference}`, 14, metaY); metaY += 5; }
+            if (data.date) { doc.text(`Date: ${new Date(data.date).toLocaleDateString()}`, 14, metaY); metaY += 5; }
+
+            clientY = 18;
+            doc.setFontSize(12);
+            doc.setTextColor(0, 0, 0);
+            doc.setFont('helvetica', 'bold');
+            doc.text("Prepared For:", 196, clientY, { align: 'right' });
+
+            clientY += 6;
+            doc.setFontSize(10);
+            doc.setFont('helvetica', 'normal');
+            doc.text(client.companyName || 'Unknown Client', 196, clientY, { align: 'right' });
+            clientY += 5;
+            if (client.contactPerson) { doc.text(client.contactPerson, 196, clientY, { align: 'right' }); clientY += 5; }
+            if (client.email) { doc.text(client.email, 196, clientY, { align: 'right' }); clientY += 5; }
+            if (client.phone) { doc.text(client.phone, 196, clientY, { align: 'right' }); clientY += 5; }
+
+            if (data.validUntil || data.paymentTerms || data.expectedStartDate || data.deliveryTime) {
+                clientY += 4;
+                doc.setFontSize(10);
+                doc.setTextColor(0, 0, 0);
+                doc.setFont('helvetica', 'bold');
+                doc.text(`${type} Details:`, 196, clientY, { align: 'right' });
+                clientY += 5;
+
+                doc.setFont('helvetica', 'normal');
+                if (data.validUntil) { doc.text(`Valid Until: ${new Date(data.validUntil).toLocaleDateString()}`, 196, clientY, { align: 'right' }); clientY += 5; }
+                if (data.paymentTerms) { doc.text(`Payment Terms: ${data.paymentTerms}`, 196, clientY, { align: 'right' }); clientY += 5; }
+                if (data.expectedStartDate) { doc.text(`Project Start: ${new Date(data.expectedStartDate).toLocaleDateString()}`, 196, clientY, { align: 'right' }); clientY += 5; }
+                if (data.deliveryTime) { doc.text(`Delivery Time: ${data.deliveryTime}`, 196, clientY, { align: 'right' }); clientY += 5; }
+            }
+
+            doc.setDrawColor(229, 231, 235);
+            let headerBottom = Math.max(metaY, clientY) + 5;
+            doc.line(14, headerBottom, 196, headerBottom);
+
+            finalY = headerBottom + 10;
         }
 
-        doc.setDrawColor(229, 231, 235);
-        let headerBottom = Math.max(metaY, clientY) + 5;
-        doc.line(14, headerBottom, 196, headerBottom);
-
         // --- DOCUMENT SPECIFIC CONTENT ---
-        let finalY = headerBottom + 10;
 
         if (type === 'Quotation' || type === 'Invoice' || type === 'Receipt') {
             const tableData = data.items.map(item => [
@@ -192,10 +315,15 @@ const pdfEngine = {
 
             let theme = 'striped';
             let headStyles = { fillColor: primaryColor, textColor: 255 };
+            let bodyStyles = {};
 
-            if (settings.userPlan === 'Premium' && settings.pdfTemplate === 'Modern') {
+            if (isCorporate) {
                 theme = 'grid';
-                headStyles = { fillColor: [240, 240, 240], textColor: 0, lineWidth: 0.1, lineColor: 200 };
+                headStyles = { fillColor: primaryColor, textColor: 255, lineWidth: 0.1, lineColor: 200 };
+            } else if (isCreative) {
+                theme = 'plain';
+                headStyles = { fillColor: [255, 255, 255], textColor: primaryColor, fontStyle: 'bold', lineWidth: 0 };
+                bodyStyles = { lineWidth: 0, borderBottom: [0.5, 'solid', '#eee'] };
             }
 
             doc.autoTable({
@@ -204,7 +332,8 @@ const pdfEngine = {
                 body: tableData,
                 theme: theme,
                 headStyles: headStyles,
-                alternateRowStyles: { fillColor: [249, 250, 251] },
+                bodyStyles: bodyStyles,
+                alternateRowStyles: isCreative ? {} : { fillColor: [249, 250, 251] },
                 margin: { left: 14, right: 14 }
             });
 
