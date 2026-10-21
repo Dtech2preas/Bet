@@ -1,1 +1,14 @@
-127.0.0.1 - - [18/Oct/2026 21:20:00] "GET /public_app.html HTTP/1.1" 200 -
+127.0.0.1 - - [21/Oct/2026 18:27:58] "GET /admin.html HTTP/1.1" 200 -
+127.0.0.1 - - [21/Oct/2026 18:27:58] "GET /js/api.js HTTP/1.1" 200 -
+127.0.0.1 - - [21/Oct/2026 18:27:58] "GET /js/auth.js HTTP/1.1" 200 -
+127.0.0.1 - - [21/Oct/2026 18:28:00] "GET /app.html HTTP/1.1" 200 -
+127.0.0.1 - - [21/Oct/2026 18:28:00] "GET /js/clients.js HTTP/1.1" 200 -
+127.0.0.1 - - [21/Oct/2026 18:28:00] "GET /js/quotations.js HTTP/1.1" 200 -
+127.0.0.1 - - [21/Oct/2026 18:28:00] "GET /js/pdfEngine.js HTTP/1.1" 200 -
+127.0.0.1 - - [21/Oct/2026 18:28:00] "GET /js/products.js HTTP/1.1" 200 -
+127.0.0.1 - - [21/Oct/2026 18:28:00] "GET /js/licenses.js HTTP/1.1" 200 -
+127.0.0.1 - - [21/Oct/2026 18:28:00] "GET /js/app.js HTTP/1.1" 200 -
+127.0.0.1 - - [21/Oct/2026 18:28:00] "GET /js/invoices.js HTTP/1.1" 200 -
+127.0.0.1 - - [21/Oct/2026 18:28:00] "GET /js/payments.js HTTP/1.1" 200 -
+127.0.0.1 - - [21/Oct/2026 18:28:00] "GET /js/contracts.js HTTP/1.1" 200 -
+127.0.0.1 - - [21/Oct/2026 18:28:00] "GET /js/financials.js HTTP/1.1" 200 -
