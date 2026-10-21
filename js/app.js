@@ -84,6 +84,39 @@ const app = {
         }
     },
 
+
+    logActivity(message) {
+        console.log("Activity:", message);
+
+        // Find activity container
+        const activityContainer = document.querySelector('#section-dashboard .space-y-4');
+        if (!activityContainer) return;
+
+        const timeStr = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+
+        const activityHtml = `
+            <div class="flex">
+                <div class="flex-shrink-0">
+                    <span class="h-8 w-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center">
+                        <i class="fas fa-info-circle"></i>
+                    </span>
+                </div>
+                <div class="ml-3">
+                    <p class="text-sm font-medium">${message}</p>
+                    <p class="text-xs text-gray-500">${timeStr}</p>
+                </div>
+            </div>
+        `;
+
+        // Insert at beginning
+        activityContainer.insertAdjacentHTML('afterbegin', activityHtml);
+
+        // Keep only last 10 activities (for simplicity)
+        if (activityContainer.children.length > 10) {
+            activityContainer.removeChild(activityContainer.lastElementChild);
+        }
+    },
+
     initDarkMode() {
         if (localStorage.theme === 'dark') {
             document.documentElement.classList.add('dark');

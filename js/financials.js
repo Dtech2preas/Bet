@@ -130,7 +130,7 @@ const financialsManager = {
         }).then(async (result) => {
             if (result.isConfirmed) {
                 try {
-                    const response = await API.request('/api/transactions', 'POST', result.value);
+                    const response = await API.request('/api/transactions', { method: 'POST', body: JSON.stringify(result.value) });
                     if (response.success) {
                         app.logActivity(`Added manual transaction: ${result.value.description}`);
                         Swal.fire('Saved!', '', 'success');
@@ -156,7 +156,7 @@ const financialsManager = {
             confirmButtonText: 'Yes, delete it!'
         }).then(res => res.isConfirmed)) {
             try {
-                const response = await API.request(`/api/transactions/${id}`, 'DELETE');
+                const response = await API.request(`/api/transactions/${id}`, { method: 'DELETE' });
                 if (response.success) {
                     app.logActivity('Deleted a transaction record');
                     this.loadTransactions();
@@ -186,35 +186,115 @@ const financialsManager = {
     },
 
     parseCSV(csvText) {
-        const lines = csvText.split('\n');
+        // Parse CSV with support for quoted strings
+        function parseCSVRow(str) {
+            const arr = [];
+            let quote = false;
+            let col = '';
+            for (let i = 0; i < str.length; i++) {
+                let cc = str[i], nc = str[i+1];
+                if (cc === '"' && quote && nc === '"') {
+                    col += cc; ++i; continue;
+                }
+                if (cc === '"') {
+                    quote = !quote; continue;
+                }
+                if (cc === ',' && !quote) {
+                    arr.push(col); col = ''; continue;
+                }
+                if (cc === '\r' && nc === '\n' && !quote) {
+                    arr.push(col); col = ''; ++i; continue;
+                }
+                if (cc === '\n' && !quote) {
+                    arr.push(col); col = ''; continue;
+                }
+                if (cc === '\r' && !quote) continue;
+                col += cc;
+            }
+            arr.push(col);
+            return arr;
+        }
+
+        const lines = csvText.split(/\r?\n/).filter(line => line.trim().length > 0);
+        if (lines.length < 2) {
+            Swal.fire('Error', 'CSV file appears to be empty or invalid.', 'error');
+            return;
+        }
+
+        const headers = parseCSVRow(lines[0]).map(h => h.trim().toLowerCase());
+
+        // Find indices
+        const dateIdx = headers.findIndex(h => h.includes('posting date') || h.includes('transaction date') || h === 'date');
+        const descIdx = headers.findIndex(h => h === 'description' || h === 'original description');
+        const moneyInIdx = headers.findIndex(h => h === 'money in' || h === 'credit');
+        const moneyOutIdx = headers.findIndex(h => h === 'money out' || h === 'debit');
+        const amountIdx = headers.findIndex(h => h === 'amount');
+        const feeIdx = headers.findIndex(h => h === 'fee');
+
+        if (dateIdx === -1 || descIdx === -1) {
+            Swal.fire('Error', 'Could not detect required columns (Date, Description) in the CSV.', 'error');
+            return;
+        }
+
         const parsedData = [];
 
-        // Very basic CSV parser. Assuming: Date, Description, Amount (positive or negative)
-        // Adjust indices if your bank uses a different format, or prompt user to map columns
         for (let i = 1; i < lines.length; i++) {
-            const line = lines[i].trim();
-            if (!line) continue;
+            const columns = parseCSVRow(lines[i]);
+            if (columns.length <= Math.max(dateIdx, descIdx)) continue;
 
-            // Handle quotes in CSV if needed, but simple split for now
-            const columns = line.split(',');
-            if (columns.length >= 3) {
-                let dateStr = columns[0].replace(/"/g, '').trim();
-                let desc = columns[1].replace(/"/g, '').trim();
-                let amtStr = columns[2].replace(/"/g, '').trim();
-                let amount = parseFloat(amtStr);
+            let dateStr = columns[dateIdx] ? columns[dateIdx].trim() : '';
+            // Strip time if present (e.g. 2026-09-01 06:47 -> 2026-09-01)
+            dateStr = dateStr.split(' ')[0];
 
-                if (!isNaN(amount)) {
-                    // Try to guess type based on amount sign
-                    let type = amount < 0 ? 'Expense' : 'Income';
+            let desc = columns[descIdx] ? columns[descIdx].trim() : '';
+            if (!desc) continue; // Skip empty rows
 
-                    parsedData.push({
-                        date: dateStr,
-                        description: desc,
-                        amount: Math.abs(amount),
-                        type: type,
-                        category: '' // Needs to be categorized
-                    });
+            let amount = 0;
+            let type = '';
+
+            // Handle specific formats with Money In / Money Out
+            if (moneyInIdx !== -1 || moneyOutIdx !== -1) {
+                let mIn = moneyInIdx !== -1 && columns[moneyInIdx] ? parseFloat(columns[moneyInIdx].replace(/[^\d.-]/g, '')) : NaN;
+                let mOut = moneyOutIdx !== -1 && columns[moneyOutIdx] ? parseFloat(columns[moneyOutIdx].replace(/[^\d.-]/g, '')) : NaN;
+                let fee = feeIdx !== -1 && columns[feeIdx] ? parseFloat(columns[feeIdx].replace(/[^\d.-]/g, '')) : NaN;
+
+                if (!isNaN(mIn) && mIn !== 0) {
+                    amount = Math.abs(mIn);
+                    type = 'Income';
+                } else if (!isNaN(mOut) && mOut !== 0) {
+                    amount = Math.abs(mOut);
+                    type = 'Expense';
+                } else if (!isNaN(fee) && fee !== 0) {
+                    amount = Math.abs(fee);
+                    type = 'Expense';
+                    desc += ' (Fee)';
                 }
+            } else if (amountIdx !== -1) {
+                // Simple Amount column
+                const amtStr = columns[amountIdx] ? columns[amountIdx].replace(/[^\d.-]/g, '') : '';
+                amount = parseFloat(amtStr);
+                if (!isNaN(amount)) {
+                    type = amount < 0 ? 'Expense' : 'Income';
+                    amount = Math.abs(amount);
+                }
+            } else {
+                // Fallback: try to guess standard 3 column format (Date, Description, Amount)
+                const amtStrFallback = columns.length >= 3 ? columns[2].replace(/[^\d.-]/g, '') : '';
+                amount = parseFloat(amtStrFallback);
+                if (!isNaN(amount)) {
+                    type = amount < 0 ? 'Expense' : 'Income';
+                    amount = Math.abs(amount);
+                }
+            }
+
+            if (!isNaN(amount) && amount !== 0) {
+                parsedData.push({
+                    date: dateStr,
+                    description: desc,
+                    amount: amount,
+                    type: type,
+                    category: '' // Needs to be categorized
+                });
             }
         }
 
@@ -298,7 +378,7 @@ const financialsManager = {
                 let successCount = 0;
                 for (const t of result.value) {
                     try {
-                        const response = await API.request('/api/transactions', 'POST', t);
+                        const response = await API.request('/api/transactions', { method: 'POST', body: JSON.stringify(t) });
                         if (response.success) successCount++;
                     } catch (e) {
                         console.error('Failed to save transaction', t, e);
