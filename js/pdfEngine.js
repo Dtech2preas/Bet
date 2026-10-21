@@ -362,3 +362,220 @@ async function saveFileNative(base64Data, filename) {
         if (window.Swal) Swal.fire('Error', 'Failed to save or share PDF natively', 'error');
     }
 }
+
+pdfEngine.generateIncomeStatementPDF = function(transactions, startDate, endDate) {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+
+        let revenue = 0;
+        let cogs = 0;
+        let expenses = 0;
+
+        const revData = [];
+        const expData = [];
+        const cogsData = [];
+
+        // Aggregate by category
+        const categoryTotals = {};
+        transactions.forEach(t => {
+            const cat = t.category || 'Uncategorized';
+            if (!categoryTotals[cat]) {
+                categoryTotals[cat] = { total: 0, type: t.type };
+            }
+            categoryTotals[cat].total += parseFloat(t.amount);
+        });
+
+        for (const [cat, data] of Object.entries(categoryTotals)) {
+            if (data.type === 'Income') {
+                revenue += data.total;
+                revData.push([cat, `R ${data.total.toFixed(2)}`]);
+            } else if (cat === 'Cost of Goods Sold') {
+                cogs += data.total;
+                cogsData.push([cat, `R ${data.total.toFixed(2)}`]);
+            } else if (data.type === 'Expense') {
+                expenses += data.total;
+                expData.push([cat, `R ${data.total.toFixed(2)}`]);
+            }
+        }
+
+        const grossProfit = revenue - cogs;
+        const netProfit = grossProfit - expenses;
+
+        doc.setFontSize(20);
+        doc.text('Income Statement', 14, 20);
+        doc.setFontSize(10);
+        doc.text(`For the period: ${startDate} to ${endDate}`, 14, 28);
+
+        let startY = 40;
+
+        // Revenue Section
+        doc.setFontSize(12);
+        doc.text('Revenue', 14, startY - 2);
+        doc.autoTable({
+            startY: startY,
+            head: [['Account', 'Amount']],
+            body: revData.length > 0 ? revData : [['No Revenue', 'R 0.00']],
+            theme: 'grid',
+            headStyles: { fillColor: [41, 128, 185] }
+        });
+
+        // COGS
+        if (cogsData.length > 0) {
+            startY = doc.lastAutoTable.finalY + 10;
+            doc.text('Cost of Goods Sold', 14, startY - 2);
+            doc.autoTable({
+                startY: startY,
+                head: [['Account', 'Amount']],
+                body: cogsData,
+                theme: 'grid',
+                headStyles: { fillColor: [41, 128, 185] }
+            });
+        }
+
+        startY = doc.lastAutoTable.finalY + 10;
+        doc.setFontSize(12);
+        doc.text(`Gross Profit: R ${grossProfit.toFixed(2)}`, 14, startY);
+
+        // Expenses Section
+        startY += 15;
+        doc.text('Operating Expenses', 14, startY - 2);
+        doc.autoTable({
+            startY: startY,
+            head: [['Account', 'Amount']],
+            body: expData.length > 0 ? expData : [['No Expenses', 'R 0.00']],
+            theme: 'grid',
+            headStyles: { fillColor: [192, 57, 43] }
+        });
+
+        startY = doc.lastAutoTable.finalY + 15;
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        doc.text(`Net Profit: R ${netProfit.toFixed(2)}`, 14, startY);
+
+        this.handleSave(doc, `Income_Statement_${startDate}_to_${endDate}.pdf`);
+};
+
+pdfEngine.generateBalanceSheetPDF = function(transactions, asOfDate) {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+
+        let assets = 0;
+        let liabilities = 0;
+        let equity = 0;
+        let netIncome = 0; // Accumulated net income to date
+
+        const assetData = [];
+        const liabilityData = [];
+        const equityData = [];
+
+        // Aggregate by category
+        const categoryTotals = {};
+        transactions.forEach(t => {
+            const cat = t.category || 'Uncategorized';
+            // We need to know account types from financialsManager, but we can infer for basics
+            let accntType = 'Expense'; // default
+            if (typeof financialsManager !== 'undefined' && financialsManager.chartOfAccounts) {
+                const accDef = financialsManager.chartOfAccounts.find(a => a.name === cat);
+                if (accDef) accntType = accDef.type;
+            }
+
+            if (!categoryTotals[cat]) {
+                categoryTotals[cat] = { total: 0, type: accntType };
+            }
+
+            // Adjust balances based on debits/credits basic logic
+            if (accntType === 'Income') categoryTotals[cat].total += parseFloat(t.amount);
+            else if (accntType === 'Expense') categoryTotals[cat].total += parseFloat(t.amount);
+            else if (accntType === 'Asset') {
+                if (t.type === 'Income') categoryTotals[cat].total += parseFloat(t.amount); // Increase asset
+                else categoryTotals[cat].total -= parseFloat(t.amount); // Decrease asset
+            }
+            else if (accntType === 'Liability' || accntType === 'Equity') {
+                if (t.type === 'Income') categoryTotals[cat].total += parseFloat(t.amount); // Increase liability/equity
+                else categoryTotals[cat].total -= parseFloat(t.amount); // Decrease liability/equity
+            }
+        });
+
+        for (const [cat, data] of Object.entries(categoryTotals)) {
+            if (data.type === 'Asset') {
+                assets += data.total;
+                assetData.push([cat, `R ${data.total.toFixed(2)}`]);
+            } else if (data.type === 'Liability') {
+                liabilities += data.total;
+                liabilityData.push([cat, `R ${data.total.toFixed(2)}`]);
+            } else if (data.type === 'Equity') {
+                equity += data.total;
+                equityData.push([cat, `R ${data.total.toFixed(2)}`]);
+            } else if (data.type === 'Income') {
+                netIncome += data.total;
+            } else if (data.type === 'Expense') {
+                netIncome -= data.total;
+            }
+        }
+
+        // Retained Earnings (Net Income) goes to Equity
+        equity += netIncome;
+        equityData.push(['Retained Earnings (Net Income)', `R ${netIncome.toFixed(2)}`]);
+
+        doc.setFontSize(20);
+        doc.text('Balance Sheet', 14, 20);
+        doc.setFontSize(10);
+        doc.text(`As of: ${asOfDate}`, 14, 28);
+
+        let startY = 40;
+
+        // Assets
+        doc.setFontSize(12);
+        doc.text('Assets', 14, startY - 2);
+        doc.autoTable({
+            startY: startY,
+            head: [['Account', 'Amount']],
+            body: assetData.length > 0 ? assetData : [['No Assets', 'R 0.00']],
+            theme: 'grid',
+            headStyles: { fillColor: [39, 174, 96] }
+        });
+
+        startY = doc.lastAutoTable.finalY + 10;
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.text(`Total Assets: R ${assets.toFixed(2)}`, 14, startY);
+
+        // Liabilities
+        startY += 15;
+        doc.setFont('helvetica', 'normal');
+        doc.text('Liabilities', 14, startY - 2);
+        doc.autoTable({
+            startY: startY,
+            head: [['Account', 'Amount']],
+            body: liabilityData.length > 0 ? liabilityData : [['No Liabilities', 'R 0.00']],
+            theme: 'grid',
+            headStyles: { fillColor: [192, 57, 43] }
+        });
+
+        startY = doc.lastAutoTable.finalY + 10;
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.text(`Total Liabilities: R ${liabilities.toFixed(2)}`, 14, startY);
+
+        // Equity
+        startY += 15;
+        doc.setFont('helvetica', 'normal');
+        doc.text('Equity', 14, startY - 2);
+        doc.autoTable({
+            startY: startY,
+            head: [['Account', 'Amount']],
+            body: equityData,
+            theme: 'grid',
+            headStyles: { fillColor: [142, 68, 173] }
+        });
+
+        startY = doc.lastAutoTable.finalY + 10;
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.text(`Total Equity: R ${equity.toFixed(2)}`, 14, startY);
+
+        startY += 10;
+        doc.text(`Total Liabilities & Equity: R ${(liabilities + equity).toFixed(2)}`, 14, startY);
+
+        this.handleSave(doc, `Balance_Sheet_${asOfDate}.pdf`);
+};

@@ -338,7 +338,7 @@ export default {
        }
     }
 
-    const collections = ['clients', 'products', 'quotations', 'invoices', 'licenses', 'payments', 'contracts'];
+    const collections = ['clients', 'products', 'quotations', 'invoices', 'licenses', 'payments', 'contracts', 'transactions'];
 
     // Dynamic routing for collections
     for (const collection of collections) {

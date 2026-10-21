@@ -41,22 +41,29 @@ const app = {
 
     showSection(sectionId) {
         // Hide all sections
-        const sections = ['dashboard', 'clients', 'products', 'licenses', 'quotations', 'invoices', 'payments', 'contracts'];
+        const sections = ['dashboard', 'clients', 'products', 'licenses', 'quotations', 'invoices', 'payments', 'contracts', 'financials'];
         sections.forEach(sec => {
-            document.getElementById(`section-${sec}`).classList.add('hidden');
-            document.getElementById(`nav-${sec}`).classList.remove('active', 'bg-dtech-700', 'text-white');
-            document.getElementById(`nav-${sec}`).classList.add('text-gray-700', 'dark:text-gray-300');
-            document.getElementById(`nav-${sec}`).style.backgroundColor = '';
-            document.getElementById(`nav-${sec}`).style.color = '';
+            const secEl = document.getElementById(`section-${sec}`);
+            if (secEl) secEl.classList.add('hidden');
+            const navEl = document.getElementById(`nav-${sec}`);
+            if (navEl) {
+                navEl.classList.remove('active', 'bg-dtech-700', 'text-white');
+                navEl.classList.add('text-gray-700', 'dark:text-gray-300');
+                navEl.style.backgroundColor = '';
+                navEl.style.color = '';
+            }
         });
 
         // Show target section
-        document.getElementById(`section-${sectionId}`).classList.remove('hidden');
+        const targetSecEl = document.getElementById(`section-${sectionId}`);
+        if (targetSecEl) targetSecEl.classList.remove('hidden');
         const navItem = document.getElementById(`nav-${sectionId}`);
-        navItem.classList.add('active');
-        navItem.classList.remove('text-gray-700', 'dark:text-gray-300');
-        navItem.style.backgroundColor = '#1e3a8a';
-        navItem.style.color = 'white';
+        if (navItem) {
+            navItem.classList.add('active');
+            navItem.classList.remove('text-gray-700', 'dark:text-gray-300');
+            navItem.style.backgroundColor = '#1e3a8a';
+            navItem.style.color = 'white';
+        }
 
         // Load specific data if needed
         if (sectionId === 'clients') clientsManager.loadClients();
