@@ -130,7 +130,7 @@ const financialsManager = {
         }).then(async (result) => {
             if (result.isConfirmed) {
                 try {
-                    const response = await API.request('/api/transactions', 'POST', result.value);
+                    const response = await API.request('/api/transactions', { method: 'POST', body: JSON.stringify(result.value) });
                     if (response.success) {
                         app.logActivity(`Added manual transaction: ${result.value.description}`);
                         Swal.fire('Saved!', '', 'success');
@@ -156,7 +156,7 @@ const financialsManager = {
             confirmButtonText: 'Yes, delete it!'
         }).then(res => res.isConfirmed)) {
             try {
-                const response = await API.request(`/api/transactions/${id}`, 'DELETE');
+                const response = await API.request(`/api/transactions/${id}`, { method: 'DELETE' });
                 if (response.success) {
                     app.logActivity('Deleted a transaction record');
                     this.loadTransactions();
@@ -298,7 +298,7 @@ const financialsManager = {
                 let successCount = 0;
                 for (const t of result.value) {
                     try {
-                        const response = await API.request('/api/transactions', 'POST', t);
+                        const response = await API.request('/api/transactions', { method: 'POST', body: JSON.stringify(t) });
                         if (response.success) successCount++;
                     } catch (e) {
                         console.error('Failed to save transaction', t, e);
