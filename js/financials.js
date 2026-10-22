@@ -311,8 +311,33 @@ const financialsManager = {
             categoryOptions += `<option value="${acc.name}">${acc.name} (${acc.type})</option>`;
         });
 
+
+        let autoReconMap = {};
+        try {
+            const savedMap = localStorage.getItem('dtech_auto_recon_map');
+            if (savedMap) autoReconMap = JSON.parse(savedMap);
+        } catch(e) {}
+
         let rowsHTML = '';
         parsedData.forEach((row, index) => {
+            let preSelected = '';
+
+            if (row.type === 'Expense' && row.description.toLowerCase().includes('fee')) {
+                preSelected = 'Bank Fees';
+            } else {
+                for (const [desc, cat] of Object.entries(autoReconMap)) {
+                    if (row.description.toLowerCase().includes(desc.toLowerCase())) {
+                        preSelected = cat;
+                        break;
+                    }
+                }
+            }
+
+            let currentCategoryOptions = categoryOptions;
+            if (preSelected) {
+                currentCategoryOptions = currentCategoryOptions.replace(`<option value="${preSelected}">`, `<option value="${preSelected}" selected>`);
+            }
+
             const amountColor = row.type === 'Expense' ? 'text-red-500' : 'text-green-500';
             const amountSign = row.type === 'Expense' ? '-' : '+';
             rowsHTML += `
@@ -322,7 +347,7 @@ const financialsManager = {
                     <td class="p-2 text-sm font-medium ${amountColor}">${amountSign}R${row.amount.toFixed(2)}</td>
                     <td class="p-2">
                         <select id="recon-cat-${index}" class="w-full text-sm rounded border-gray-300">
-                            ${categoryOptions}
+                            ${currentCategoryOptions}
                         </select>
                     </td>
                 </tr>
@@ -354,15 +379,27 @@ const financialsManager = {
             confirmButtonText: 'Save Reconciled',
             preConfirm: () => {
                 const finalData = [];
+                let autoReconMapToSave = {};
+                try {
+                    const savedMap = localStorage.getItem('dtech_auto_recon_map');
+                    if (savedMap) autoReconMapToSave = JSON.parse(savedMap);
+                } catch(e) {}
+
                 parsedData.forEach((row, index) => {
                     const catSelect = document.getElementById(`recon-cat-${index}`);
                     if (catSelect && catSelect.value) {
+                        if (!autoReconMapToSave[row.description]) {
+                            autoReconMapToSave[row.description] = catSelect.value;
+                        }
+
                         finalData.push({
                             ...row,
                             category: catSelect.value
                         });
                     }
                 });
+
+                localStorage.setItem('dtech_auto_recon_map', JSON.stringify(autoReconMapToSave));
                 return finalData;
             }
         }).then(async (result) => {

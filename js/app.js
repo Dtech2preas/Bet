@@ -74,6 +74,9 @@ const app = {
         if (sectionId === 'payments') paymentsManager.loadPayments();
         if (sectionId === 'contracts') contractsManager.loadContracts();
         if (sectionId === 'dashboard') this.loadDashboardData();
+        if (sectionId === 'financials') {
+            if (typeof financialsManager !== 'undefined') financialsManager.loadTransactions();
+        }
 
         // Close sidebar on mobile after navigating
         if (window.innerWidth < 768) {
