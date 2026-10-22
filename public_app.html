@@ -532,6 +532,217 @@
                 </div>
             </section>
 
+            <!-- FINANCIALS SECTION -->
+            <section id="section-financials" class="hidden animate-fade-in p-4 md:p-8">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
+                    <div>
+                        <h2 class="text-2xl font-bold text-gray-800 dark:text-white">Financials & Reports</h2>
+                        <p class="text-gray-600 dark:text-gray-400">Manage transactions, reconcile statements, and generate CIPC/SARS reports.</p>
+                    </div>
+                    <div class="mt-4 md:mt-0 flex gap-2">
+                        <button onclick="financialsManager.openTransactionModal()" class="btn-primary">
+                            <i class="fas fa-plus mr-2"></i> Add Transaction
+                        </button>
+                        <button onclick="financialsManager.triggerCSVUpload()" class="bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-dark-card dark:text-white dark:hover:bg-gray-700 px-4 py-2 rounded-md font-medium transition-colors">
+                            <i class="fas fa-file-csv mr-2"></i> Upload CSV
+                        </button>
+                        <input type="file" id="csvFileInput" accept=".csv" class="hidden" onchange="financialsManager.handleCSVUpload(event)">
+                    </div>
+                </div>
+
+                <!-- Tabs -->
+                <div class="border-b border-gray-200 dark:border-dark-border mb-6">
+                    <nav class="-mb-px flex space-x-8">
+                        <button id="btn-tab-ledger" onclick="financialsManager.switchTab('ledger')" class="border-dtech-500 text-dtech-600 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
+                            Transaction Ledger
+                        </button>
+                        <button id="btn-tab-reports" onclick="financialsManager.switchTab('reports')" class="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:hover:text-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
+                            Generate Reports
+                        </button>
+                        <button id="btn-tab-config" onclick="financialsManager.switchTab('config')" class="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:hover:text-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
+                            Configuration
+                        </button>
+                    </nav>
+                </div>
+
+                <!-- Ledger Tab -->
+                <div id="financials-ledger-tab">
+                    <div class="mb-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                        <div>
+                            <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100">Transaction History</h3>
+                            <p class="text-sm text-gray-500">View and manage your categorized transactions.</p>
+                        </div>
+                        <div class="w-full md:w-64">
+                            <select id="financials-month-filter" onchange="financialsManager.renderLedgerTable()" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-dtech-500 focus:ring-dtech-500 sm:text-sm dark:bg-dark-bg dark:border-dark-border dark:text-white">
+                                <option value="all">All Months</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="bg-white dark:bg-dark-card rounded-lg shadow-sm border dark:border-dark-border overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200 dark:divide-dark-border">
+                                <thead class="bg-gray-50 dark:bg-gray-800/50">
+                                    <tr>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+                                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="financials-ledger-tbody" class="bg-white dark:bg-dark-card divide-y divide-gray-200 dark:divide-dark-border">
+                                    <!-- Populated by JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Reports Tab -->
+                <div id="financials-reports-tab" class="hidden space-y-6">
+
+                    <div class="bg-white dark:bg-dark-card rounded-lg shadow-sm border dark:border-dark-border p-6">
+                        <div class="flex justify-between items-center mb-4">
+                            <div>
+                                <h3 class="text-lg font-bold text-gray-800 dark:text-white">Annual Financial Reports</h3>
+                                <p class="text-sm text-gray-500">Auto-generate and save your reports based on your financial year setting.</p>
+                            </div>
+                            <button onclick="financialsManager.generateAnnualReports()" class="bg-dtech-600 hover:bg-dtech-700 text-white px-4 py-2 rounded-md shadow-sm text-sm font-medium transition-colors">
+                                <i class="fas fa-magic mr-2"></i> Auto-Generate Now
+                            </button>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200 dark:divide-dark-border mt-4">
+                                <thead class="bg-gray-50 dark:bg-gray-800/50">
+                                    <tr>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Report Type</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Period</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Generated On</th>
+                                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="saved-reports-tbody" class="bg-white dark:bg-dark-card divide-y divide-gray-200 dark:divide-dark-border">
+                                    <!-- Populated by JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Income Statement Card -->
+                    <div class="bg-white dark:bg-dark-card rounded-lg shadow-sm border dark:border-dark-border p-6">
+                        <div class="flex items-center mb-4">
+                            <div class="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center mr-4">
+                                <i class="fas fa-file-invoice-dollar text-xl"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-lg font-bold text-gray-800 dark:text-white">Income Statement (Profit & Loss)</h3>
+                                <p class="text-sm text-gray-500">Generates a PDF showing revenue, expenses, and net profit over a selected period.</p>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Start Date</label>
+                                <input type="date" id="report-start-date" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-dtech-500 focus:ring-dtech-500 dark:bg-dark-bg dark:border-dark-border dark:text-white">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">End Date</label>
+                                <input type="date" id="report-end-date" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-dtech-500 focus:ring-dtech-500 dark:bg-dark-bg dark:border-dark-border dark:text-white">
+                            </div>
+                            <div class="flex items-end">
+                                <button onclick="financialsManager.generateIncomeStatement()" class="btn-primary w-full">
+                                    <i class="fas fa-download mr-2"></i> Generate PDF
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Balance Sheet Card -->
+                    <div class="bg-white dark:bg-dark-card rounded-lg shadow-sm border dark:border-dark-border p-6">
+                        <div class="flex items-center mb-4">
+                            <div class="w-10 h-10 rounded-full bg-green-100 text-green-600 flex items-center justify-center mr-4">
+                                <i class="fas fa-balance-scale text-xl"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-lg font-bold text-gray-800 dark:text-white">Balance Sheet</h3>
+                                <p class="text-sm text-gray-500">Generates a PDF snapshot of assets, liabilities, and equity at a specific date.</p>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                            <div class="md:col-span-2">
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">As Of Date (Financial Year End)</label>
+                                <input type="date" id="report-as-of-date" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-dtech-500 focus:ring-dtech-500 dark:bg-dark-bg dark:border-dark-border dark:text-white">
+                            </div>
+                            <div class="flex items-end">
+                                <button onclick="financialsManager.generateBalanceSheet()" class="btn-primary w-full">
+                                    <i class="fas fa-download mr-2"></i> Generate PDF
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Configuration Tab -->
+                <div id="financials-config-tab" class="hidden space-y-6">
+                    <!-- Financial Year Settings -->
+                    <div class="bg-white dark:bg-dark-card rounded-lg shadow-sm border dark:border-dark-border p-6">
+                        <h3 class="text-lg font-bold text-gray-800 dark:text-white mb-4">Financial Settings</h3>
+                        <p class="text-sm text-gray-500 mb-4">Configure your financial year start month to enable auto-generation of annual reports.</p>
+
+                        <div class="flex flex-col md:flex-row gap-4 max-w-lg">
+                            <div class="flex-1">
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Financial Year Start Month</label>
+                                <select id="config-fy-month" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-dtech-500 focus:ring-dtech-500 sm:text-sm dark:bg-dark-bg dark:border-dark-border dark:text-white">
+                                    <option value="1">January</option>
+                                    <option value="2">February</option>
+                                    <option value="3" selected>March</option>
+                                    <option value="4">April</option>
+                                    <option value="5">May</option>
+                                    <option value="6">June</option>
+                                    <option value="7">July</option>
+                                    <option value="8">August</option>
+                                    <option value="9">September</option>
+                                    <option value="10">October</option>
+                                    <option value="11">November</option>
+                                    <option value="12">December</option>
+                                </select>
+                            </div>
+                            <div class="flex items-end">
+                                <button onclick="financialsManager.saveFinancialSettings()" class="bg-dtech-600 text-white px-4 py-2 rounded-md hover:bg-dtech-700 text-sm font-medium w-full">Save Settings</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white dark:bg-dark-card rounded-lg shadow-sm border dark:border-dark-border p-6">
+                        <h3 class="text-lg font-bold text-gray-800 dark:text-white mb-4">Auto-Categorization Rules</h3>
+                        <p class="text-sm text-gray-500 mb-4">Map specific transaction descriptions to categories automatically during CSV uploads.</p>
+
+                        <div class="flex flex-col md:flex-row gap-4 mb-6">
+                            <input type="text" id="config-desc-input" placeholder="e.g. Bank Fee" class="flex-1 rounded-md border-gray-300 shadow-sm focus:border-dtech-500 focus:ring-dtech-500 sm:text-sm dark:bg-dark-bg dark:border-dark-border dark:text-white">
+                            <select id="config-cat-select" class="flex-1 rounded-md border-gray-300 shadow-sm focus:border-dtech-500 focus:ring-dtech-500 sm:text-sm dark:bg-dark-bg dark:border-dark-border dark:text-white">
+                                <!-- Populated dynamically -->
+                            </select>
+                            <button onclick="financialsManager.addMappingRule()" class="bg-dtech-600 text-white px-4 py-2 rounded-md hover:bg-dtech-700 text-sm font-medium">Add Rule</button>
+                        </div>
+
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200 dark:divide-dark-border">
+                                <thead class="bg-gray-50 dark:bg-gray-800/50">
+                                    <tr>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description Match (Contains)</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
+                                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="config-mappings-tbody" class="bg-white dark:bg-dark-card divide-y divide-gray-200 dark:divide-dark-border">
+                                    <!-- Populated by JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
             <!-- SETTINGS SECTION -->
             <section id="section-settings" class="hidden">
                 <div class="mb-6">
@@ -665,6 +876,28 @@
     </main>
 
     <!-- Client Modal (Hidden) -->
+    <!-- Reconcile Modal -->
+    <div id="reconcileModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-start md:items-center justify-center z-50 overflow-y-auto p-4 md:p-0">
+        <div class="bg-white dark:bg-dark-card rounded-lg shadow-xl w-full max-w-4xl mx-auto my-4 md:my-8 flex flex-col max-h-[90vh]">
+            <div class="flex justify-between items-center p-6 border-b border-gray-200 dark:border-dark-border flex-shrink-0">
+                <h3 class="text-xl font-bold text-gray-800 dark:text-white">Reconcile Transactions</h3>
+                <button onclick="financialsManager.closeReconcileModal()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            <div class="p-6 overflow-y-auto flex-1 bg-gray-50 dark:bg-dark-bg">
+                <p class="text-sm text-gray-500 mb-4">Assign a category to each imported transaction. Uncategorized transactions will not be saved.</p>
+                <div id="reconcileContainer" class="space-y-4">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+            <div class="flex justify-end gap-3 p-6 border-t border-gray-200 dark:border-dark-border flex-shrink-0 bg-white dark:bg-dark-card rounded-b-lg">
+                <button type="button" onclick="financialsManager.closeReconcileModal()" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 dark:bg-dark-card dark:text-gray-300 dark:border-dark-border dark:hover:bg-gray-800 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-dtech-500">Cancel</button>
+                <button type="button" onclick="financialsManager.saveReconciled()" class="btn-primary">Save Reconciled</button>
+            </div>
+        </div>
+    </div>
+
     <div id="clientModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 p-4">
         <div class="bg-white dark:bg-dark-card rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col">
             <div class="px-6 py-4 border-b dark:border-dark-border flex justify-between items-center bg-white dark:bg-dark-card rounded-t-lg flex-shrink-0">

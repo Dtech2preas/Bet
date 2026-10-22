@@ -45,13 +45,47 @@ const financialsManager = {
         const tbody = document.getElementById('financials-ledger-tbody');
         if (!tbody) return;
 
-        if (this.transactions.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-gray-500">No transactions found. Upload CSV or Add Manually.</td></tr>';
+        // Populate month filter dropdown
+        const monthFilter = document.getElementById('financials-month-filter');
+        let selectedMonth = monthFilter ? monthFilter.value : 'all';
+
+        if (monthFilter && this.transactions.length > 0) {
+            const uniqueMonths = new Set();
+            this.transactions.forEach(t => {
+                if (t.date) {
+                    const dateParts = t.date.split('-');
+                    if (dateParts.length >= 2) {
+                        uniqueMonths.add(`${dateParts[0]}-${dateParts[1]}`);
+                    }
+                }
+            });
+
+            const sortedMonths = Array.from(uniqueMonths).sort((a, b) => b.localeCompare(a));
+
+            // If it's the first time rendering and 'all' is selected, default to the most recent month
+            if (monthFilter.options.length <= 1 && sortedMonths.length > 0) {
+                selectedMonth = sortedMonths[0];
+            }
+
+            monthFilter.innerHTML = '<option value="all">All Months</option>' + sortedMonths.map(m => {
+                const dateObj = new Date(`${m}-01`);
+                const monthName = dateObj.toLocaleString('default', { month: 'long', year: 'numeric' });
+                return `<option value="${m}" ${selectedMonth === m ? 'selected' : ''}>${monthName}</option>`;
+            }).join('');
+        }
+
+        let filteredTransactions = this.transactions;
+        if (selectedMonth && selectedMonth !== 'all') {
+            filteredTransactions = this.transactions.filter(t => t.date && t.date.startsWith(selectedMonth));
+        }
+
+        if (filteredTransactions.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-gray-500">No transactions found for this period.</td></tr>';
             return;
         }
 
         tbody.innerHTML = '';
-        this.transactions.forEach(t => {
+        filteredTransactions.forEach(t => {
             const tr = document.createElement('tr');
             tr.className = 'border-b dark:border-dark-border hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors';
 
@@ -319,98 +353,93 @@ const financialsManager = {
     },
 
     showReconciliationModal(parsedData) {
-        let categoryOptions = '<option value="">Select Category</option>';
-        this.chartOfAccounts.forEach(acc => {
-            categoryOptions += `<option value="${acc.name}">${acc.name} (${acc.type})</option>`;
-        });
-
-        let rowsHTML = '';
+        this._pendingReconcileData = parsedData;
+        let html = '';
         parsedData.forEach((row, index) => {
-            const amountColor = row.type === 'Expense' ? 'text-red-500' : 'text-green-500';
-            const amountSign = row.type === 'Expense' ? '-' : '+';
-            rowsHTML += `
-                <tr class="border-b">
-                    <td class="p-2 text-sm">${row.date}</td>
-                    <td class="p-2 text-sm">${row.description}</td>
-                    <td class="p-2 text-sm font-medium ${amountColor}">${amountSign}R${row.amount.toFixed(2)}</td>
-                    <td class="p-2">
-                        <select id="recon-cat-${index}" class="w-full text-sm rounded border-gray-300">
-                            <option value="">Select Category</option>
+            const isExpense = row.type === 'Expense';
+            const amountColor = isExpense ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400';
+            const amountSign = isExpense ? '-' : '+';
+
+            html += `
+                <div class="bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-lg p-4 shadow-sm flex flex-col md:flex-row gap-4 items-start md:items-center">
+                    <div class="flex-1 min-w-0 w-full">
+                        <div class="flex justify-between md:justify-start items-center gap-2 mb-1">
+                            <span class="text-sm font-medium text-gray-500 dark:text-gray-400">${row.date}</span>
+                            <span class="text-base font-bold ${amountColor} md:ml-4">${amountSign}R${row.amount.toFixed(2)}</span>
+                        </div>
+                        <p class="text-gray-900 dark:text-gray-100 font-medium truncate" title="${row.description}">${row.description}</p>
+                    </div>
+                    <div class="w-full md:w-64 flex-shrink-0">
+                        <select id="recon-cat-${index}" class="w-full rounded-md border-gray-300 shadow-sm focus:border-dtech-500 focus:ring-dtech-500 sm:text-sm dark:bg-dark-bg dark:border-dark-border dark:text-white">
+                            <option value="">Select Category...</option>
                             ${this.chartOfAccounts.map(acc => `<option value="${acc.name}" ${row.category === acc.name ? 'selected' : ''}>${acc.name} (${acc.type})</option>`).join('')}
                         </select>
-                    </td>
-                </tr>
+                    </div>
+                </div>
             `;
         });
 
-        Swal.fire({
-            title: 'Reconcile Transactions',
-            width: '800px',
-            html: `
-                <div class="max-h-[60vh] overflow-y-auto">
-                    <p class="text-sm text-gray-500 mb-4 text-left">Assign a category to each imported transaction. Uncategorized transactions will not be saved.</p>
-                    <table class="min-w-full text-left">
-                        <thead>
-                            <tr class="bg-gray-100">
-                                <th class="p-2 text-sm">Date</th>
-                                <th class="p-2 text-sm">Description</th>
-                                <th class="p-2 text-sm">Amount</th>
-                                <th class="p-2 text-sm">Category</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${rowsHTML}
-                        </tbody>
-                    </table>
-                </div>
-            `,
-            showCancelButton: true,
-            confirmButtonText: 'Save Reconciled',
-            preConfirm: () => {
-                const finalData = [];
-                const newMappings = JSON.parse(localStorage.getItem('dtech_financials_mappings') || '{}');
-                parsedData.forEach((row, index) => {
-                    const catSelect = document.getElementById(`recon-cat-${index}`);
-                    if (catSelect && catSelect.value) {
-                        finalData.push({
-                            ...row,
-                            category: catSelect.value
-                        });
-                        // Automatically map this description to this category
-                        const words = row.description.split(' ').slice(0, 3).join(' '); // Use first 3 words as key
-                        if (words && !newMappings[words]) {
-                            newMappings[words] = catSelect.value;
-                        }
-                    }
-                });
-                localStorage.setItem('dtech_financials_mappings', JSON.stringify(newMappings));
-                return finalData;
-            }
-        }).then(async (result) => {
-            if (result.isConfirmed && result.value.length > 0) {
-                Swal.fire({
-                    title: 'Saving...',
-                    allowOutsideClick: false,
-                    didOpen: () => {
-                        Swal.showLoading();
-                    }
-                });
+        document.getElementById('reconcileContainer').innerHTML = html;
+        document.getElementById('reconcileModal').classList.remove('hidden');
+        document.getElementById('reconcileModal').classList.add('flex');
+    },
 
-                let successCount = 0;
-                for (const t of result.value) {
-                    try {
-                        const response = await API.request('/api/transactions', { method: 'POST', body: JSON.stringify(t) });
-                        if (response.success) successCount++;
-                    } catch (e) {
-                        console.error('Failed to save transaction', t, e);
-                    }
+    closeReconcileModal() {
+        document.getElementById('reconcileModal').classList.add('hidden');
+        document.getElementById('reconcileModal').classList.remove('flex');
+        this._pendingReconcileData = null;
+    },
+
+    async saveReconciled() {
+        if (!this._pendingReconcileData) return;
+
+        const finalData = [];
+        const newMappings = JSON.parse(localStorage.getItem('dtech_financials_mappings') || '{}');
+
+        this._pendingReconcileData.forEach((row, index) => {
+            const catSelect = document.getElementById(`recon-cat-${index}`);
+            if (catSelect && catSelect.value) {
+                finalData.push({
+                    ...row,
+                    category: catSelect.value
+                });
+                const words = row.description.split(' ').slice(0, 3).join(' '); // Use first 3 words as key
+                if (words && !newMappings[words.toLowerCase()]) {
+                    newMappings[words.toLowerCase()] = catSelect.value;
                 }
-
-                app.logActivity(`Imported and reconciled ${successCount} transactions`);
-                Swal.fire('Complete', `Successfully saved ${successCount} transactions.`, 'success');
-                this.loadTransactions();
             }
         });
+
+        if (finalData.length === 0) {
+            Swal.fire('Info', 'No transactions were categorized to save.', 'info');
+            return;
+        }
+
+        localStorage.setItem('dtech_financials_mappings', JSON.stringify(newMappings));
+
+        this.closeReconcileModal();
+
+        Swal.fire({
+            title: 'Saving...',
+            allowOutsideClick: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
+
+        let successCount = 0;
+        for (const t of finalData) {
+            try {
+                const response = await API.request('/api/transactions', { method: 'POST', body: JSON.stringify(t) });
+                if (response.success) successCount++;
+            } catch (e) {
+                console.error('Failed to save transaction', t, e);
+            }
+        }
+
+        app.logActivity(`Imported and reconciled ${successCount} transactions`);
+        Swal.fire('Complete', `Successfully saved ${successCount} transactions.`, 'success');
+        this.loadTransactions();
     },
 
     generateIncomeStatement() {
@@ -454,8 +483,117 @@ const financialsManager = {
         }
     },
 
+    saveFinancialSettings() {
+        const fyMonth = document.getElementById('config-fy-month').value;
+        localStorage.setItem('dtech_fy_start_month', fyMonth);
+        Swal.fire('Saved', 'Financial settings have been saved successfully.', 'success');
+    },
+
+    async generateAnnualReports() {
+        const fyStartMonth = parseInt(localStorage.getItem('dtech_fy_start_month') || '3', 10);
+
+        // Determine the current financial year based on today's date
+        const today = new Date();
+        const currentYear = today.getFullYear();
+        const currentMonth = today.getMonth() + 1; // 1-12
+
+        let startYear, endYear;
+        if (currentMonth >= fyStartMonth) {
+            // We are currently IN the new financial year
+            startYear = currentYear;
+            endYear = currentYear + 1;
+        } else {
+            // We are still in the previous financial year
+            startYear = currentYear - 1;
+            endYear = currentYear;
+        }
+
+        const startDateStr = `${startYear}-${String(fyStartMonth).padStart(2, '0')}-01`;
+        // End date is the day before the next start date
+        const nextStartDate = new Date(`${endYear}-${String(fyStartMonth).padStart(2, '0')}-01`);
+        const endDate = new Date(nextStartDate.getTime() - 86400000); // minus 1 day
+        const endDateStr = endDate.toISOString().split('T')[0];
+
+        const periodStr = `${startDateStr} to ${endDateStr}`;
+        const generatedOn = new Date().toISOString().split('T')[0];
+
+        // Create report records
+        const newReports = [
+            { id: Date.now().toString(), type: 'IncomeStatement', startDate: startDateStr, endDate: endDateStr, period: periodStr, generatedOn },
+            { id: (Date.now() + 1).toString(), type: 'BalanceSheet', asOfDate: endDateStr, period: `As of ${endDateStr}`, generatedOn }
+        ];
+
+        let savedReports = JSON.parse(localStorage.getItem('dtech_saved_reports') || '[]');
+        savedReports = [...newReports, ...savedReports];
+        localStorage.setItem('dtech_saved_reports', JSON.stringify(savedReports));
+
+        this.renderReportsTab();
+        Swal.fire('Success', 'Annual reports have been generated and saved.', 'success');
+    },
+
+    downloadSavedReport(id) {
+        const savedReports = JSON.parse(localStorage.getItem('dtech_saved_reports') || '[]');
+        const report = savedReports.find(r => r.id === id);
+        if (!report) return Swal.fire('Error', 'Report not found.', 'error');
+
+        if (report.type === 'IncomeStatement') {
+            const filtered = this.transactions.filter(t => {
+                const d = new Date(t.date);
+                return d >= new Date(report.startDate) && d <= new Date(report.endDate);
+            });
+            if (typeof pdfEngine !== 'undefined' && pdfEngine.generateIncomeStatementPDF) {
+                pdfEngine.generateIncomeStatementPDF(filtered, report.startDate, report.endDate);
+            }
+        } else if (report.type === 'BalanceSheet') {
+            const filtered = this.transactions.filter(t => {
+                const d = new Date(t.date);
+                return d <= new Date(report.asOfDate);
+            });
+            if (typeof pdfEngine !== 'undefined' && pdfEngine.generateBalanceSheetPDF) {
+                pdfEngine.generateBalanceSheetPDF(filtered, report.asOfDate);
+            }
+        }
+    },
+
+    deleteSavedReport(id) {
+        let savedReports = JSON.parse(localStorage.getItem('dtech_saved_reports') || '[]');
+        savedReports = savedReports.filter(r => r.id !== id);
+        localStorage.setItem('dtech_saved_reports', JSON.stringify(savedReports));
+        this.renderReportsTab();
+    },
+
+    renderReportsTab() {
+        const tbody = document.getElementById('saved-reports-tbody');
+        if (!tbody) return;
+
+        const savedReports = JSON.parse(localStorage.getItem('dtech_saved_reports') || '[]');
+        if (savedReports.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-gray-500">No saved reports found.</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = savedReports.map(r => `
+            <tr class="border-b dark:border-dark-border hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
+                    <i class="fas ${r.type === 'IncomeStatement' ? 'fa-file-invoice-dollar text-blue-500' : 'fa-balance-scale text-green-500'} mr-2"></i>
+                    ${r.type === 'IncomeStatement' ? 'Income Statement' : 'Balance Sheet'}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${r.period}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${r.generatedOn}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <button onclick="financialsManager.downloadSavedReport('${r.id}')" class="text-dtech-600 hover:text-dtech-900 mr-3" title="Download"><i class="fas fa-download"></i></button>
+                    <button onclick="financialsManager.deleteSavedReport('${r.id}')" class="text-red-600 hover:text-red-900" title="Delete"><i class="fas fa-trash"></i></button>
+                </td>
+            </tr>
+        `).join('');
+    },
 
     renderConfigTab() {
+        const fySelect = document.getElementById('config-fy-month');
+        if (fySelect) {
+            fySelect.value = localStorage.getItem('dtech_fy_start_month') || '3';
+        }
+
         const select = document.getElementById('config-cat-select');
         if (select) {
             select.innerHTML = '<option value="">Select Category</option>' +
@@ -547,6 +685,7 @@ const financialsManager = {
             tabReports.classList.remove('hidden');
             btnReports.classList.add('border-dtech-500', 'text-dtech-600');
             btnReports.classList.remove('border-transparent', 'text-gray-500');
+            this.renderReportsTab();
         } else if (tabName === 'config' && tabConfig && btnConfig) {
             tabConfig.classList.remove('hidden');
             btnConfig.classList.add('border-dtech-500', 'text-dtech-600');
