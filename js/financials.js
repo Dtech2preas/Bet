@@ -1,5 +1,10 @@
 const financialsManager = {
     transactions: [],
+    settings: {
+        fyStartMonth: '3',
+        mappings: {},
+        savedReports: []
+    },
     chartOfAccounts: [
         { name: "Sales Revenue", type: "Income" },
         { name: "Service Revenue", type: "Income" },
@@ -20,6 +25,8 @@ const financialsManager = {
     ],
 
     async loadTransactions() {
+        await this.loadFinancialSettings();
+
         const container = document.getElementById('financials-ledger-tbody');
         if (container) {
             container.innerHTML = '<tr><td colspan="5" class="text-center py-4"><i class="fas fa-spinner fa-spin text-2xl text-dtech-500"></i></td></tr>';
@@ -37,6 +44,85 @@ const financialsManager = {
             console.error('Failed to load transactions:', error);
             if (container) {
                 container.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-red-500">Failed to load transactions: ${error.message}</td></tr>`;
+            }
+        }
+    },
+
+    async loadFinancialSettings() {
+        try {
+            const response = await API.request('/api/settings');
+            if (response.success && response.settings) {
+                if (response.settings.financials) {
+                    this.settings = { ...this.settings, ...response.settings.financials };
+                }
+            }
+        } catch (e) {
+            console.error('Failed to load financial settings', e);
+        }
+    },
+
+    async syncFinancialSettings() {
+        try {
+            const response = await API.request('/api/settings', {
+                method: 'PUT',
+                body: JSON.stringify({ financials: this.settings })
+            });
+            return response.success;
+        } catch (e) {
+            console.error('Failed to sync financial settings', e);
+            return false;
+        }
+    },
+
+    toggleSelectAll(source) {
+        const checkboxes = document.querySelectorAll('.transaction-checkbox');
+        checkboxes.forEach(cb => cb.checked = source.checked);
+        this.updateBulkActionsState();
+    },
+
+    updateBulkActionsState() {
+        const checkboxes = document.querySelectorAll('.transaction-checkbox:checked');
+        const bulkBtn = document.getElementById('btn-bulk-delete-transactions');
+        if (bulkBtn) {
+            if (checkboxes.length > 0) {
+                bulkBtn.classList.remove('hidden');
+            } else {
+                bulkBtn.classList.add('hidden');
+            }
+        }
+    },
+
+    async bulkDeleteTransactions() {
+        const selected = Array.from(document.querySelectorAll('.transaction-checkbox:checked')).map(cb => cb.value);
+        if (selected.length === 0) return Swal.fire('Info', 'No transactions selected', 'info');
+
+        if (await Swal.fire({
+            title: 'Are you sure?',
+            text: `You are about to delete ${selected.length} transactions. This cannot be undone!`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Yes, delete them!'
+        }).then(res => res.isConfirmed)) {
+            Swal.fire({ title: 'Deleting...', allowOutsideClick: false, didOpen: () => { Swal.showLoading() }});
+            try {
+                let successCount = 0;
+                for (const id of selected) {
+                    const response = await API.request(`/api/transactions/${id}`, { method: 'DELETE' });
+                    if (response.success) successCount++;
+                }
+                app.logActivity(`Bulk deleted ${successCount} transactions`);
+                Swal.fire('Success', `Deleted ${successCount} transactions`, 'success');
+                this.loadTransactions();
+
+                // Hide bulk btn and uncheck select all
+                const selectAll = document.getElementById('selectAllTransactions');
+                if (selectAll) selectAll.checked = false;
+                this.updateBulkActionsState();
+
+            } catch (e) {
+                Swal.fire('Error', e.message, 'error');
             }
         }
     },
@@ -327,7 +413,7 @@ const financialsManager = {
                 autoCategory = 'Bank Fees';
             }
             // Get saved mappings
-            const savedMappings = JSON.parse(localStorage.getItem('dtech_financials_mappings') || '{}');
+            const savedMappings = this.settings.mappings || {};
             for (const [key, cat] of Object.entries(savedMappings)) {
                 if (lowerDesc.includes(key.toLowerCase())) {
                     autoCategory = cat;
@@ -394,7 +480,7 @@ const financialsManager = {
         if (!this._pendingReconcileData) return;
 
         const finalData = [];
-        const newMappings = JSON.parse(localStorage.getItem('dtech_financials_mappings') || '{}');
+        const newMappings = this.settings.mappings || {};
 
         this._pendingReconcileData.forEach((row, index) => {
             const catSelect = document.getElementById(`recon-cat-${index}`);
@@ -415,7 +501,8 @@ const financialsManager = {
             return;
         }
 
-        localStorage.setItem('dtech_financials_mappings', JSON.stringify(newMappings));
+        this.settings.mappings = newMappings;
+        await this.syncFinancialSettings();
 
         this.closeReconcileModal();
 
@@ -483,14 +570,17 @@ const financialsManager = {
         }
     },
 
-    saveFinancialSettings() {
+    async saveFinancialSettings() {
         const fyMonth = document.getElementById('config-fy-month').value;
-        localStorage.setItem('dtech_fy_start_month', fyMonth);
-        Swal.fire('Saved', 'Financial settings have been saved successfully.', 'success');
+        this.settings.fyStartMonth = fyMonth;
+        const success = await this.syncFinancialSettings();
+        if (success) {
+            Swal.fire('Saved', 'Financial settings have been saved successfully.', 'success');
+        }
     },
 
     async generateAnnualReports() {
-        const fyStartMonth = parseInt(localStorage.getItem('dtech_fy_start_month') || '3', 10);
+        const fyStartMonth = parseInt(this.settings.fyStartMonth || '3', 10);
 
         // Determine the current financial year based on today's date
         const today = new Date();
@@ -523,16 +613,17 @@ const financialsManager = {
             { id: (Date.now() + 1).toString(), type: 'BalanceSheet', asOfDate: endDateStr, period: `As of ${endDateStr}`, generatedOn }
         ];
 
-        let savedReports = JSON.parse(localStorage.getItem('dtech_saved_reports') || '[]');
+        let savedReports = this.settings.savedReports || [];
         savedReports = [...newReports, ...savedReports];
-        localStorage.setItem('dtech_saved_reports', JSON.stringify(savedReports));
+        this.settings.savedReports = savedReports;
+        await this.syncFinancialSettings();
 
         this.renderReportsTab();
         Swal.fire('Success', 'Annual reports have been generated and saved.', 'success');
     },
 
     downloadSavedReport(id) {
-        const savedReports = JSON.parse(localStorage.getItem('dtech_saved_reports') || '[]');
+        const savedReports = this.settings.savedReports || [];
         const report = savedReports.find(r => r.id === id);
         if (!report) return Swal.fire('Error', 'Report not found.', 'error');
 
@@ -555,10 +646,11 @@ const financialsManager = {
         }
     },
 
-    deleteSavedReport(id) {
-        let savedReports = JSON.parse(localStorage.getItem('dtech_saved_reports') || '[]');
+    async deleteSavedReport(id) {
+        let savedReports = this.settings.savedReports || [];
         savedReports = savedReports.filter(r => r.id !== id);
-        localStorage.setItem('dtech_saved_reports', JSON.stringify(savedReports));
+        this.settings.savedReports = savedReports;
+        await this.syncFinancialSettings();
         this.renderReportsTab();
     },
 
@@ -566,23 +658,35 @@ const financialsManager = {
         const tbody = document.getElementById('saved-reports-tbody');
         if (!tbody) return;
 
-        const savedReports = JSON.parse(localStorage.getItem('dtech_saved_reports') || '[]');
+        const savedReports = this.settings.savedReports || [];
         if (savedReports.length === 0) {
             tbody.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-gray-500">No saved reports found.</td></tr>';
             return;
         }
 
         tbody.innerHTML = savedReports.map(r => `
-            <tr class="border-b dark:border-dark-border hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
-                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
-                    <i class="fas ${r.type === 'IncomeStatement' ? 'fa-file-invoice-dollar text-blue-500' : 'fa-balance-scale text-green-500'} mr-2"></i>
-                    ${r.type === 'IncomeStatement' ? 'Income Statement' : 'Balance Sheet'}
+            <tr class="block md:table-row mb-4 md:mb-0 border-b md:border-0 p-4 md:p-0 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                <td class="px-0 md:px-6 py-2 md:py-4 flex md:table-cell justify-between items-center whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
+                    <div class="md:hidden font-bold text-xs uppercase text-gray-500 mr-2">Type:</div>
+                    <div class="text-right md:text-left">
+                        <i class="fas ${r.type === 'IncomeStatement' ? 'fa-file-invoice-dollar text-blue-500' : 'fa-balance-scale text-green-500'} mr-2"></i>
+                        ${r.type === 'IncomeStatement' ? 'Income Statement' : 'Balance Sheet'}
+                    </div>
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${r.period}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${r.generatedOn}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <button onclick="financialsManager.downloadSavedReport('${r.id}')" class="text-dtech-600 hover:text-dtech-900 mr-3" title="Download"><i class="fas fa-download"></i></button>
-                    <button onclick="financialsManager.deleteSavedReport('${r.id}')" class="text-red-600 hover:text-red-900" title="Delete"><i class="fas fa-trash"></i></button>
+                <td class="px-0 md:px-6 py-2 md:py-4 flex md:table-cell justify-between items-center whitespace-nowrap text-sm text-gray-500">
+                    <div class="md:hidden font-bold text-xs uppercase text-gray-500 mr-2">Period:</div>
+                    <div class="text-right md:text-left">${r.period}</div>
+                </td>
+                <td class="px-0 md:px-6 py-2 md:py-4 flex md:table-cell justify-between items-center whitespace-nowrap text-sm text-gray-500">
+                    <div class="md:hidden font-bold text-xs uppercase text-gray-500 mr-2">Generated On:</div>
+                    <div class="text-right md:text-left">${r.generatedOn}</div>
+                </td>
+                <td class="px-0 md:px-6 py-2 md:py-4 flex md:table-cell justify-between items-center whitespace-nowrap text-right text-sm font-medium">
+                    <div class="md:hidden font-bold text-xs uppercase text-gray-500 mr-2">Actions:</div>
+                    <div>
+                        <button onclick="financialsManager.downloadSavedReport('${r.id}')" class="text-dtech-600 hover:text-dtech-900 mr-3" title="Download"><i class="fas fa-download"></i></button>
+                        <button onclick="financialsManager.deleteSavedReport('${r.id}')" class="text-red-600 hover:text-red-900" title="Delete"><i class="fas fa-trash"></i></button>
+                    </div>
                 </td>
             </tr>
         `).join('');
@@ -591,7 +695,7 @@ const financialsManager = {
     renderConfigTab() {
         const fySelect = document.getElementById('config-fy-month');
         if (fySelect) {
-            fySelect.value = localStorage.getItem('dtech_fy_start_month') || '3';
+            fySelect.value = this.settings.fyStartMonth || '3';
         }
 
         const select = document.getElementById('config-cat-select');
@@ -603,7 +707,7 @@ const financialsManager = {
         const tbody = document.getElementById('config-mappings-tbody');
         if (!tbody) return;
 
-        const mappings = JSON.parse(localStorage.getItem('dtech_financials_mappings') || '{}');
+        const mappings = this.settings.mappings || {};
         const keys = Object.keys(mappings);
 
         if (keys.length === 0) {
@@ -612,17 +716,24 @@ const financialsManager = {
         }
 
         tbody.innerHTML = keys.map(k => `
-            <tr>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">${k}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${mappings[k]}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+            <tr class="block md:table-row mb-4 md:mb-0 border-b md:border-0 p-4 md:p-0 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                <td class="px-0 md:px-6 py-2 md:py-4 flex md:table-cell justify-between items-center whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
+                    <div class="md:hidden font-bold text-xs uppercase text-gray-500 mr-2">Match:</div>
+                    <div class="text-right md:text-left">${k}</div>
+                </td>
+                <td class="px-0 md:px-6 py-2 md:py-4 flex md:table-cell justify-between items-center whitespace-nowrap text-sm text-gray-500">
+                    <div class="md:hidden font-bold text-xs uppercase text-gray-500 mr-2">Category:</div>
+                    <div class="text-right md:text-left">${mappings[k]}</div>
+                </td>
+                <td class="px-0 md:px-6 py-2 md:py-4 flex md:table-cell justify-between items-center whitespace-nowrap text-right text-sm font-medium">
+                    <div class="md:hidden font-bold text-xs uppercase text-gray-500 mr-2">Actions:</div>
                     <button onclick="financialsManager.deleteMappingRule('${k.replace(/'/g, "\'")}')" class="text-red-600 hover:text-red-900"><i class="fas fa-trash"></i></button>
                 </td>
             </tr>
         `).join('');
     },
 
-    addMappingRule() {
+    async addMappingRule() {
         const descInput = document.getElementById('config-desc-input');
         const catSelect = document.getElementById('config-cat-select');
 
@@ -634,9 +745,10 @@ const financialsManager = {
             return;
         }
 
-        const mappings = JSON.parse(localStorage.getItem('dtech_financials_mappings') || '{}');
+        const mappings = this.settings.mappings || {};
         mappings[desc.toLowerCase()] = cat;
-        localStorage.setItem('dtech_financials_mappings', JSON.stringify(mappings));
+        this.settings.mappings = mappings;
+        await this.syncFinancialSettings();
 
         descInput.value = '';
         catSelect.value = '';
@@ -644,10 +756,11 @@ const financialsManager = {
         app.logActivity('Added a new financial mapping rule');
     },
 
-    deleteMappingRule(key) {
-        const mappings = JSON.parse(localStorage.getItem('dtech_financials_mappings') || '{}');
+    async deleteMappingRule(key) {
+        const mappings = this.settings.mappings || {};
         delete mappings[key];
-        localStorage.setItem('dtech_financials_mappings', JSON.stringify(mappings));
+        this.settings.mappings = mappings;
+        await this.syncFinancialSettings();
         this.renderConfigTab();
     },
 

@@ -547,6 +547,11 @@ export default {
         const customStart = url.searchParams.get('start');
         const customEnd = url.searchParams.get('end');
 
+        const settingsData = await env.DTECH_KV.get('settings');
+        const allSettings = settingsData ? JSON.parse(settingsData) : [];
+        const businessSettings = allSettings.find(s => s.business_id === business_id) || {};
+        const fyStartMonth = parseInt((businessSettings.financials && businessSettings.financials.fyStartMonth) || '3', 10);
+
         const clientsData = await env.DTECH_KV.get('clients');
         const allClients = clientsData ? JSON.parse(clientsData) : [];
         const clients = allClients.filter(c => c.business_id === business_id);
@@ -637,6 +642,16 @@ export default {
         let monthlyRevenue = 0;
         let lastMonthRevenue = 0;
         let yearRevenue = 0;
+        let ytdRevenue = 0;
+
+        // Calculate current financial year start date
+        let fyStartYear;
+        if ((currentMonth + 1) >= fyStartMonth) {
+            fyStartYear = currentYear;
+        } else {
+            fyStartYear = currentYear - 1;
+        }
+        const fyStartDate = new Date(`${fyStartYear}-${String(fyStartMonth).padStart(2, '0')}-01`);
 
         invoices.filter(i => i.status === 'Paid').forEach(inv => {
             const amount = Number(inv.total) || 0;
@@ -656,6 +671,9 @@ export default {
 
             // This year
             if (d.getFullYear() === currentYear) yearRevenue += amount;
+
+            // Year to Date (Financial Year)
+            if (d >= fyStartDate) ytdRevenue += amount;
         });
 
         // Calculate revenue for the last 6 months for the chart
