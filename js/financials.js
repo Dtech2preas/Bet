@@ -20,6 +20,32 @@ const financialsManager = {
     ],
 
     async loadTransactions() {
+        // Set default report dates to current month if they are empty
+        const now = new Date();
+        const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+        const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+
+        // Format to YYYY-MM-DD
+        const formatDate = (date) => {
+            const d = new Date(date);
+            let month = '' + (d.getMonth() + 1);
+            let day = '' + d.getDate();
+            const year = d.getFullYear();
+
+            if (month.length < 2) month = '0' + month;
+            if (day.length < 2) day = '0' + day;
+
+            return [year, month, day].join('-');
+        };
+
+        const startDateInput = document.getElementById('report-start-date');
+        const endDateInput = document.getElementById('report-end-date');
+        const asOfDateInput = document.getElementById('report-as-of-date');
+
+        if (startDateInput && !startDateInput.value) startDateInput.value = formatDate(firstDay);
+        if (endDateInput && !endDateInput.value) endDateInput.value = formatDate(lastDay);
+        if (asOfDateInput && !asOfDateInput.value) asOfDateInput.value = formatDate(lastDay);
+
         const container = document.getElementById('financials-ledger-tbody');
         if (container) {
             container.innerHTML = '<tr><td colspan="5" class="text-center py-4"><i class="fas fa-spinner fa-spin text-2xl text-dtech-500"></i></td></tr>';
@@ -47,11 +73,74 @@ const financialsManager = {
 
         if (this.transactions.length === 0) {
             tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-gray-500">No transactions found. Upload CSV or Add Manually.</td></tr>';
+            const filterDropdown = document.getElementById('ledger-month-filter');
+            if (filterDropdown) filterDropdown.innerHTML = '<option value="all">All Months</option>';
+            document.getElementById('ledger-current-month-display').innerText = 'All Months';
             return;
         }
 
-        tbody.innerHTML = '';
+        // Get unique months from transactions
+        const months = new Set();
         this.transactions.forEach(t => {
+            if (t.date) {
+                // assume date is YYYY-MM-DD
+                const monthStr = t.date.substring(0, 7); // YYYY-MM
+                months.add(monthStr);
+            }
+        });
+
+        // Sort months descending
+        const sortedMonths = Array.from(months).sort((a, b) => b.localeCompare(a));
+
+        const filterDropdown = document.getElementById('ledger-month-filter');
+        let selectedMonth = filterDropdown ? filterDropdown.value : null;
+
+        // Setup dropdown if it's not populated or has wrong values
+        if (filterDropdown) {
+            if (filterDropdown.children.length <= 1) { // Maybe just empty or "all"
+                let optionsHtml = '<option value="all">All Months</option>';
+                sortedMonths.forEach(m => {
+                    // Format YYYY-MM to Month YYYY
+                    const dateObj = new Date(m + '-01T00:00:00Z');
+                    const label = dateObj.toLocaleDateString('default', { month: 'long', year: 'numeric' });
+                    optionsHtml += `<option value="${m}">${label}</option>`;
+                });
+                filterDropdown.innerHTML = optionsHtml;
+
+                // Default to most recent month if not selected
+                if (!selectedMonth || selectedMonth === '') {
+                    selectedMonth = sortedMonths[0];
+                    filterDropdown.value = selectedMonth;
+                }
+            } else {
+                selectedMonth = filterDropdown.value;
+            }
+        }
+
+        // Update display text
+        const displaySpan = document.getElementById('ledger-current-month-display');
+        if (displaySpan) {
+            if (selectedMonth === 'all') {
+                displaySpan.innerText = 'All Time';
+            } else {
+                const dateObj = new Date(selectedMonth + '-01T00:00:00Z');
+                displaySpan.innerText = dateObj.toLocaleDateString('default', { month: 'long', year: 'numeric' });
+            }
+        }
+
+        // Filter transactions
+        let filteredTransactions = this.transactions;
+        if (selectedMonth && selectedMonth !== 'all') {
+            filteredTransactions = this.transactions.filter(t => t.date && t.date.startsWith(selectedMonth));
+        }
+
+        tbody.innerHTML = '';
+        if (filteredTransactions.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-gray-500">No transactions found for this month.</td></tr>';
+            return;
+        }
+
+        filteredTransactions.forEach(t => {
             const tr = document.createElement('tr');
             tr.className = 'border-b dark:border-dark-border hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors';
 
@@ -62,10 +151,14 @@ const financialsManager = {
             tr.innerHTML = `
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">${t.date}</td>
                 <td class="px-6 py-4 text-sm text-gray-900 dark:text-gray-100">${t.description}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">${t.category || 'Uncategorized'}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                    <span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200">
+                        ${t.category || 'Uncategorized'}
+                    </span>
+                </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium ${amountColor}">${isExpense ? '-' : '+'}${displayAmount}</td>
                 <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <button onclick="financialsManager.deleteTransaction('${t.id}')" class="text-red-600 hover:text-red-900 ml-3" title="Delete"><i class="fas fa-trash"></i></button>
+                    <button onclick="financialsManager.deleteTransaction('${t.id}')" class="text-red-600 hover:text-red-900 dark:hover:text-red-400 p-1"><i class="fas fa-trash"></i></button>
                 </td>
             `;
             tbody.appendChild(tr);
@@ -78,71 +171,60 @@ const financialsManager = {
             categoryOptions += `<option value="${acc.name}">${acc.name} (${acc.type})</option>`;
         });
 
-        Swal.fire({
-            title: 'Add Manual Transaction',
-            html: `
-                <div class="space-y-4 text-left">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Date</label>
-                        <input type="date" id="t-date" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-dtech-500 focus:ring-dtech-500 dark:bg-dark-card dark:border-dark-border dark:text-white" value="${new Date().toISOString().split('T')[0]}">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Description</label>
-                        <input type="text" id="t-desc" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-dtech-500 focus:ring-dtech-500 dark:bg-dark-card dark:border-dark-border dark:text-white" placeholder="e.g. Office supplies">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Amount (ZAR)</label>
-                        <input type="number" id="t-amount" step="0.01" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-dtech-500 focus:ring-dtech-500 dark:bg-dark-card dark:border-dark-border dark:text-white" placeholder="0.00">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Type</label>
-                        <select id="t-type" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-dtech-500 focus:ring-dtech-500 dark:bg-dark-card dark:border-dark-border dark:text-white">
-                            <option value="Income">Income (Money In)</option>
-                            <option value="Expense">Expense (Money Out)</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Category</label>
-                        <select id="t-category" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-dtech-500 focus:ring-dtech-500 dark:bg-dark-card dark:border-dark-border dark:text-white">
-                            ${categoryOptions}
-                        </select>
-                    </div>
-                </div>
-            `,
-            showCancelButton: true,
-            confirmButtonText: 'Save Transaction',
-            customClass: {
-                popup: 'dark:bg-dark-bg dark:text-white'
-            },
-            preConfirm: () => {
-                const date = document.getElementById('t-date').value;
-                const desc = document.getElementById('t-desc').value;
-                const amount = document.getElementById('t-amount').value;
-                const type = document.getElementById('t-type').value;
-                const category = document.getElementById('t-category').value;
+        const catSelect = document.getElementById('t-category');
+        if (catSelect) catSelect.innerHTML = categoryOptions;
 
-                if (!date || !desc || !amount || !category) {
-                    Swal.showValidationMessage('Please fill all fields');
-                    return false;
-                }
-                return { date, description: desc, amount: parseFloat(amount), type, category };
+        document.getElementById('t-date').value = new Date().toISOString().split('T')[0];
+        document.getElementById('t-desc').value = '';
+        document.getElementById('t-amount').value = '';
+        document.getElementById('t-type').value = 'Expense';
+
+        const modal = document.getElementById('transactionModal');
+        if (modal) modal.classList.remove('hidden');
+    },
+
+    closeTransactionModal() {
+        const modal = document.getElementById('transactionModal');
+        if (modal) modal.classList.add('hidden');
+    },
+
+    async saveTransaction(e) {
+        e.preventDefault();
+
+        const btn = document.getElementById('saveTransactionBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+
+        const date = document.getElementById('t-date').value;
+        const desc = document.getElementById('t-desc').value;
+        const amount = document.getElementById('t-amount').value;
+        const type = document.getElementById('t-type').value;
+        const category = document.getElementById('t-category').value;
+
+        const payload = {
+            date,
+            description: desc,
+            amount: parseFloat(amount),
+            type,
+            category
+        };
+
+        try {
+            const response = await API.request('/api/transactions', { method: 'POST', body: JSON.stringify(payload) });
+            if (response.success) {
+                app.logActivity(`Added manual transaction: ${payload.description}`);
+                Swal.fire({ icon: 'success', title: 'Saved!', showConfirmButton: false, timer: 1500 });
+                this.closeTransactionModal();
+                this.loadTransactions();
+            } else {
+                Swal.fire('Error', response.message || 'Failed to save', 'error');
             }
-        }).then(async (result) => {
-            if (result.isConfirmed) {
-                try {
-                    const response = await API.request('/api/transactions', { method: 'POST', body: JSON.stringify(result.value) });
-                    if (response.success) {
-                        app.logActivity(`Added manual transaction: ${result.value.description}`);
-                        Swal.fire('Saved!', '', 'success');
-                        this.loadTransactions();
-                    } else {
-                        Swal.fire('Error', response.message || 'Failed to save', 'error');
-                    }
-                } catch (e) {
-                    Swal.fire('Error', e.message, 'error');
-                }
-            }
-        });
+        } catch (e) {
+            Swal.fire('Error', e.message, 'error');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = 'Save Transaction';
+        }
     },
 
     async deleteTransaction(id) {
@@ -306,90 +388,116 @@ const financialsManager = {
     },
 
     showReconciliationModal(parsedData) {
+        this.pendingReconciliationData = parsedData; // Store temporarily
+
         let categoryOptions = '<option value="">Select Category</option>';
         this.chartOfAccounts.forEach(acc => {
             categoryOptions += `<option value="${acc.name}">${acc.name} (${acc.type})</option>`;
         });
 
-        let rowsHTML = '';
+        const tbody = document.getElementById('reconcile-tbody');
+        if (!tbody) return;
+
+        tbody.innerHTML = '';
         parsedData.forEach((row, index) => {
             const amountColor = row.type === 'Expense' ? 'text-red-500' : 'text-green-500';
             const amountSign = row.type === 'Expense' ? '-' : '+';
-            rowsHTML += `
-                <tr class="border-b">
-                    <td class="p-2 text-sm">${row.date}</td>
-                    <td class="p-2 text-sm">${row.description}</td>
-                    <td class="p-2 text-sm font-medium ${amountColor}">${amountSign}R${row.amount.toFixed(2)}</td>
-                    <td class="p-2">
-                        <select id="recon-cat-${index}" class="w-full text-sm rounded border-gray-300">
-                            ${categoryOptions}
-                        </select>
-                    </td>
-                </tr>
+
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td class="p-3 text-sm dark:text-gray-200">${row.date}</td>
+                <td class="p-3 text-sm dark:text-gray-200">${row.description}</td>
+                <td class="p-3 text-sm font-medium ${amountColor}">${amountSign}R${row.amount.toFixed(2)}</td>
+                <td class="p-3">
+                    <select id="recon-cat-${index}" class="w-full text-sm rounded border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200">
+                        ${categoryOptions}
+                    </select>
+                </td>
             `;
+            tbody.appendChild(tr);
         });
 
-        Swal.fire({
-            title: 'Reconcile Transactions',
-            width: '800px',
-            html: `
-                <div class="max-h-[60vh] overflow-y-auto">
-                    <p class="text-sm text-gray-500 mb-4 text-left">Assign a category to each imported transaction. Uncategorized transactions will not be saved.</p>
-                    <table class="min-w-full text-left">
-                        <thead>
-                            <tr class="bg-gray-100">
-                                <th class="p-2 text-sm">Date</th>
-                                <th class="p-2 text-sm">Description</th>
-                                <th class="p-2 text-sm">Amount</th>
-                                <th class="p-2 text-sm">Category</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${rowsHTML}
-                        </tbody>
-                    </table>
-                </div>
-            `,
-            showCancelButton: true,
-            confirmButtonText: 'Save Reconciled',
-            preConfirm: () => {
-                const finalData = [];
-                parsedData.forEach((row, index) => {
-                    const catSelect = document.getElementById(`recon-cat-${index}`);
-                    if (catSelect && catSelect.value) {
-                        finalData.push({
-                            ...row,
-                            category: catSelect.value
-                        });
-                    }
-                });
-                return finalData;
-            }
-        }).then(async (result) => {
-            if (result.isConfirmed && result.value.length > 0) {
-                Swal.fire({
-                    title: 'Saving...',
-                    allowOutsideClick: false,
-                    didOpen: () => {
-                        Swal.showLoading();
-                    }
-                });
+        const modal = document.getElementById('reconcileModal');
+        if (modal) modal.classList.remove('hidden');
+    },
 
-                let successCount = 0;
-                for (const t of result.value) {
-                    try {
-                        const response = await API.request('/api/transactions', { method: 'POST', body: JSON.stringify(t) });
-                        if (response.success) successCount++;
-                    } catch (e) {
-                        console.error('Failed to save transaction', t, e);
-                    }
-                }
+    closeReconcileModal() {
+        const modal = document.getElementById('reconcileModal');
+        if (modal) modal.classList.add('hidden');
+        this.pendingReconciliationData = null;
+    },
 
-                app.logActivity(`Imported and reconciled ${successCount} transactions`);
-                Swal.fire('Complete', `Successfully saved ${successCount} transactions.`, 'success');
-                this.loadTransactions();
+    async saveReconciledTransactions() {
+        if (!this.pendingReconciliationData) return;
+
+        const finalData = [];
+        this.pendingReconciliationData.forEach((row, index) => {
+            const catSelect = document.getElementById(`recon-cat-${index}`);
+            if (catSelect && catSelect.value) {
+                finalData.push({
+                    ...row,
+                    category: catSelect.value
+                });
             }
         });
+
+        if (finalData.length === 0) {
+            Swal.fire('Info', 'No transactions were categorized.', 'info');
+            this.closeReconcileModal();
+            return;
+        }
+
+        const btn = document.getElementById('saveReconciledBtn');
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+        }
+
+        let successCount = 0;
+        for (const t of finalData) {
+            try {
+                const response = await API.request('/api/transactions', { method: 'POST', body: JSON.stringify(t) });
+                if (response.success) successCount++;
+            } catch (e) {
+                console.error('Failed to save transaction', t, e);
+            }
+        }
+
+        app.logActivity(`Imported and reconciled ${successCount} transactions`);
+        Swal.fire('Complete', `Successfully saved ${successCount} transactions.`, 'success');
+
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = 'Save Reconciled';
+        }
+
+        this.closeReconcileModal();
+        this.loadTransactions();
+    },
+
+    applyFinancialYearDates() {
+        const fyStart = document.getElementById('fy-start-date');
+        const fyEnd = document.getElementById('fy-end-date');
+
+        if (fyStart && fyEnd && fyStart.value && fyEnd.value) {
+            const reportStart = document.getElementById('report-start-date');
+            const reportEnd = document.getElementById('report-end-date');
+            const reportAsOf = document.getElementById('report-as-of-date');
+
+            if (reportStart) reportStart.value = fyStart.value;
+            if (reportEnd) reportEnd.value = fyEnd.value;
+            if (reportAsOf) reportAsOf.value = fyEnd.value;
+
+            Swal.fire({
+                icon: 'success',
+                title: 'Dates Applied',
+                text: 'Report dates have been updated to match your financial year.',
+                timer: 1500,
+                showConfirmButton: false
+            });
+        } else {
+            Swal.fire('Warning', 'Please select both start and end dates for the financial year.', 'warning');
+        }
     },
 
     generateIncomeStatement() {

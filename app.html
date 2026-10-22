@@ -354,7 +354,7 @@
                     <p class="text-gray-600 dark:text-gray-400">Manage transactions, reconcile statements, and generate CIPC/SARS reports.</p>
                 </div>
                 <div class="mt-4 md:mt-0 flex gap-2">
-                    <button onclick="financialsManager.openTransactionModal()" class="btn-primary">
+                    <button onclick="financialsManager.openTransactionModal()" class="bg-dtech-600 hover:bg-dtech-700 text-white px-4 py-2 rounded-md font-medium transition-colors">
                         <i class="fas fa-plus mr-2"></i> Add Transaction
                     </button>
                     <button onclick="financialsManager.triggerCSVUpload()" class="bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-dark-card dark:text-white dark:hover:bg-gray-700 px-4 py-2 rounded-md font-medium transition-colors">
@@ -378,6 +378,12 @@
 
             <!-- Ledger Tab -->
             <div id="financials-ledger-tab">
+                <div class="mb-4 flex justify-between items-center">
+                    <h3 class="text-lg font-medium text-gray-800 dark:text-gray-200">Transactions for <span id="ledger-current-month-display">this month</span></h3>
+                    <select id="ledger-month-filter" onchange="financialsManager.renderLedgerTable()" class="border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-md shadow-sm sm:text-sm">
+                        <!-- Populated by JS -->
+                    </select>
+                </div>
                 <div class="bg-white dark:bg-dark-card rounded-lg shadow-sm border dark:border-dark-border overflow-hidden">
                     <div class="overflow-x-auto">
                         <table class="min-w-full divide-y divide-gray-200 dark:divide-dark-border">
@@ -422,7 +428,7 @@
                             <input type="date" id="report-end-date" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-dtech-500 focus:ring-dtech-500 dark:bg-dark-bg dark:border-dark-border dark:text-white">
                         </div>
                         <div class="flex items-end">
-                            <button onclick="financialsManager.generateIncomeStatement()" class="btn-primary w-full">
+                            <button onclick="financialsManager.generateIncomeStatement()" class="bg-dtech-600 hover:bg-dtech-700 text-white px-4 py-2 w-full rounded-md font-medium transition-colors">
                                 <i class="fas fa-download mr-2"></i> Generate PDF
                             </button>
                         </div>
@@ -446,8 +452,36 @@
                             <input type="date" id="report-as-of-date" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-dtech-500 focus:ring-dtech-500 dark:bg-dark-bg dark:border-dark-border dark:text-white">
                         </div>
                         <div class="flex items-end">
-                            <button onclick="financialsManager.generateBalanceSheet()" class="btn-primary w-full">
+                            <button onclick="financialsManager.generateBalanceSheet()" class="bg-dtech-600 hover:bg-dtech-700 text-white px-4 py-2 w-full rounded-md font-medium transition-colors">
                                 <i class="fas fa-download mr-2"></i> Generate PDF
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Financial Year Setup -->
+                <div class="bg-white dark:bg-dark-card rounded-lg shadow-sm border dark:border-dark-border p-6 mt-6">
+                    <div class="flex items-center mb-4">
+                        <div class="w-10 h-10 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center mr-4">
+                            <i class="fas fa-calendar-alt text-xl"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-bold text-gray-800 dark:text-white">Financial Year Preset</h3>
+                            <p class="text-sm text-gray-500">Set your financial year to quickly populate dates for reports.</p>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Financial Year Start</label>
+                            <input type="date" id="fy-start-date" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-dtech-500 focus:ring-dtech-500 dark:bg-dark-bg dark:border-dark-border dark:text-white">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Financial Year End</label>
+                            <input type="date" id="fy-end-date" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-dtech-500 focus:ring-dtech-500 dark:bg-dark-bg dark:border-dark-border dark:text-white">
+                        </div>
+                        <div class="flex items-end">
+                            <button onclick="financialsManager.applyFinancialYearDates()" class="bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600 w-full px-4 py-2 rounded-md font-medium transition-colors">
+                                <i class="fas fa-check mr-2"></i> Apply to Reports
                             </button>
                         </div>
                     </div>
@@ -561,6 +595,87 @@
                     <button type="submit" id="saveClientBtn" class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-dtech-600 hover:bg-dtech-700">Save Client</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+
+    <!-- Transaction Modal (Hidden) -->
+    <div id="transactionModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-start md:items-center justify-center z-50 overflow-y-auto">
+        <div class="bg-white dark:bg-dark-card rounded-lg shadow-xl w-[min(95%,500px)] mx-auto my-8 overflow-hidden">
+            <div class="px-6 py-4 border-b dark:border-dark-border flex justify-between items-center sticky top-0 bg-white dark:bg-dark-card z-10">
+                <h3 class="text-lg font-medium">Add Manual Transaction</h3>
+                <button onclick="financialsManager.closeTransactionModal()" class="text-gray-400 hover:text-gray-500">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form id="transactionForm" onsubmit="financialsManager.saveTransaction(event)" class="p-6">
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Date</label>
+                        <input type="date" id="t-date" required class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm focus:border-dtech-500 focus:ring-dtech-500 sm:text-sm px-3 py-2 border">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Description</label>
+                        <input type="text" id="t-desc" required class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm focus:border-dtech-500 focus:ring-dtech-500 sm:text-sm px-3 py-2 border" placeholder="e.g. Office supplies">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Amount (ZAR)</label>
+                        <input type="number" id="t-amount" step="0.01" required class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm focus:border-dtech-500 focus:ring-dtech-500 sm:text-sm px-3 py-2 border" placeholder="0.00">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Type</label>
+                        <select id="t-type" required class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm focus:border-dtech-500 focus:ring-dtech-500 sm:text-sm px-3 py-2 border">
+                            <option value="Income">Income (Money In)</option>
+                            <option value="Expense">Expense (Money Out)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Category</label>
+                        <select id="t-category" required class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm focus:border-dtech-500 focus:ring-dtech-500 sm:text-sm px-3 py-2 border">
+                            <!-- Populated dynamically -->
+                        </select>
+                    </div>
+                </div>
+                <div class="mt-6 flex justify-end space-x-3 border-t dark:border-dark-border pt-4">
+                    <button type="button" onclick="financialsManager.closeTransactionModal()" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700">Cancel</button>
+                    <button type="submit" id="saveTransactionBtn" class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-dtech-600 hover:bg-dtech-700">Save Transaction</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+
+    <!-- Reconcile Transactions Modal (Hidden) -->
+    <div id="reconcileModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-start md:items-center justify-center z-50 p-4 overflow-y-auto">
+        <div class="bg-white dark:bg-dark-card rounded-lg shadow-xl w-full max-w-4xl flex flex-col my-8">
+            <div class="px-6 py-4 border-b dark:border-dark-border flex justify-between items-center bg-white dark:bg-dark-card rounded-t-lg flex-shrink-0 sticky top-0 z-10">
+                <h3 class="text-lg font-medium">Reconcile Transactions</h3>
+                <button onclick="financialsManager.closeReconcileModal()" class="text-gray-400 hover:text-gray-500">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="p-6 overflow-y-auto">
+                <p class="text-sm text-gray-500 mb-4">Assign a category to each imported transaction. Uncategorized transactions will not be saved.</p>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full text-left divide-y divide-gray-200 dark:divide-gray-700">
+                        <thead class="bg-gray-50 dark:bg-gray-800">
+                            <tr>
+                                <th class="p-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                                <th class="p-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
+                                <th class="p-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+                                <th class="p-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
+                            </tr>
+                        </thead>
+                        <tbody id="reconcile-tbody" class="divide-y divide-gray-200 dark:divide-gray-700">
+                            <!-- Populated dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="px-6 py-4 border-t dark:border-dark-border flex justify-end space-x-3 bg-white dark:bg-dark-card rounded-b-lg flex-shrink-0 sticky bottom-0">
+                <button type="button" onclick="financialsManager.closeReconcileModal()" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700">Cancel</button>
+                <button type="button" onclick="financialsManager.saveReconciledTransactions()" id="saveReconciledBtn" class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-dtech-600 hover:bg-dtech-700">Save Reconciled</button>
+            </div>
         </div>
     </div>
 
