@@ -566,6 +566,117 @@
 
             </div>
         </section>
+
+        <!-- CSV UPLOAD SECTION -->
+        <section id="section-csv-upload" class="hidden animate-fade-in p-4 md:p-8">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 sticky top-0 bg-gray-50 dark:bg-dark-bg z-10 py-4 border-b dark:border-dark-border">
+                <div>
+                    <h2 class="text-2xl font-bold text-gray-800 dark:text-white">Import Transactions</h2>
+                    <p class="text-gray-600 dark:text-gray-400">Upload bank statements to auto-categorize and save bulk transactions.</p>
+                </div>
+                <div class="mt-4 md:mt-0 flex gap-2">
+                    <button id="btn-cancel-reconciled" onclick="financialsManager.closeReconciliationView()" class="hidden bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-dark-card dark:text-white dark:hover:bg-gray-700 px-4 py-2 rounded-md font-medium transition-colors">
+                        Cancel
+                    </button>
+                    <button id="btn-save-reconciled" onclick="financialsManager.saveReconciled()" class="hidden bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md shadow-sm text-sm font-medium transition-colors">
+                        <i class="fas fa-save mr-2"></i> Save Transactions
+                    </button>
+                    <button onclick="app.showSection('financials')" class="bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-dark-card dark:text-white dark:hover:bg-gray-700 px-4 py-2 rounded-md font-medium transition-colors">
+                        <i class="fas fa-arrow-left mr-2"></i> Back
+                    </button>
+                </div>
+            </div>
+
+            <div id="reconcile-split-view" class="hidden">
+                <div class="mb-6">
+                    <h3 class="text-lg font-bold text-green-600 mb-2"><i class="fas fa-check-circle mr-2"></i> Auto-Categorized</h3>
+                    <p class="text-sm text-gray-500 mb-4">The system recognized these from your mapping rules.</p>
+                    <div id="reconcile-auto-container" class="space-y-4"></div>
+                </div>
+                <div>
+                    <h3 class="text-lg font-bold text-yellow-600 mb-2"><i class="fas fa-exclamation-circle mr-2"></i> Needs Review</h3>
+                    <p class="text-sm text-gray-500 mb-4">Please categorize these manually. Saving them will teach the system for next time!</p>
+                    <div id="reconcile-manual-container" class="space-y-4"></div>
+                </div>
+            </div>
+            <div id="reconcile-empty-state" class="text-center py-20 text-gray-500">
+                <i class="fas fa-cloud-upload-alt text-5xl mb-4 text-gray-300"></i>
+                <p>Select a CSV file to begin importing transactions.</p>
+            </div>
+        </section>
+
+        <!-- FINANCIALS CONFIG SECTION -->
+        <section id="section-financials-config" class="hidden animate-fade-in p-4 md:p-8">
+            <div class="flex justify-between items-center mb-8 border-b dark:border-dark-border pb-4">
+                <div>
+                    <h2 class="text-2xl font-bold text-gray-800 dark:text-white">Financial Configuration</h2>
+                    <p class="text-gray-600 dark:text-gray-400">Manage financial year settings and auto-categorization mapping rules.</p>
+                </div>
+                <button onclick="app.showSection('financials')" class="bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-dark-card dark:text-white dark:hover:bg-gray-700 px-4 py-2 rounded-md font-medium transition-colors">
+                    <i class="fas fa-arrow-left mr-2"></i> Back to Financials
+                </button>
+            </div>
+            <div id="financials-config-tab" class="space-y-6">
+
+                <!-- Financial Year Settings -->
+                <div class="bg-white dark:bg-dark-card rounded-lg shadow-sm border dark:border-dark-border p-6">
+                    <h3 class="text-lg font-bold text-gray-800 dark:text-white mb-4">Financial Settings</h3>
+                    <p class="text-sm text-gray-500 mb-4">Configure your financial year start month to enable auto-generation of annual reports.</p>
+
+                    <div class="flex flex-col md:flex-row gap-4 max-w-lg">
+                        <div class="flex-1">
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Financial Year Start Month</label>
+                            <select id="config-fy-month" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-dtech-500 focus:ring-dtech-500 sm:text-sm dark:bg-dark-bg dark:border-dark-border dark:text-white">
+                                <option value="1">January</option>
+                                <option value="2">February</option>
+                                <option value="3" selected>March</option>
+                                <option value="4">April</option>
+                                <option value="5">May</option>
+                                <option value="6">June</option>
+                                <option value="7">July</option>
+                                <option value="8">August</option>
+                                <option value="9">September</option>
+                                <option value="10">October</option>
+                                <option value="11">November</option>
+                                <option value="12">December</option>
+                            </select>
+                        </div>
+                        <div class="flex items-end">
+                            <button onclick="financialsManager.saveFinancialSettings()" class="bg-dtech-600 text-white px-4 py-2 rounded-md hover:bg-dtech-700 text-sm font-medium w-full">Save Settings</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white dark:bg-dark-card rounded-lg shadow-sm border dark:border-dark-border p-6">
+                    <h3 class="text-lg font-bold text-gray-800 dark:text-white mb-4">Auto-Categorization Rules</h3>
+                    <p class="text-sm text-gray-500 mb-4">Map specific transaction descriptions to categories automatically during CSV uploads.</p>
+
+                    <div class="flex flex-col md:flex-row gap-4 mb-6">
+                        <input type="text" id="config-desc-input" placeholder="e.g. Bank Fee" class="flex-1 rounded-md border-gray-300 shadow-sm focus:border-dtech-500 focus:ring-dtech-500 sm:text-sm dark:bg-dark-bg dark:border-dark-border dark:text-white">
+                        <select id="config-cat-select" class="flex-1 rounded-md border-gray-300 shadow-sm focus:border-dtech-500 focus:ring-dtech-500 sm:text-sm dark:bg-dark-bg dark:border-dark-border dark:text-white">
+                            <!-- Populated dynamically -->
+                        </select>
+                        <button onclick="financialsManager.addMappingRule()" class="bg-dtech-600 text-white px-4 py-2 rounded-md hover:bg-dtech-700 text-sm font-medium">Add Rule</button>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200 dark:divide-dark-border block md:table">
+                            <thead class="bg-gray-50 dark:bg-gray-800/50 hidden md:table-header-group">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description Match (Contains)</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
+                                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="config-mappings-tbody" class="bg-white dark:bg-dark-card divide-y divide-gray-200 dark:divide-dark-border block md:table-row-group">
+                                <!-- Populated by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
     </main>
 
     <!-- Client Modal (Hidden) -->
