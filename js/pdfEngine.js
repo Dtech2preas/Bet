@@ -452,7 +452,15 @@ pdfEngine.generateIncomeStatementPDF = function(transactions, startDate, endDate
         doc.setFont('helvetica', 'bold');
         doc.text(`Net Profit: R ${netProfit.toFixed(2)}`, 14, startY);
 
-        this.handleSave(doc, `Income_Statement_${startDate}_to_${endDate}.pdf`);
+
+        if (window.Capacitor && window.Capacitor.isNativePlatform()) {
+            const base64 = doc.output('datauristring').split(',')[1];
+            if (typeof saveFileNative === 'function') {
+                saveFileNative(base64, `Income_Statement_${startDate}_to_${endDate}.pdf`);
+            }
+        } else {
+            doc.save(`Income_Statement_${startDate}_to_${endDate}.pdf`);
+        }
 };
 
 pdfEngine.generateBalanceSheetPDF = function(transactions, asOfDate) {
@@ -577,5 +585,13 @@ pdfEngine.generateBalanceSheetPDF = function(transactions, asOfDate) {
         startY += 10;
         doc.text(`Total Liabilities & Equity: R ${(liabilities + equity).toFixed(2)}`, 14, startY);
 
-        this.handleSave(doc, `Balance_Sheet_${asOfDate}.pdf`);
+
+        if (window.Capacitor && window.Capacitor.isNativePlatform()) {
+            const base64 = doc.output('datauristring').split(',')[1];
+            if (typeof saveFileNative === 'function') {
+                saveFileNative(base64, `Balance_Sheet_${asOfDate}.pdf`);
+            }
+        } else {
+            doc.save(`Balance_Sheet_${asOfDate}.pdf`);
+        }
 };
