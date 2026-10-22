@@ -41,7 +41,7 @@ const app = {
 
     showSection(sectionId) {
         // Hide all sections
-        const sections = ['dashboard', 'clients', 'products', 'licenses', 'quotations', 'invoices', 'payments', 'contracts', 'financials'];
+        const sections = ['dashboard', 'clients', 'products', 'licenses', 'quotations', 'invoices', 'payments', 'contracts', 'financials', 'csv-upload', 'financials-config'];
         sections.forEach(sec => {
             const secEl = document.getElementById(`section-${sec}`);
             if (secEl) secEl.classList.add('hidden');
@@ -73,7 +73,10 @@ const app = {
         if (sectionId === 'invoices') invoicesManager.loadInvoices();
         if (sectionId === 'payments') paymentsManager.loadPayments();
         if (sectionId === 'contracts') contractsManager.loadContracts();
-        if (sectionId === 'financials') financialsManager.loadTransactions();
+        if (sectionId === 'financials') {
+            financialsManager.loadTransactions();
+            financialsManager.switchTab('ledger');
+        }
         if (sectionId === 'dashboard') this.loadDashboardData();
 
         // Close sidebar on mobile after navigating
