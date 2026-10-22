@@ -334,6 +334,39 @@
                 <div id="payments-container"><div class="text-center py-10"><i class="fas fa-spinner fa-spin text-3xl text-dtech-500"></i></div></div>
             </section>
 
+
+            <!-- Configuration Tab -->
+            <div id="financials-config-tab" class="hidden space-y-6">
+                <div class="bg-white dark:bg-dark-card rounded-lg shadow-sm border dark:border-dark-border p-6">
+                    <h3 class="text-lg font-bold text-gray-800 dark:text-white mb-4">Auto-Categorization Rules</h3>
+                    <p class="text-sm text-gray-500 mb-4">Map specific transaction descriptions to categories automatically during CSV uploads.</p>
+
+                    <div class="flex flex-col md:flex-row gap-4 mb-6">
+                        <input type="text" id="config-desc-input" placeholder="e.g. Bank Fee" class="flex-1 rounded-md border-gray-300 shadow-sm focus:border-dtech-500 focus:ring-dtech-500 sm:text-sm dark:bg-dark-bg dark:border-dark-border dark:text-white">
+                        <select id="config-cat-select" class="flex-1 rounded-md border-gray-300 shadow-sm focus:border-dtech-500 focus:ring-dtech-500 sm:text-sm dark:bg-dark-bg dark:border-dark-border dark:text-white">
+                            <!-- Populated dynamically -->
+                        </select>
+                        <button onclick="financialsManager.addMappingRule()" class="bg-dtech-600 text-white px-4 py-2 rounded-md hover:bg-dtech-700 text-sm font-medium">Add Rule</button>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200 dark:divide-dark-border">
+                            <thead class="bg-gray-50 dark:bg-gray-800/50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description Match (Contains)</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
+                                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="config-mappings-tbody" class="bg-white dark:bg-dark-card divide-y divide-gray-200 dark:divide-dark-border">
+                                <!-- Populated dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+
             <!-- Contracts Section -->
             <section id="section-contracts" class="hidden">
                 <div class="flex justify-between items-center mb-6">
@@ -372,6 +405,9 @@
                     </button>
                     <button id="btn-tab-reports" onclick="financialsManager.switchTab('reports')" class="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:hover:text-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
                         Generate Reports
+                    </button>
+                    <button id="btn-tab-config" onclick="financialsManager.switchTab('config')" class="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:hover:text-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
+                        Configuration
                     </button>
                 </nav>
             </div>

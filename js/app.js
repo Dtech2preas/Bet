@@ -73,6 +73,7 @@ const app = {
         if (sectionId === 'invoices') invoicesManager.loadInvoices();
         if (sectionId === 'payments') paymentsManager.loadPayments();
         if (sectionId === 'contracts') contractsManager.loadContracts();
+        if (sectionId === 'financials') financialsManager.loadTransactions();
         if (sectionId === 'dashboard') this.loadDashboardData();
 
         // Close sidebar on mobile after navigating

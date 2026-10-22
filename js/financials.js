@@ -287,13 +287,26 @@ const financialsManager = {
                 }
             }
 
+            let autoCategory = '';
+            const lowerDesc = desc.toLowerCase();
+            if (lowerDesc.includes('fee')) {
+                autoCategory = 'Bank Fees';
+            }
+            // Get saved mappings
+            const savedMappings = JSON.parse(localStorage.getItem('dtech_financials_mappings') || '{}');
+            for (const [key, cat] of Object.entries(savedMappings)) {
+                if (lowerDesc.includes(key.toLowerCase())) {
+                    autoCategory = cat;
+                    break;
+                }
+            }
             if (!isNaN(amount) && amount !== 0) {
                 parsedData.push({
                     date: dateStr,
                     description: desc,
                     amount: amount,
                     type: type,
-                    category: '' // Needs to be categorized
+                    category: autoCategory
                 });
             }
         }
@@ -322,7 +335,8 @@ const financialsManager = {
                     <td class="p-2 text-sm font-medium ${amountColor}">${amountSign}R${row.amount.toFixed(2)}</td>
                     <td class="p-2">
                         <select id="recon-cat-${index}" class="w-full text-sm rounded border-gray-300">
-                            ${categoryOptions}
+                            <option value="">Select Category</option>
+                            ${this.chartOfAccounts.map(acc => `<option value="${acc.name}" ${row.category === acc.name ? 'selected' : ''}>${acc.name} (${acc.type})</option>`).join('')}
                         </select>
                     </td>
                 </tr>
@@ -354,6 +368,7 @@ const financialsManager = {
             confirmButtonText: 'Save Reconciled',
             preConfirm: () => {
                 const finalData = [];
+                const newMappings = JSON.parse(localStorage.getItem('dtech_financials_mappings') || '{}');
                 parsedData.forEach((row, index) => {
                     const catSelect = document.getElementById(`recon-cat-${index}`);
                     if (catSelect && catSelect.value) {
@@ -361,8 +376,14 @@ const financialsManager = {
                             ...row,
                             category: catSelect.value
                         });
+                        // Automatically map this description to this category
+                        const words = row.description.split(' ').slice(0, 3).join(' '); // Use first 3 words as key
+                        if (words && !newMappings[words]) {
+                            newMappings[words] = catSelect.value;
+                        }
                     }
                 });
+                localStorage.setItem('dtech_financials_mappings', JSON.stringify(newMappings));
                 return finalData;
             }
         }).then(async (result) => {
@@ -433,23 +454,104 @@ const financialsManager = {
         }
     },
 
+
+    renderConfigTab() {
+        const select = document.getElementById('config-cat-select');
+        if (select) {
+            select.innerHTML = '<option value="">Select Category</option>' +
+                this.chartOfAccounts.map(acc => `<option value="${acc.name}">${acc.name} (${acc.type})</option>`).join('');
+        }
+
+        const tbody = document.getElementById('config-mappings-tbody');
+        if (!tbody) return;
+
+        const mappings = JSON.parse(localStorage.getItem('dtech_financials_mappings') || '{}');
+        const keys = Object.keys(mappings);
+
+        if (keys.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="3" class="text-center py-4 text-gray-500">No mapping rules configured yet.</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = keys.map(k => `
+            <tr>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">${k}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${mappings[k]}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <button onclick="financialsManager.deleteMappingRule('${k.replace(/'/g, "\'")}')" class="text-red-600 hover:text-red-900"><i class="fas fa-trash"></i></button>
+                </td>
+            </tr>
+        `).join('');
+    },
+
+    addMappingRule() {
+        const descInput = document.getElementById('config-desc-input');
+        const catSelect = document.getElementById('config-cat-select');
+
+        const desc = descInput.value.trim();
+        const cat = catSelect.value;
+
+        if (!desc || !cat) {
+            Swal.fire('Error', 'Please enter a description match and select a category.', 'error');
+            return;
+        }
+
+        const mappings = JSON.parse(localStorage.getItem('dtech_financials_mappings') || '{}');
+        mappings[desc.toLowerCase()] = cat;
+        localStorage.setItem('dtech_financials_mappings', JSON.stringify(mappings));
+
+        descInput.value = '';
+        catSelect.value = '';
+        this.renderConfigTab();
+        app.logActivity('Added a new financial mapping rule');
+    },
+
+    deleteMappingRule(key) {
+        const mappings = JSON.parse(localStorage.getItem('dtech_financials_mappings') || '{}');
+        delete mappings[key];
+        localStorage.setItem('dtech_financials_mappings', JSON.stringify(mappings));
+        this.renderConfigTab();
+    },
+
     switchTab(tabName) {
-        document.getElementById('financials-ledger-tab').classList.add('hidden');
-        document.getElementById('financials-reports-tab').classList.add('hidden');
+        const tabLedger = document.getElementById('financials-ledger-tab');
+        const tabConfig = document.getElementById('financials-config-tab');
+        const tabReports = document.getElementById('financials-reports-tab');
 
-        document.getElementById('btn-tab-ledger').classList.remove('border-dtech-500', 'text-dtech-600');
-        document.getElementById('btn-tab-reports').classList.remove('border-dtech-500', 'text-dtech-600');
-        document.getElementById('btn-tab-ledger').classList.add('border-transparent', 'text-gray-500');
-        document.getElementById('btn-tab-reports').classList.add('border-transparent', 'text-gray-500');
+        const btnLedger = document.getElementById('btn-tab-ledger');
+        const btnConfig = document.getElementById('btn-tab-config');
+        const btnReports = document.getElementById('btn-tab-reports');
 
-        if (tabName === 'ledger') {
-            document.getElementById('financials-ledger-tab').classList.remove('hidden');
-            document.getElementById('btn-tab-ledger').classList.add('border-dtech-500', 'text-dtech-600');
-            document.getElementById('btn-tab-ledger').classList.remove('border-transparent', 'text-gray-500');
-        } else {
-            document.getElementById('financials-reports-tab').classList.remove('hidden');
-            document.getElementById('btn-tab-reports').classList.add('border-dtech-500', 'text-dtech-600');
-            document.getElementById('btn-tab-reports').classList.remove('border-transparent', 'text-gray-500');
+        if(tabLedger) tabLedger.classList.add('hidden');
+        if(tabConfig) tabConfig.classList.add('hidden');
+        if(tabReports) tabReports.classList.add('hidden');
+
+        if(btnLedger) {
+            btnLedger.classList.remove('border-dtech-500', 'text-dtech-600');
+            btnLedger.classList.add('border-transparent', 'text-gray-500');
+        }
+        if(btnReports) {
+            btnReports.classList.remove('border-dtech-500', 'text-dtech-600');
+            btnReports.classList.add('border-transparent', 'text-gray-500');
+        }
+        if(btnConfig) {
+            btnConfig.classList.remove('border-dtech-500', 'text-dtech-600');
+            btnConfig.classList.add('border-transparent', 'text-gray-500');
+        }
+
+        if (tabName === 'ledger' && tabLedger && btnLedger) {
+            tabLedger.classList.remove('hidden');
+            btnLedger.classList.add('border-dtech-500', 'text-dtech-600');
+            btnLedger.classList.remove('border-transparent', 'text-gray-500');
+        } else if (tabName === 'reports' && tabReports && btnReports) {
+            tabReports.classList.remove('hidden');
+            btnReports.classList.add('border-dtech-500', 'text-dtech-600');
+            btnReports.classList.remove('border-transparent', 'text-gray-500');
+        } else if (tabName === 'config' && tabConfig && btnConfig) {
+            tabConfig.classList.remove('hidden');
+            btnConfig.classList.add('border-dtech-500', 'text-dtech-600');
+            btnConfig.classList.remove('border-transparent', 'text-gray-500');
+            this.renderConfigTab();
         }
     }
 };
