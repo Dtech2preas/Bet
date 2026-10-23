@@ -3,7 +3,7 @@
 const app = {
     init() {
         // Protect route
-        if (!localStorage.getItem('dtech_token') && window.location.pathname.endsWith('app.html')) {
+        if (!localStorage.getItem('dtech_token')) {
             window.location.href = 'admin.html';
             return;
         }
@@ -12,12 +12,27 @@ const app = {
         const userStr = localStorage.getItem('dtech_user');
         if (userStr) {
             const user = JSON.parse(userStr);
-            document.getElementById('userNameDisplay').innerText = user.username;
+            const unDisp = document.getElementById('userNameDisplay'); if (unDisp) unDisp.innerText = user.username;
         }
 
         this.initDarkMode();
-        // Load dashboard data (which also initializes charts)
-        this.loadDashboardData();
+
+        // Load specific data based on current page
+        const path = window.location.pathname;
+        if (path.includes('clients.html')) clientsManager.loadClients();
+        else if (path.includes('products.html')) productsManager.loadProducts();
+        else if (path.includes('licenses.html')) licensesManager.loadLicenses();
+        else if (path.includes('quotations.html')) quotationsManager.loadQuotations();
+        else if (path.includes('invoices.html')) invoicesManager.loadInvoices();
+        else if (path.includes('payments.html')) paymentsManager.loadPayments();
+        else if (path.includes('contracts.html')) contractsManager.loadContracts();
+        else if (path.includes('financials.html')) {
+            financialsManager.loadTransactions();
+            financialsManager.switchTab('ledger');
+        }
+        else if (path.includes('dashboard.html')) this.loadDashboardData();
+        else if (path.includes('plan.html') && typeof planManager !== 'undefined') planManager.loadPlanData();
+
     },
 
     toggleSidebar() {
@@ -40,52 +55,7 @@ const app = {
     },
 
     showSection(sectionId) {
-        // Hide all sections
-        const sections = ['dashboard', 'clients', 'products', 'licenses', 'quotations', 'invoices', 'payments', 'contracts', 'financials', 'csv-upload', 'financials-config'];
-        sections.forEach(sec => {
-            const secEl = document.getElementById(`section-${sec}`);
-            if (secEl) secEl.classList.add('hidden');
-            const navEl = document.getElementById(`nav-${sec}`);
-            if (navEl) {
-                navEl.classList.remove('active', 'bg-dtech-700', 'text-white');
-                navEl.classList.add('text-gray-700', 'dark:text-gray-300');
-                navEl.style.backgroundColor = '';
-                navEl.style.color = '';
-            }
-        });
-
-        // Show target section
-        const targetSecEl = document.getElementById(`section-${sectionId}`);
-        if (targetSecEl) targetSecEl.classList.remove('hidden');
-        const navItem = document.getElementById(`nav-${sectionId}`);
-        if (navItem) {
-            navItem.classList.add('active');
-            navItem.classList.remove('text-gray-700', 'dark:text-gray-300');
-            navItem.style.backgroundColor = '#1e3a8a';
-            navItem.style.color = 'white';
-        }
-
-        // Load specific data if needed
-        if (sectionId === 'clients') clientsManager.loadClients();
-        if (sectionId === 'products') productsManager.loadProducts();
-        if (sectionId === 'licenses') licensesManager.loadLicenses();
-        if (sectionId === 'quotations') quotationsManager.loadQuotations();
-        if (sectionId === 'invoices') invoicesManager.loadInvoices();
-        if (sectionId === 'payments') paymentsManager.loadPayments();
-        if (sectionId === 'contracts') contractsManager.loadContracts();
-        if (sectionId === 'financials') {
-            financialsManager.loadTransactions();
-            financialsManager.switchTab('ledger');
-        }
-        if (sectionId === 'dashboard') this.loadDashboardData();
-
-        // Close sidebar on mobile after navigating
-        if (window.innerWidth < 768) {
-            const sidebar = document.getElementById('sidebar');
-            if (sidebar && !sidebar.classList.contains('-translate-x-full')) {
-                this.toggleSidebar();
-            }
-        }
+        window.location.href = '' + sectionId + '.html';
     },
 
 
@@ -164,7 +134,7 @@ const app = {
 };
 
 document.addEventListener('DOMContentLoaded', () => {
-    if (window.location.pathname.endsWith('app.html')) {
+    if (!window.location.pathname.endsWith('admin.html') && !window.location.pathname.endsWith('index.html')) {
         app.init();
     }
 });

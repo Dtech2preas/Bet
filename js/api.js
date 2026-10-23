@@ -31,10 +31,10 @@ const API = {
                     // Unauthorized, clear token and redirect to login
                     localStorage.removeItem('dtech_token');
                     localStorage.removeItem('dtech_user');
-                    window.location.href = window.location.pathname.endsWith('public_app.html') ? 'index.html' : 'admin.html';
+                    window.location.href = window.location.pathname.includes('public_') ? 'index.html' : 'admin.html';
                 }
 
-                if (response.status === 403 && window.location.pathname.includes('public_app.html')) {
+                if (response.status === 403 && window.location.pathname.includes('public_')) {
                     if (data.code === 'LIMIT_REACHED' || data.code === 'FEATURE_LOCKED' || data.code === 'OVER_LIMIT_FROZEN') {
                          Swal.fire({
                              icon: 'lock',
