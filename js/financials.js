@@ -291,21 +291,28 @@ const financialsManager = {
         document.getElementById('csvFileInput').click();
     },
 
-    handleCSVUpload(event) {
+        handleCSVUpload(event) {
         const file = event.target.files[0];
         if (!file) return;
+
+        const overlay = document.getElementById('csv-loading-overlay');
+        if (overlay) overlay.classList.remove('hidden');
 
         const reader = new FileReader();
         reader.onload = (e) => {
             const text = e.target.result;
-            this.parseCSV(text);
+            // Add a small delay so UI can update
+            setTimeout(() => {
+                this.parseCSV(text);
+                if (overlay) overlay.classList.add('hidden');
+            }, 100);
         };
         reader.readAsText(file);
         // Reset input so the same file can be uploaded again if needed
         event.target.value = '';
     },
 
-    parseCSV(csvText) {
+parseCSV(csvText) {
         // Parse CSV with support for quoted strings
         function parseCSVRow(str) {
             const arr = [];
@@ -755,7 +762,7 @@ const financialsManager = {
                 this.chartOfAccounts.map(acc => `<option value="${acc.name}">${acc.name} (${acc.type})</option>`).join('');
         }
 
-        const tbody = document.getElementById('config-mappings-tbody');
+        const tbody = document.getElementById('config-rules-tbody');
         if (!tbody) return;
 
         const mappings = this.settings.mappings || {};
@@ -815,17 +822,14 @@ const financialsManager = {
         this.renderConfigTab();
     },
 
-    switchTab(tabName) {
+        switchTab(tabName) {
         const tabLedger = document.getElementById('financials-ledger-tab');
-        const tabConfig = document.getElementById('financials-config-tab');
         const tabReports = document.getElementById('financials-reports-tab');
 
         const btnLedger = document.getElementById('btn-tab-ledger');
-        const btnConfig = document.getElementById('btn-tab-config');
         const btnReports = document.getElementById('btn-tab-reports');
 
         if(tabLedger) tabLedger.classList.add('hidden');
-        if(tabConfig) tabConfig.classList.add('hidden');
         if(tabReports) tabReports.classList.add('hidden');
 
         if(btnLedger) {
@@ -836,10 +840,6 @@ const financialsManager = {
             btnReports.classList.remove('border-dtech-500', 'text-dtech-600');
             btnReports.classList.add('border-transparent', 'text-gray-500');
         }
-        if(btnConfig) {
-            btnConfig.classList.remove('border-dtech-500', 'text-dtech-600');
-            btnConfig.classList.add('border-transparent', 'text-gray-500');
-        }
 
         if (tabName === 'ledger' && tabLedger && btnLedger) {
             tabLedger.classList.remove('hidden');
@@ -849,12 +849,38 @@ const financialsManager = {
             tabReports.classList.remove('hidden');
             btnReports.classList.add('border-dtech-500', 'text-dtech-600');
             btnReports.classList.remove('border-transparent', 'text-gray-500');
-            this.renderReportsTab();
+            if(this.renderReportsTab) this.renderReportsTab();
+        }
+    },
+
+    switchCsvTab(tabName) {
+        const tabCsv = document.getElementById('csv-importer-tab');
+        const tabConfig = document.getElementById('financials-config-tab');
+
+        const btnCsv = document.getElementById('btn-tab-csv');
+        const btnConfig = document.getElementById('btn-tab-csv-config');
+
+        if(tabCsv) tabCsv.classList.add('hidden');
+        if(tabConfig) tabConfig.classList.add('hidden');
+
+        if(btnCsv) {
+            btnCsv.classList.remove('border-dtech-500', 'text-dtech-600');
+            btnCsv.classList.add('border-transparent', 'text-gray-500');
+        }
+        if(btnConfig) {
+            btnConfig.classList.remove('border-dtech-500', 'text-dtech-600');
+            btnConfig.classList.add('border-transparent', 'text-gray-500');
+        }
+
+        if (tabName === 'csv' && tabCsv && btnCsv) {
+            tabCsv.classList.remove('hidden');
+            btnCsv.classList.add('border-dtech-500', 'text-dtech-600');
+            btnCsv.classList.remove('border-transparent', 'text-gray-500');
         } else if (tabName === 'config' && tabConfig && btnConfig) {
             tabConfig.classList.remove('hidden');
             btnConfig.classList.add('border-dtech-500', 'text-dtech-600');
             btnConfig.classList.remove('border-transparent', 'text-gray-500');
-            this.renderConfigTab();
+            if(this.renderConfigTab) this.renderConfigTab();
         }
     }
 };
