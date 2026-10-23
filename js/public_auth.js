@@ -1,7 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
     // If already logged in on login page, redirect to app
     if (localStorage.getItem('dtech_token') && (window.location.pathname.includes('index') || window.location.pathname === '/')) {
-        window.location.href = 'public_app.html';
+        window.location.href = 'public_dashboard.html';
     }
 
     const tabLogin = document.getElementById('tabLogin');
@@ -61,7 +61,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         timer: 1500,
                         showConfirmButton: false
                     }).then(() => {
-                        window.location.href = 'public_app.html';
+                        window.location.href = 'public_dashboard.html';
                     });
                 }
             } catch (error) {
@@ -107,7 +107,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         timer: 1500,
                         showConfirmButton: false
                     }).then(() => {
-                        window.location.href = 'public_app.html';
+                        window.location.href = 'public_dashboard.html';
                     });
                 }
             } catch (error) {

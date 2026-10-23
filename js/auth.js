@@ -3,7 +3,7 @@
 document.addEventListener('DOMContentLoaded', () => {
     // If already logged in on login page, redirect to app
     if (localStorage.getItem('dtech_token') && (window.location.pathname.includes('admin') || window.location.pathname === '/')) {
-        window.location.href = 'app.html';
+        window.location.href = 'dashboard.html';
     }
 
     const loginForm = document.getElementById('loginForm');
@@ -35,7 +35,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         timer: 1500,
                         showConfirmButton: false
                     }).then(() => {
-                        window.location.href = 'app.html';
+                        window.location.href = 'dashboard.html';
                     });
                 }
             } catch (error) {
