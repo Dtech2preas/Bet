@@ -152,7 +152,7 @@ const app = {
 
     showSection(sectionId) {
         // Hide all sections
-        const sections = ['dashboard', 'clients', 'products', 'licenses', 'quotations', 'invoices', 'payments', 'contracts', 'financials', 'plan', 'settings'];
+        const sections = ['dashboard', 'clients', 'products', 'licenses', 'quotations', 'invoices', 'payments', 'contracts', 'financials', 'plan', 'settings', 'csv-upload', 'financials-config'];
         sections.forEach(sec => {
             const secEl = document.getElementById(`section-${sec}`);
             if (secEl) secEl.classList.add('hidden');

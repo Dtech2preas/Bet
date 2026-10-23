@@ -419,10 +419,10 @@
                     <button onclick="financialsManager.openTransactionModal()" class="btn-primary">
                         <i class="fas fa-plus mr-2"></i> Add Transaction
                     </button>
-                    <button onclick="financialsManager.triggerCSVUpload()" class="bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-dark-card dark:text-white dark:hover:bg-gray-700 px-4 py-2 rounded-md font-medium transition-colors">
+                    <button onclick="app.showSection('csv-upload')" class="bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-dark-card dark:text-white dark:hover:bg-gray-700 px-4 py-2 rounded-md font-medium transition-colors">
                         <i class="fas fa-file-csv mr-2"></i> Upload CSV
                     </button>
-                    <input type="file" id="csvFileInput" accept=".csv" class="hidden" onchange="financialsManager.handleCSVUpload(event)">
+
                 </div>
             </div>
 
@@ -575,6 +575,10 @@
                     <p class="text-gray-600 dark:text-gray-400">Upload bank statements to auto-categorize and save bulk transactions.</p>
                 </div>
                 <div class="mt-4 md:mt-0 flex gap-2">
+                    <button onclick="app.showSection('csv-upload')" class="bg-blue-100 hover:bg-blue-200 text-blue-800 dark:bg-blue-900 dark:text-blue-100 px-4 py-2 rounded-md font-medium transition-colors">
+                        <i class="fas fa-file-csv mr-2"></i> Select CSV File
+                    </button>
+                    <input type="file" id="csvFileInput" accept=".csv" class="hidden" onchange="financialsManager.handleCSVUpload(event)">
                     <button id="btn-cancel-reconciled" onclick="financialsManager.closeReconciliationView()" class="hidden bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-dark-card dark:text-white dark:hover:bg-gray-700 px-4 py-2 rounded-md font-medium transition-colors">
                         Cancel
                     </button>

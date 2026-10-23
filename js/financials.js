@@ -432,21 +432,37 @@ const financialsManager = {
         }
 
         if (parsedData.length > 0) {
-            this.showReconciliationModal(parsedData);
+            this.renderCSVReconciliation(parsedData);
         } else {
             Swal.fire('Error', 'Could not parse any valid transactions from the CSV.', 'error');
         }
     },
 
-    showReconciliationModal(parsedData) {
+    renderCSVReconciliation(parsedData) {
         this._pendingReconcileData = parsedData;
-        let html = '';
+
+        const autoContainer = document.getElementById('reconcile-auto-container');
+        const manualContainer = document.getElementById('reconcile-manual-container');
+        const emptyState = document.getElementById('reconcile-empty-state');
+        const splitView = document.getElementById('reconcile-split-view');
+
+        const btnSave = document.getElementById('btn-save-reconciled');
+        const btnCancel = document.getElementById('btn-cancel-reconciled');
+
+        if (!autoContainer || !manualContainer) return;
+
+        let autoHtml = '';
+        let manualHtml = '';
+        let autoCount = 0;
+        let manualCount = 0;
+
         parsedData.forEach((row, index) => {
             const isExpense = row.type === 'Expense';
             const amountColor = isExpense ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400';
             const amountSign = isExpense ? '-' : '+';
+            const hasCategory = row.category && row.category.trim() !== '';
 
-            html += `
+            const rowHtml = `
                 <div class="bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-lg p-4 shadow-sm flex flex-col md:flex-row gap-4 items-start md:items-center">
                     <div class="flex-1 min-w-0 w-full">
                         <div class="flex justify-between md:justify-start items-center gap-2 mb-1">
@@ -463,17 +479,52 @@ const financialsManager = {
                     </div>
                 </div>
             `;
+
+            if (hasCategory) {
+                autoHtml += rowHtml;
+                autoCount++;
+            } else {
+                manualHtml += rowHtml;
+                manualCount++;
+            }
         });
 
-        document.getElementById('reconcileContainer').innerHTML = html;
-        document.getElementById('reconcileModal').classList.remove('hidden');
-        document.getElementById('reconcileModal').classList.add('flex');
+        if (autoCount === 0) {
+            autoHtml = '<p class="text-gray-500 italic">No transactions were auto-categorized.</p>';
+        }
+        if (manualCount === 0) {
+            manualHtml = '<p class="text-gray-500 italic">All transactions were auto-categorized!</p>';
+        }
+
+        autoContainer.innerHTML = autoHtml;
+        manualContainer.innerHTML = manualHtml;
+
+        if (emptyState) emptyState.classList.add('hidden');
+        if (splitView) splitView.classList.remove('hidden');
+        if (btnSave) btnSave.classList.remove('hidden');
+        if (btnCancel) btnCancel.classList.remove('hidden');
+
+        app.showSection('csv-upload');
     },
 
-    closeReconcileModal() {
-        document.getElementById('reconcileModal').classList.add('hidden');
-        document.getElementById('reconcileModal').classList.remove('flex');
+    closeReconciliationView() {
         this._pendingReconcileData = null;
+        const autoContainer = document.getElementById('reconcile-auto-container');
+        const manualContainer = document.getElementById('reconcile-manual-container');
+        const emptyState = document.getElementById('reconcile-empty-state');
+        const splitView = document.getElementById('reconcile-split-view');
+
+        const btnSave = document.getElementById('btn-save-reconciled');
+        const btnCancel = document.getElementById('btn-cancel-reconciled');
+
+        if (autoContainer) autoContainer.innerHTML = '';
+        if (manualContainer) manualContainer.innerHTML = '';
+        if (emptyState) emptyState.classList.remove('hidden');
+        if (splitView) splitView.classList.add('hidden');
+        if (btnSave) btnSave.classList.add('hidden');
+        if (btnCancel) btnCancel.classList.add('hidden');
+
+        app.showSection('financials');
     },
 
     async saveReconciled() {
@@ -504,7 +555,7 @@ const financialsManager = {
         this.settings.mappings = newMappings;
         await this.syncFinancialSettings();
 
-        this.closeReconcileModal();
+        this.closeReconciliationView();
 
         Swal.fire({
             title: 'Saving...',
