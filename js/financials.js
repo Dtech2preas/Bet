@@ -511,7 +511,7 @@ parseCSV(csvText) {
         if (btnSave) btnSave.classList.remove('hidden');
         if (btnCancel) btnCancel.classList.remove('hidden');
 
-        app.showSection('csv-upload');
+
     },
 
     closeReconciliationView() {
@@ -531,7 +531,7 @@ parseCSV(csvText) {
         if (btnSave) btnSave.classList.add('hidden');
         if (btnCancel) btnCancel.classList.add('hidden');
 
-        app.showSection('financials');
+        window.location.href = window.location.pathname.includes('public_') ? 'public_financials.html' : 'financials.html';
     },
 
     async saveReconciled() {
