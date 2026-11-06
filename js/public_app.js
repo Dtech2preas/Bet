@@ -902,6 +902,17 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
+// Close navigation dropdown on outside click
+document.addEventListener('click', (e) => {
+    const dropdown = document.getElementById('nav-dropdown');
+    const menuBtn = document.getElementById('menu-button');
+    if (dropdown && !dropdown.classList.contains('hidden')) {
+        if (!dropdown.contains(e.target) && !menuBtn?.contains(e.target)) {
+            dropdown.classList.add('hidden');
+        }
+    }
+});
+
 // Add Capacitor App Deep Link Listener to handle payment returns
 if (window.Capacitor) {
     const { App } = window.Capacitor.Plugins;
