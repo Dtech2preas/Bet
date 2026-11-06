@@ -123,12 +123,24 @@ async function handleKVCollection(request, env, collectionName, business_id) {
   if (request.method === 'POST') {
     try {
       const body = await request.json();
+      let data = await env.DTECH_KV.get(collectionName);
+      let items = data ? JSON.parse(data) : [];
+
+      if (Array.isArray(body)) {
+        const addedItems = body.map(b => {
+          b.id = b.id || generateId();
+          b.business_id = business_id;
+          b.dateAdded = b.dateAdded || new Date().toISOString();
+          return b;
+        });
+        items.push(...addedItems);
+        await env.DTECH_KV.put(collectionName, JSON.stringify(items));
+        return jsonResponse({ success: true, count: addedItems.length, items: addedItems }, 201);
+      }
+
       body.id = generateId();
       body.business_id = business_id;
       body.dateAdded = new Date().toISOString();
-
-      let data = await env.DTECH_KV.get(collectionName);
-      let items = data ? JSON.parse(data) : [];
 
       const filteredItems = items.filter(item => item.business_id === business_id);
       const limitCheck = await checkLimits(business_id, env, collectionName, filteredItems);

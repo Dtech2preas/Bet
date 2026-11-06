@@ -689,12 +689,88 @@ const financialsManager = {
         }, false);
     },
 
+    extractVendorKey(description) {
+        if (!description) return '';
+        let clean = description
+            .replace(/^(POS PURCHASE|DEBIT CARD|CARD PURCHASE|PURCHASE|PAYMENT TO|TRANSFER TO|EFT TO|EFT|ACB DEBIT|DIRECT DEBIT)\s*[:-]?\s*/i, '')
+            .replace(/[*#]\d+/g, '')
+            .replace(/\b\d{4,}\b/g, '') // remove large reference numbers
+            .replace(/[^a-zA-Z0-9\s]/g, ' ')
+            .trim();
+        
+        const words = clean.split(/\s+/).filter(w => w.length > 1);
+        if (words.length >= 2) {
+            return words.slice(0, 2).join(' ').toLowerCase();
+        }
+        return (words[0] || clean).toLowerCase();
+    },
+
+    showReconcileToast(message) {
+        const container = document.getElementById('reconcile-toast-container');
+        if (!container) return;
+
+        const toast = document.createElement('div');
+        toast.className = "pointer-events-auto bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-xs font-semibold px-4 py-2.5 rounded-xl shadow-2xl flex items-center gap-2 transform translate-y-2 opacity-0 transition-all duration-200 border border-white/10 dark:border-black/10";
+        toast.innerHTML = `<i class="fas fa-bolt text-amber-400"></i> <span>${message}</span>`;
+        container.appendChild(toast);
+
+        requestAnimationFrame(() => {
+            toast.classList.remove('translate-y-2', 'opacity-0');
+        });
+
+        setTimeout(() => {
+            toast.classList.add('opacity-0', 'translate-y-2');
+            setTimeout(() => toast.remove(), 250);
+        }, 3500);
+    },
+
+    updateParseProgress(stepIndex, title, subtitle, percent) {
+        const titleEl = document.getElementById('parse-progress-title');
+        const subEl = document.getElementById('parse-progress-subtitle');
+        const barEl = document.getElementById('parse-progress-bar');
+        const pctEl = document.getElementById('parse-progress-percent');
+
+        if (title && titleEl) titleEl.textContent = title;
+        if (subtitle && subEl) subEl.textContent = subtitle;
+        if (percent !== undefined) {
+            if (barEl) barEl.style.width = `${percent}%`;
+            if (pctEl) pctEl.textContent = `${percent}%`;
+        }
+
+        for (let i = 1; i <= 4; i++) {
+            const stepEl = document.getElementById(`parse-step-${i}`);
+            const statusEl = document.getElementById(`parse-step-${i}-status`);
+            if (!stepEl || !statusEl) continue;
+
+            if (i < stepIndex) {
+                stepEl.className = "flex items-center justify-between text-green-600 dark:text-green-400";
+                const icon = stepEl.querySelector('i');
+                if (icon) icon.className = "fas fa-check-circle w-4 text-center";
+                statusEl.textContent = "Done";
+                statusEl.className = "text-[11px] font-semibold text-green-600 dark:text-green-400";
+            } else if (i === stepIndex) {
+                stepEl.className = "flex items-center justify-between font-medium text-gray-900 dark:text-white";
+                const icon = stepEl.querySelector('i');
+                if (icon) icon.className = "fas fa-spinner fa-spin text-dtech-500 w-4 text-center";
+                statusEl.textContent = "Processing";
+                statusEl.className = "text-[11px] font-semibold text-dtech-600 dark:text-dtech-400";
+            } else {
+                stepEl.className = "flex items-center justify-between text-gray-400";
+                const icon = stepEl.querySelector('i');
+                if (icon) icon.className = "far fa-circle w-4 text-center";
+                statusEl.textContent = "Pending";
+                statusEl.className = "text-[11px] text-gray-400";
+            }
+        }
+    },
+
     handleCSVUpload(event) {
         const file = event.target.files[0];
         if (!file) return;
 
         const overlay = document.getElementById('csv-loading-overlay');
         if (overlay) overlay.classList.remove('hidden');
+        this.updateParseProgress(1, 'Reading Bank Statement...', `Analyzing ${file.name} lines & headers`, 15);
 
         const reader = new FileReader();
         reader.onload = async (e) => {
@@ -761,6 +837,9 @@ const financialsManager = {
             return;
         }
 
+        this.updateParseProgress(2, 'Matching Invoices...', `Checking unpaid invoices against ${lines.length - 1} statement rows...`, 45);
+        await new Promise(r => setTimeout(r, 120));
+
         // Fetch existing invoices and transactions for smart cross-referencing
         let existingInvoices = [];
         try {
@@ -769,6 +848,9 @@ const financialsManager = {
         } catch (e) {
             console.warn("Could not pre-load invoices for reconciliation", e);
         }
+
+        this.updateParseProgress(3, 'Checking Duplicates...', 'Cross-referencing historical ledger entries to prevent duplicates...', 70);
+        await new Promise(r => setTimeout(r, 100));
 
         let existingTransactions = this.transactions || [];
         if (!existingTransactions || existingTransactions.length === 0) {
@@ -782,6 +864,8 @@ const financialsManager = {
                 console.warn("Could not pre-load transactions for reconciliation", e);
             }
         }
+
+        this.updateParseProgress(4, 'Applying Categorization Rules...', 'Applying automated vendor categorization rules...', 85);
         const parsedData = [];
 
         for (let i = 1; i < lines.length; i++) {
@@ -916,6 +1000,8 @@ const financialsManager = {
         }
 
         if (parsedData.length > 0) {
+            this.updateParseProgress(5, 'Reconciliation Ready!', `Successfully processed ${parsedData.length} transactions.`, 100);
+            await new Promise(r => setTimeout(r, 220));
             this.renderCSVReconciliation(parsedData);
         } else {
             Swal.fire('Error', 'Could not parse any valid transactions from the CSV.', 'error');
@@ -1041,6 +1127,15 @@ const financialsManager = {
         const searchQuery = (document.getElementById('recon-search-filter')?.value || '').toLowerCase().trim();
         const itemsWithIndex = this._pendingReconcileData.map((row, idx) => ({ row, idx }));
 
+        // Count similar unassigned payees across pending data to display smart count badges
+        const vendorCounts = {};
+        this._pendingReconcileData.forEach(r => {
+            const k = this.extractVendorKey(r.description);
+            if (k && k.length >= 3) {
+                vendorCounts[k] = (vendorCounts[k] || 0) + 1;
+            }
+        });
+
         const filtered = itemsWithIndex.filter(item => {
             const { row } = item;
             const hasCat = row.category && row.category.trim() !== '';
@@ -1136,6 +1231,9 @@ const financialsManager = {
                 borderClass = 'border-gray-200 dark:border-dark-border opacity-75 bg-gray-50/50 dark:bg-dark-card/50';
             }
 
+            const vendorKey = this.extractVendorKey(row.description);
+            const similarCount = vendorCounts[vendorKey] || 0;
+
             const catOptions = Object.keys(groups).map(grp => `
                 <optgroup label="${grp}">
                     ${groups[grp].map(acc => `<option value="${acc.name}" ${row.category === acc.name ? 'selected' : ''}>${acc.name}</option>`).join('')}
@@ -1160,6 +1258,11 @@ const financialsManager = {
                             ${row.isDuplicate ? `
                                 <span class="inline-flex items-center gap-1 text-xs font-medium bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400 px-2.5 py-0.5 rounded-full border border-amber-200 dark:border-amber-900/60">
                                     <i class="fas fa-copy text-[10px]"></i> ${row.duplicateReason || 'Duplicate'}
+                                </span>
+                            ` : ''}
+                            ${similarCount > 1 ? `
+                                <span class="inline-flex items-center gap-1 text-[11px] font-medium text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/40 px-2.5 py-0.5 rounded-full border border-blue-200 dark:border-blue-900/60" title="${similarCount} transactions share payee &quot;${vendorKey.toUpperCase()}&quot; and will auto-sync category">
+                                    <i class="fas fa-layer-group text-[10px]"></i> ${similarCount} in statement (auto-syncs)
                                 </span>
                             ` : ''}
                             <span id="recon-status-badge-${idx}" class="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full ${hasCategory ? 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300' : 'bg-amber-100 text-amber-800 dark:bg-amber-900/60 dark:text-amber-200'}">
@@ -1199,10 +1302,11 @@ const financialsManager = {
         container.innerHTML = cardsHtml;
     },
 
-    onReconcileCatChange(idx, newCategory) {
+    onReconcileCatChange(idx, newCategory, isAutoPropagated = false) {
         if (!this._pendingReconcileData || !this._pendingReconcileData[idx]) return;
 
         const row = this._pendingReconcileData[idx];
+        const oldCategory = row.category;
         row.category = newCategory;
 
         this.updateReconcileKPIs();
@@ -1234,6 +1338,43 @@ const financialsManager = {
             if (card && !row.isDuplicate) {
                 card.classList.add('border-amber-300', 'dark:border-amber-700/80', 'bg-amber-50/15', 'dark:bg-amber-950/10', 'ring-1', 'ring-amber-300/40');
                 card.classList.remove('border-gray-200', 'dark:border-dark-border');
+            }
+        }
+
+        // Auto-propagate to matching vendor rows in the statement (unless user explicitly edits an individual transaction)
+        if (newCategory && !isAutoPropagated) {
+            const vendorKey = this.extractVendorKey(row.description);
+            if (vendorKey && vendorKey.length >= 3) {
+                let propagatedCount = 0;
+                this._pendingReconcileData.forEach((otherRow, otherIdx) => {
+                    // Only propagate to other unassigned rows or rows with identical previous category
+                    if (otherIdx !== idx && !otherRow.skip && (!otherRow.category || otherRow.category === oldCategory)) {
+                        const otherKey = this.extractVendorKey(otherRow.description);
+                        if (otherKey === vendorKey || otherRow.description.toLowerCase().includes(vendorKey)) {
+                            otherRow.category = newCategory;
+                            propagatedCount++;
+
+                            const otherCard = document.getElementById(`recon-card-${otherIdx}`);
+                            const otherBadge = document.getElementById(`recon-status-badge-${otherIdx}`);
+                            const otherSelect = document.getElementById(`recon-cat-${otherIdx}`);
+
+                            if (otherSelect) otherSelect.value = newCategory;
+                            if (otherBadge) {
+                                otherBadge.className = "inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300";
+                                otherBadge.innerHTML = '<i class="fas fa-check text-[10px]"></i> Categorized';
+                            }
+                            if (otherCard && !otherRow.isDuplicate) {
+                                otherCard.classList.remove('border-amber-300', 'dark:border-amber-700/80', 'bg-amber-50/15', 'dark:bg-amber-950/10', 'ring-1', 'ring-amber-300/40');
+                                otherCard.classList.add('border-gray-200', 'dark:border-dark-border');
+                            }
+                        }
+                    }
+                });
+
+                if (propagatedCount > 0) {
+                    this.updateReconcileKPIs();
+                    this.showReconcileToast(`⚡ Auto-applied "${newCategory}" to ${propagatedCount} matching "${vendorKey.toUpperCase()}" transaction(s)!`);
+                }
             }
         }
     },
@@ -1322,52 +1463,117 @@ const financialsManager = {
             }
         });
         this.settings.mappings = newMappings;
-        await this.syncFinancialSettings();
 
+        // Interactive Live Progress Modal
         Swal.fire({
-            title: 'Posting to Ledger...',
-            html: `Saving ${readyData.length} transactions and updating reconciled invoice statuses.`,
+            title: 'Posting to Financials Ledger',
+            html: `
+                <div class="text-left mt-2">
+                    <div class="flex justify-between items-center text-xs text-gray-500 mb-1.5 font-medium">
+                        <span id="post-step-status">Initializing posting sequence...</span>
+                        <span id="post-percent" class="font-bold text-dtech-600">0%</span>
+                    </div>
+                    <div class="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-2.5 mb-3 overflow-hidden">
+                        <div id="post-progress-bar" class="bg-dtech-600 h-2.5 rounded-full transition-all duration-300 ease-out" style="width: 5%"></div>
+                    </div>
+                    <div class="bg-gray-50 dark:bg-dark-bg/80 border border-gray-200 dark:border-dark-border rounded-xl p-3 max-h-40 overflow-y-auto font-mono text-[11px] text-gray-700 dark:text-gray-300 space-y-1.5" id="post-activity-log">
+                        <div class="text-gray-400 flex items-center gap-1.5"><i class="fas fa-circle-notch fa-spin text-dtech-500"></i> Preparing ${readyData.length} transactions for ledger...</div>
+                    </div>
+                </div>
+            `,
             allowOutsideClick: false,
-            didOpen: () => {
-                Swal.showLoading();
-            }
+            showConfirmButton: false,
+            didOpen: () => {}
         });
+
+        const updateProgress = (pct, statusText, logMessage, logIcon = 'fas fa-check text-green-500') => {
+            const bar = document.getElementById('post-progress-bar');
+            const pctEl = document.getElementById('post-percent');
+            const statusEl = document.getElementById('post-step-status');
+            const logEl = document.getElementById('post-activity-log');
+
+            if (bar) bar.style.width = `${pct}%`;
+            if (pctEl) pctEl.textContent = `${pct}%`;
+            if (statusEl && statusText) statusEl.textContent = statusText;
+            if (logEl && logMessage) {
+                const item = document.createElement('div');
+                item.className = "flex items-center gap-1.5 animate-fade-in";
+                item.innerHTML = `<i class="${logIcon} text-[10px] w-3.5 text-center"></i> <span>${logMessage}</span>`;
+                logEl.appendChild(item);
+                logEl.scrollTop = logEl.scrollHeight;
+            }
+        };
+
+        // 1. Sync learned vendor categorization rules
+        updateProgress(15, 'Saving vendor rules...', `Saved automated categorization rules for learned payees`, 'fas fa-brain text-purple-500');
+        await this.syncFinancialSettings();
+        await new Promise(r => setTimeout(r, 120));
+
+        // 2. Prepare payload
+        const txPayload = readyData.map(t => ({
+            date: t.date,
+            description: t.description,
+            amount: t.amount,
+            type: t.type,
+            category: t.category,
+            reference: t.matchedInvoice || ''
+        }));
+
+        updateProgress(35, 'Posting transactions to Cloudflare KV...', `Committing batch of ${txPayload.length} transactions...`, 'fas fa-database text-blue-500');
 
         let successCount = 0;
         let invoiceUpdates = 0;
 
-        for (const t of readyData) {
-            try {
-                const response = await API.request('/api/transactions', {
-                    method: 'POST',
-                    body: JSON.stringify({
-                        date: t.date,
-                        description: t.description,
-                        amount: t.amount,
-                        type: t.type,
-                        category: t.category,
-                        reference: t.matchedInvoice || ''
-                    })
-                });
+        try {
+            const batchResponse = await API.request('/api/transactions', {
+                method: 'POST',
+                body: JSON.stringify(txPayload)
+            });
 
-                if (response && response.success) {
-                    successCount++;
-                    if (t.matchedInvoiceId) {
-                        try {
-                            await API.request(`/api/invoices/${t.matchedInvoiceId}`, {
-                                method: 'PUT',
-                                body: JSON.stringify({ status: 'Paid', balanceDue: '0.00' })
-                            });
-                            invoiceUpdates++;
-                        } catch (invErr) {
-                            console.warn("Could not mark matched invoice as paid", invErr);
-                        }
-                    }
+            if (batchResponse && batchResponse.success) {
+                successCount = txPayload.length;
+                updateProgress(65, 'Transactions stored in ledger!', `Committed all ${successCount} transactions cleanly in 1 KV write`, 'fas fa-check-circle text-green-500');
+            } else {
+                // Fallback to sequential if batch not accepted
+                for (let i = 0; i < txPayload.length; i++) {
+                    const t = txPayload[i];
+                    try {
+                        const r = await API.request('/api/transactions', { method: 'POST', body: JSON.stringify(t) });
+                        if (r && r.success) successCount++;
+                        const p = 35 + Math.round(((i + 1) / txPayload.length) * 35);
+                        updateProgress(p, `Posting ${i + 1}/${txPayload.length}...`, `Recorded: "${t.description.slice(0, 24)}..."`);
+                    } catch (err) {}
                 }
-            } catch (e) {
-                console.error('Failed to save transaction', t, e);
+            }
+        } catch (e) {
+            console.error('Batch save failed, falling back', e);
+        }
+        await new Promise(r => setTimeout(r, 150));
+
+        // 3. Reconcile matched invoices
+        const matchedItems = readyData.filter(t => t.matchedInvoiceId);
+        if (matchedItems.length > 0) {
+            updateProgress(70, `Reconciling ${matchedItems.length} matched invoice(s)...`, `Cross-referencing payment records against client invoices...`, 'fas fa-link text-blue-500');
+            for (let i = 0; i < matchedItems.length; i++) {
+                const t = matchedItems[i];
+                try {
+                    await API.request(`/api/invoices/${t.matchedInvoiceId}`, {
+                        method: 'PUT',
+                        body: JSON.stringify({ status: 'Paid', balanceDue: '0.00' })
+                    });
+                    invoiceUpdates++;
+                    const pct = 70 + Math.round(((i + 1) / matchedItems.length) * 25);
+                    updateProgress(pct, `Reconciling invoice ${i + 1}/${matchedItems.length}...`, `Invoice ${t.matchedInvoice || ''} marked as Paid`, 'fas fa-file-invoice-dollar text-green-500');
+                    await new Promise(r => setTimeout(r, 80));
+                } catch (invErr) {
+                    console.warn("Could not mark invoice paid", invErr);
+                }
             }
         }
+
+        // 4. Wrap up
+        updateProgress(100, 'Reconciliation Complete!', `Posted ${successCount} transactions and updated ${invoiceUpdates} invoice(s).`, 'fas fa-check-double text-green-500');
+        await new Promise(r => setTimeout(r, 350));
 
         if (typeof app !== 'undefined' && app.logActivity) {
             app.logActivity(`Imported and reconciled ${successCount} transactions`);

@@ -282,16 +282,63 @@
 </section>
 </main>
 
-<!-- Loading Overlay -->
-<div class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center" id="csv-loading-overlay">
-    <div class="bg-white dark:bg-dark-card p-6 rounded-xl shadow-xl flex items-center space-x-4">
-        <i class="fas fa-spinner fa-spin text-3xl text-dtech-600"></i>
-        <div>
-            <h3 class="text-base font-semibold text-gray-900 dark:text-white">Parsing Statement...</h3>
-            <p class="text-xs text-gray-500">Reading columns and applying categorization rules</p>
+<!-- Interactive Parsing Overlay -->
+<div class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden z-50 flex items-center justify-center p-4 transition-opacity duration-300" id="csv-loading-overlay">
+    <div class="bg-white dark:bg-dark-card w-full max-w-md rounded-2xl shadow-2xl border border-gray-200 dark:border-dark-border p-6 transform transition-all duration-300">
+        <div class="flex items-center space-x-3.5 mb-4">
+            <div class="w-12 h-12 rounded-xl bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 flex items-center justify-center text-2xl flex-shrink-0 animate-pulse">
+                <i class="fas fa-file-invoice-dollar"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-base font-bold text-gray-900 dark:text-white" id="parse-progress-title">Parsing Statement...</h3>
+                    <span class="text-xs font-bold text-dtech-600 dark:text-dtech-400" id="parse-progress-percent">20%</span>
+                </div>
+                <p class="text-xs text-gray-500 dark:text-gray-400 truncate" id="parse-progress-subtitle">Reading statement rows &amp; bank format</p>
+            </div>
+        </div>
+
+        <!-- Progress Bar -->
+        <div class="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-2 mb-4 overflow-hidden">
+            <div id="parse-progress-bar" class="bg-dtech-600 h-2 rounded-full transition-all duration-300 ease-out" style="width: 20%;"></div>
+        </div>
+
+        <!-- Interactive Checklist Steps -->
+        <div class="space-y-2.5 text-xs text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-dark-bg/60 p-3.5 rounded-xl border border-gray-100 dark:border-dark-border" id="parse-steps-list">
+            <div class="flex items-center justify-between" id="parse-step-1">
+                <span class="flex items-center gap-2 font-medium text-gray-900 dark:text-white">
+                    <i class="fas fa-spinner fa-spin text-dtech-500 w-4 text-center"></i>
+                    <span>Detecting bank statement layout</span>
+                </span>
+                <span class="text-[11px] text-gray-400" id="parse-step-1-status">Processing</span>
+            </div>
+            <div class="flex items-center justify-between text-gray-400" id="parse-step-2">
+                <span class="flex items-center gap-2">
+                    <i class="far fa-circle w-4 text-center"></i>
+                    <span>Cross-referencing unpaid invoices</span>
+                </span>
+                <span class="text-[11px] text-gray-400" id="parse-step-2-status">Pending</span>
+            </div>
+            <div class="flex items-center justify-between text-gray-400" id="parse-step-3">
+                <span class="flex items-center gap-2">
+                    <i class="far fa-circle w-4 text-center"></i>
+                    <span>Scanning historical ledger for duplicates</span>
+                </span>
+                <span class="text-[11px] text-gray-400" id="parse-step-3-status">Pending</span>
+            </div>
+            <div class="flex items-center justify-between text-gray-400" id="parse-step-4">
+                <span class="flex items-center gap-2">
+                    <i class="far fa-circle w-4 text-center"></i>
+                    <span>Applying auto-categorization rules</span>
+                </span>
+                <span class="text-[11px] text-gray-400" id="parse-step-4-status">Pending</span>
+            </div>
         </div>
     </div>
 </div>
+
+<!-- Floating Toast Container for Realtime Auto-Propagation Notifications -->
+<div id="reconcile-toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
 
 <!-- PDF Generation libs -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
