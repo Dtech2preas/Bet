@@ -28,13 +28,15 @@
             box-sizing: border-box !important;
         }
         .swal2-html-container { margin: 1em 1.6em 0.3em; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
 </head>
-<body class="bg-gray-100 dark:bg-dark-bg text-gray-900 dark:text-gray-100 min-h-screen flex transition-colors duration-200 relative md:overflow-visible">
+<body class="bg-gray-100 dark:bg-dark-bg text-gray-900 dark:text-gray-100 min-h-screen flex transition-colors duration-200 relative md:overflow-visible max-w-full overflow-x-hidden">
 <!-- Mobile Sidebar Overlay -->
 <!-- Sidebar -->
 <!-- Main Content -->
-<main class="flex-1 flex flex-col min-w-0 min-h-screen">
+<main class="flex-1 flex flex-col min-w-0 min-h-screen max-w-full overflow-x-hidden">
 <!-- Topbar -->
 <header class="bg-white dark:bg-dark-card border-b dark:border-dark-border h-16 flex items-center justify-between px-4 sm:px-6 sticky top-0 z-10 transition-colors duration-200">
 <div class="flex items-center flex-1">
@@ -117,73 +119,179 @@
 <!-- SETTINGS SECTION -->
 </div>
 <!-- CSV UPLOAD SECTION -->
-<section class="animate-fade-in p-4 md:p-8" id="section-csv-upload">
-<div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 sticky top-0 bg-gray-50 dark:bg-dark-bg z-10 py-4 border-b dark:border-dark-border">
-<div>
-<h2 class="text-2xl font-bold text-gray-800 dark:text-white">Import Transactions</h2>
-<p class="text-gray-600 dark:text-gray-400">Upload bank statements to auto-categorize and save bulk transactions.</p>
-</div>
-<div class="mt-4 md:mt-0 flex gap-2">
-<button class="bg-blue-100 hover:bg-blue-200 text-blue-800 dark:bg-blue-900 dark:text-blue-100 px-4 py-2 rounded-md font-medium transition-colors" onclick="document.getElementById('csvFileInput').click()">
-<i class="fas fa-search mr-2"></i> Browse for CSV File
-                    </button>
-<input accept=".csv" class="hidden" id="csvFileInput" onchange="financialsManager.handleCSVUpload(event)" type="file"/>
-<button class="bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-dark-card dark:text-white dark:hover:bg-gray-700 px-4 py-2 rounded-md font-medium transition-colors" onclick="window.location.href='public_financials.html'">
-<i class="fas fa-arrow-left mr-2"></i> Back
-</button>
-</div>
-</div>
-<!-- Tabs -->
-<div class="border-b border-gray-200 dark:border-dark-border mb-6">
-<nav class="-mb-px flex space-x-8">
-<button class="border-dtech-500 text-dtech-600 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm" id="btn-tab-csv" onclick="financialsManager.switchCsvTab('csv')">
-CSV Importer
-</button>
-<button class="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:hover:text-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm" id="btn-tab-csv-config" onclick="window.location.href='public_financials-config.html'">
-Configuration
-</button>
-</nav>
-</div>
-<div id="csv-importer-tab">
-<div class="hidden" id="reconcile-split-view">
-<div class="flex justify-between items-center mb-4 bg-white dark:bg-dark-card p-4 rounded-lg shadow-sm border dark:border-dark-border sticky top-[5.5rem] z-10">
-<div>
-<h3 class="text-lg font-bold text-gray-800 dark:text-white">Review &amp; Save</h3>
-<p class="text-sm text-gray-500">Please review your transactions before saving.</p>
-</div>
-<div class="flex gap-2">
-<button class="bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-dark-card dark:text-white dark:hover:bg-gray-700 px-4 py-2 rounded-md font-medium transition-colors" id="btn-cancel-reconciled" onclick="financialsManager.closeReconciliationView()">
-Cancel
-</button>
-<button class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md shadow-sm text-sm font-medium transition-colors" id="btn-save-reconciled" onclick="financialsManager.saveReconciled()">
-<i class="fas fa-save mr-2"></i> Save Transactions
-</button>
-</div>
-</div>
-<div class="mb-6">
-<h3 class="text-lg font-bold text-green-600 mb-2"><i class="fas fa-check-circle mr-2"></i> Auto-Categorized</h3>
-<p class="text-sm text-gray-500 mb-4">The system recognized these from your mapping rules.</p>
-<div class="space-y-4" id="reconcile-auto-container"></div>
-</div>
-<div>
-<h3 class="text-lg font-bold text-yellow-600 mb-2"><i class="fas fa-exclamation-circle mr-2"></i> Needs Review</h3>
-<p class="text-sm text-gray-500 mb-4">Please categorize these manually. Saving them will teach the system for next time!</p>
-<div class="space-y-4" id="reconcile-manual-container"></div>
-</div>
-</div>
-<div class="text-center py-20 text-gray-500" id="reconcile-empty-state">
-<i class="fas fa-cloud-upload-alt text-5xl mb-4 text-gray-300"></i>
-<p>Select a CSV file to begin importing transactions.</p>
-</div>
-<!-- Loading Spinner Overlay -->
-<div class="hidden absolute inset-0 bg-white/80 dark:bg-dark-bg/80 z-20 flex flex-col items-center justify-center rounded-lg" id="csv-loading-overlay">
-<i class="fas fa-spinner fa-spin text-5xl text-dtech-500 mb-4"></i>
-<h3 class="text-xl font-bold text-gray-800 dark:text-white">Parsing CSV...</h3>
-<p class="text-gray-500 mt-2">Please wait while we process your transactions.</p>
-</div>
-</div>
+<section class="animate-fade-in p-4 md:p-8 max-w-full overflow-x-hidden" id="section-csv-upload">
+    <!-- Top Header -->
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 pb-4 border-b border-gray-200 dark:border-dark-border gap-4">
+        <div>
+            <div class="flex items-center gap-2">
+                <span class="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400">
+                    <i class="fas fa-file-invoice-dollar text-lg"></i>
+                </span>
+                <h2 class="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">Bank Statement Reconciliation</h2>
+            </div>
+            <p class="text-xs md:text-sm text-gray-500 dark:text-gray-400 mt-1">Upload CSV statements to auto-categorize expenses, match unpaid invoices, and reconcile your cashflow in bulk.</p>
+        </div>
+        <div class="flex items-center gap-2 w-full md:w-auto">
+            <button type="button" class="btn-primary w-full md:w-auto flex items-center justify-center gap-2" onclick="document.getElementById('csvFileInput').click()">
+                <i class="fas fa-file-upload"></i> Upload CSV Statement
+            </button>
+            <input accept=".csv" class="hidden" id="csvFileInput" onchange="financialsManager.handleCSVUpload(event)" type="file"/>
+            <button type="button" class="px-4 py-2 text-sm font-medium rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-dark-card text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition" onclick="window.location.href='public_financials.html'">
+                <i class="fas fa-arrow-left mr-1"></i> Back
+            </button>
+        </div>
+    </div>
+
+    <!-- Empty State / Dropzone (Shown when no CSV is loaded) -->
+    <div id="reconcile-empty-state" class="my-6">
+        <div class="bg-white dark:bg-dark-card rounded-2xl border-2 border-dashed border-gray-300 dark:border-gray-700 p-8 sm:p-12 text-center hover:border-dtech-500 dark:hover:border-dtech-500 transition-colors cursor-pointer group" onclick="document.getElementById('csvFileInput').click()">
+            <div class="w-16 h-16 sm:w-20 sm:h-20 mx-auto rounded-full bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 flex items-center justify-center text-3xl group-hover:scale-110 transition-transform mb-4">
+                <i class="fas fa-cloud-arrow-up"></i>
+            </div>
+            <h3 class="text-lg sm:text-xl font-bold text-gray-900 dark:text-white mb-2">Drop your bank CSV statement here</h3>
+            <p class="text-xs sm:text-sm text-gray-500 dark:text-gray-400 max-w-lg mx-auto mb-6">Or click to browse your files. We automatically detect South African bank statement formats, match invoice numbers, and detect duplicates.</p>
+            
+            <div class="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-dtech-600 text-white font-medium text-sm shadow-md group-hover:bg-dtech-700 transition">
+                <i class="fas fa-folder-open"></i> Browse CSV Files
+            </div>
+
+            <!-- Supported Banks Badges -->
+            <div class="mt-8 pt-6 border-t border-gray-100 dark:border-gray-800">
+                <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Supported Bank Statement Formats</p>
+                <div class="flex flex-wrap justify-center gap-2 text-xs">
+                    <span class="px-3 py-1 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-medium">FNB (.csv)</span>
+                    <span class="px-3 py-1 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-medium">Capitec (.csv)</span>
+                    <span class="px-3 py-1 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-medium">Standard Bank (.csv)</span>
+                    <span class="px-3 py-1 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-medium">Nedbank (.csv)</span>
+                    <span class="px-3 py-1 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-medium">Absa (.csv)</span>
+                    <span class="px-3 py-1 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-medium">Custom / Excel CSV</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3 Step Process Info -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+            <div class="bg-white dark:bg-dark-card p-5 rounded-xl border border-gray-200 dark:border-dark-border shadow-sm">
+                <div class="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold text-sm mb-3">1</div>
+                <h4 class="text-sm font-bold text-gray-900 dark:text-white mb-1">Instant Bank Parsing</h4>
+                <p class="text-xs text-gray-500">Auto-identifies Date, Amount, Money In/Out, and Description columns regardless of bank layout.</p>
+            </div>
+            <div class="bg-white dark:bg-dark-card p-5 rounded-xl border border-gray-200 dark:border-dark-border shadow-sm">
+                <div class="w-8 h-8 rounded-lg bg-green-100 dark:bg-green-900/40 text-green-600 dark:text-green-400 flex items-center justify-center font-bold text-sm mb-3">2</div>
+                <h4 class="text-sm font-bold text-gray-900 dark:text-white mb-1">Smart Invoice Matching</h4>
+                <p class="text-xs text-gray-500">Finds invoice references (INV-xxxx) in descriptions, marks invoices as Paid, and flags duplicates.</p>
+            </div>
+            <div class="bg-white dark:bg-dark-card p-5 rounded-xl border border-gray-200 dark:border-dark-border shadow-sm">
+                <div class="w-8 h-8 rounded-lg bg-purple-100 dark:bg-purple-900/40 text-purple-600 dark:text-purple-400 flex items-center justify-center font-bold text-sm mb-3">3</div>
+                <h4 class="text-sm font-bold text-gray-900 dark:text-white mb-1">Dedicated Tab Views</h4>
+                <p class="text-xs text-gray-500">Review unassigned items first, confirm auto-matches, and post cleanly to your SARS/CIPC ledger.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Reconciliation Review View (Shown after CSV parsed) -->
+    <div id="reconcile-split-view" class="hidden space-y-6">
+        <!-- Reconcile Summary KPIs -->
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4" id="reconcile-kpis">
+            <div class="bg-white dark:bg-dark-card p-4 rounded-xl border border-gray-200 dark:border-dark-border shadow-sm">
+                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Total Rows</p>
+                <h4 class="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mt-1" id="recon-kpi-total">0</h4>
+                <p class="text-[11px] text-gray-400 mt-1" id="recon-kpi-net">Net: R0.00</p>
+            </div>
+            <div class="bg-white dark:bg-dark-card p-4 rounded-xl border border-amber-200 dark:border-amber-900/40 shadow-sm cursor-pointer hover:bg-amber-50/30 transition" onclick="financialsManager.setReconcileTab('review')">
+                <p class="text-xs font-semibold text-amber-700 dark:text-amber-400 uppercase tracking-wider flex items-center justify-between">
+                    <span>Needs Review</span>
+                    <i class="fas fa-exclamation-circle"></i>
+                </p>
+                <h4 class="text-xl sm:text-2xl font-bold text-amber-600 dark:text-amber-400 mt-1" id="recon-kpi-manual">0</h4>
+                <p class="text-[11px] text-amber-600/70 mt-1">Requires category</p>
+            </div>
+            <div class="bg-white dark:bg-dark-card p-4 rounded-xl border border-green-200 dark:border-green-900/40 shadow-sm cursor-pointer hover:bg-green-50/30 transition" onclick="financialsManager.setReconcileTab('auto')">
+                <p class="text-xs font-semibold text-green-700 dark:text-green-400 uppercase tracking-wider flex items-center justify-between">
+                    <span>Auto-Matched</span>
+                    <i class="fas fa-check-circle"></i>
+                </p>
+                <h4 class="text-xl sm:text-2xl font-bold text-green-600 dark:text-green-400 mt-1" id="recon-kpi-auto">0</h4>
+                <p class="text-[11px] text-green-600/70 mt-1">Rules &amp; invoices</p>
+            </div>
+            <div class="bg-white dark:bg-dark-card p-4 rounded-xl border border-gray-200 dark:border-dark-border shadow-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition" onclick="financialsManager.setReconcileTab('duplicates')">
+                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider flex items-center justify-between">
+                    <span>Duplicates</span>
+                    <i class="fas fa-copy"></i>
+                </p>
+                <h4 class="text-xl sm:text-2xl font-bold text-gray-600 dark:text-gray-300 mt-1" id="recon-kpi-dup">0</h4>
+                <p class="text-[11px] text-gray-400 mt-1">Pre-skipped</p>
+            </div>
+        </div>
+
+        <!-- Sticky Controls Bar (Dedicated View Switcher + Actions) -->
+        <div class="bg-white dark:bg-dark-card p-4 rounded-xl border border-gray-200 dark:border-dark-border shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4 sticky top-16 z-20">
+            <!-- Dedicated View Segmented Control (Tabs) -->
+            <div class="flex items-center bg-gray-100 dark:bg-gray-800 p-1 rounded-lg w-full md:w-auto overflow-x-auto no-scrollbar">
+                <button type="button" id="tab-btn-recon-review" onclick="financialsManager.setReconcileTab('review')" class="px-3 sm:px-4 py-1.5 text-xs sm:text-sm font-semibold rounded-md transition-all whitespace-nowrap flex items-center gap-1.5">
+                    <i class="fas fa-exclamation-circle text-amber-500"></i> Needs Review <span id="badge-recon-review" class="px-1.5 py-0.2 rounded-full text-[10px] bg-amber-100 text-amber-800 dark:bg-amber-900/60 dark:text-amber-200">0</span>
+                </button>
+                <button type="button" id="tab-btn-recon-auto" onclick="financialsManager.setReconcileTab('auto')" class="px-3 sm:px-4 py-1.5 text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-300 rounded-md transition-all whitespace-nowrap flex items-center gap-1.5">
+                    <i class="fas fa-check-circle text-green-500"></i> Auto-Matched <span id="badge-recon-auto" class="px-1.5 py-0.2 rounded-full text-[10px] bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300">0</span>
+                </button>
+                <button type="button" id="tab-btn-recon-dup" onclick="financialsManager.setReconcileTab('duplicates')" class="px-3 sm:px-4 py-1.5 text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-300 rounded-md transition-all whitespace-nowrap flex items-center gap-1.5">
+                    <i class="fas fa-copy text-gray-400"></i> Duplicates <span id="badge-recon-dup" class="px-1.5 py-0.2 rounded-full text-[10px] bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300">0</span>
+                </button>
+                <button type="button" id="tab-btn-recon-all" onclick="financialsManager.setReconcileTab('all')" class="px-3 sm:px-4 py-1.5 text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-300 rounded-md transition-all whitespace-nowrap flex items-center gap-1.5">
+                    All <span id="badge-recon-all" class="px-1.5 py-0.2 rounded-full text-[10px] bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300">0</span>
+                </button>
+            </div>
+
+            <!-- Search Filter inside active statement -->
+            <div class="relative w-full md:w-64">
+                <i class="fas fa-search absolute left-3 top-2.5 text-xs text-gray-400"></i>
+                <input type="text" id="recon-search-filter" oninput="financialsManager.filterReconcileList()" placeholder="Filter statement..." class="w-full pl-8 pr-3 py-1.5 text-xs rounded-md border border-gray-300 dark:border-gray-600 dark:bg-dark-bg dark:text-white shadow-sm focus:border-dtech-500">
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex items-center gap-2 w-full md:w-auto justify-end">
+                <button type="button" onclick="financialsManager.closeReconciliationView()" class="px-3.5 py-2 text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-dark-card border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+                    Cancel
+                </button>
+                <button type="button" onclick="financialsManager.saveReconciled()" class="btn-primary px-4 py-2 text-xs sm:text-sm font-semibold flex items-center gap-1.5 shadow-md">
+                    <i class="fas fa-check-double"></i> Save to Ledger
+                </button>
+            </div>
+        </div>
+
+        <!-- The Dedicated Transaction Cards List Container -->
+        <div id="reconcile-list-container" class="space-y-3">
+            <!-- Dedicated View Cards Inserted Dynamically -->
+        </div>
+
+        <!-- Bottom Action Sticky Helper -->
+        <div class="p-4 bg-gray-50 dark:bg-dark-card rounded-xl border border-gray-200 dark:border-dark-border flex flex-col sm:flex-row justify-between items-center gap-3">
+            <div class="text-xs text-gray-500">
+                <span id="recon-ready-count" class="font-bold text-gray-900 dark:text-white">0</span> transactions will be saved to your Financials ledger.
+            </div>
+            <div class="flex items-center gap-2">
+                <button type="button" onclick="financialsManager.closeReconciliationView()" class="px-4 py-2 text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-gray-900">
+                    Cancel Import
+                </button>
+                <button type="button" onclick="financialsManager.saveReconciled()" class="btn-primary px-5 py-2 text-xs sm:text-sm font-semibold flex items-center gap-1.5">
+                    <i class="fas fa-save"></i> Save Reconciled Transactions
+                </button>
+            </div>
+        </div>
+    </div>
 </section>
 </main>
+
+<!-- Loading Overlay -->
+<div class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center" id="csv-loading-overlay">
+    <div class="bg-white dark:bg-dark-card p-6 rounded-xl shadow-xl flex items-center space-x-4">
+        <i class="fas fa-spinner fa-spin text-3xl text-dtech-600"></i>
+        <div>
+            <h3 class="text-base font-semibold text-gray-900 dark:text-white">Parsing Statement...</h3>
+            <p class="text-xs text-gray-500">Reading columns and applying categorization rules</p>
+        </div>
+    </div>
+</div>
 
 <!-- PDF Generation libs -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>

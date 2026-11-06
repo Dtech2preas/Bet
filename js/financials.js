@@ -5,6 +5,8 @@ const financialsManager = {
         mappings: {},
         savedReports: []
     },
+    _reconcileTab: 'review',
+    _pendingReconcileData: null,
     chartOfAccounts: [
         { name: "Sales Revenue", type: "Income" },
         { name: "Service Revenue", type: "Income" },
@@ -59,6 +61,7 @@ const financialsManager = {
         } catch (e) {
             console.error('Failed to load financial settings', e);
         }
+        this.initCSVUpload();
     },
 
     async syncFinancialSettings() {
@@ -651,6 +654,41 @@ const financialsManager = {
         document.getElementById('csvFileInput').click();
     },
 
+    initCSVUpload() {
+        const dropzone = document.getElementById('reconcile-empty-state');
+        if (!dropzone) return;
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropzone.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const card = dropzone.querySelector('.border-dashed');
+                if (card) {
+                    card.classList.add('border-dtech-500', 'bg-blue-50/30', 'dark:bg-blue-950/20');
+                }
+            }, false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropzone.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const card = dropzone.querySelector('.border-dashed');
+                if (card) {
+                    card.classList.remove('border-dtech-500', 'bg-blue-50/30', 'dark:bg-blue-950/20');
+                }
+            }, false);
+        });
+
+        dropzone.addEventListener('drop', (e) => {
+            const dt = e.dataTransfer;
+            const files = dt ? dt.files : null;
+            if (files && files.length > 0) {
+                this.handleCSVUpload({ target: { files: files, value: '' } });
+            }
+        }, false);
+    },
+
     handleCSVUpload(event) {
         const file = event.target.files[0];
         if (!file) return;
@@ -732,7 +770,18 @@ const financialsManager = {
             console.warn("Could not pre-load invoices for reconciliation", e);
         }
 
-        const existingTransactions = this.transactions || [];
+        let existingTransactions = this.transactions || [];
+        if (!existingTransactions || existingTransactions.length === 0) {
+            try {
+                const txRes = await API.request('/api/transactions?limit=1000');
+                if (txRes && txRes.success) {
+                    this.transactions = txRes.transactions || [];
+                    existingTransactions = this.transactions;
+                }
+            } catch (e) {
+                console.warn("Could not pre-load transactions for reconciliation", e);
+            }
+        }
         const parsedData = [];
 
         for (let i = 1; i < lines.length; i++) {
@@ -876,137 +925,408 @@ const financialsManager = {
     renderCSVReconciliation(parsedData) {
         this._pendingReconcileData = parsedData;
 
-        const autoContainer = document.getElementById('reconcile-auto-container');
-        const manualContainer = document.getElementById('reconcile-manual-container');
+        // Auto pick default tab: review if there are unassigned items, else auto, else all
+        const unassigned = parsedData.filter(r => !r.skip && (!r.category || !r.category.trim()));
+        const autoCount = parsedData.filter(r => r.category && r.category.trim() && !r.isDuplicate).length;
+        if (unassigned.length > 0) {
+            this._reconcileTab = 'review';
+        } else if (autoCount > 0) {
+            this._reconcileTab = 'auto';
+        } else {
+            this._reconcileTab = 'all';
+        }
+
         const emptyState = document.getElementById('reconcile-empty-state');
         const splitView = document.getElementById('reconcile-split-view');
+        if (emptyState) emptyState.classList.add('hidden');
+        if (splitView) {
+            splitView.classList.remove('hidden');
+            splitView.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
 
-        const btnSave = document.getElementById('btn-save-reconciled');
-        const btnCancel = document.getElementById('btn-cancel-reconciled');
+        this.updateReconcileKPIs();
+        this.renderDedicatedReconcileList();
+    },
 
-        if (!autoContainer || !manualContainer) return;
+    updateReconcileKPIs() {
+        if (!this._pendingReconcileData) return;
 
-        let autoHtml = '';
-        let manualHtml = '';
-        let autoCount = 0;
+        const data = this._pendingReconcileData;
+        const total = data.length;
+        let net = 0;
         let manualCount = 0;
+        let autoCount = 0;
+        let dupCount = 0;
+        let readyCount = 0;
 
-        parsedData.forEach((row, index) => {
+        data.forEach(r => {
+            const amt = Number(r.amount) || 0;
+            if (r.type === 'Income') net += amt;
+            else net -= amt;
+
+            if (r.isDuplicate) dupCount++;
+
+            const hasCat = r.category && r.category.trim() !== '';
+            if (!hasCat && !r.skip) {
+                manualCount++;
+            } else if (hasCat && !r.isDuplicate) {
+                autoCount++;
+            }
+
+            if (!r.skip && hasCat) {
+                readyCount++;
+            }
+        });
+
+        const elTotal = document.getElementById('recon-kpi-total');
+        const elNet = document.getElementById('recon-kpi-net');
+        const elManual = document.getElementById('recon-kpi-manual');
+        const elAuto = document.getElementById('recon-kpi-auto');
+        const elDup = document.getElementById('recon-kpi-dup');
+
+        const bReview = document.getElementById('badge-recon-review');
+        const bAuto = document.getElementById('badge-recon-auto');
+        const bDup = document.getElementById('badge-recon-dup');
+        const bAll = document.getElementById('badge-recon-all');
+        const elReady = document.getElementById('recon-ready-count');
+
+        if (elTotal) elTotal.textContent = total;
+        if (elNet) elNet.textContent = `Net: ${net >= 0 ? '+' : '-'}R${Math.abs(net).toFixed(2)}`;
+        if (elManual) elManual.textContent = manualCount;
+        if (elAuto) elAuto.textContent = autoCount;
+        if (elDup) elDup.textContent = dupCount;
+
+        if (bReview) bReview.textContent = manualCount;
+        if (bAuto) bAuto.textContent = autoCount;
+        if (bDup) bDup.textContent = dupCount;
+        if (bAll) bAll.textContent = total;
+        if (elReady) elReady.textContent = readyCount;
+    },
+
+    setReconcileTab(tab) {
+        this._reconcileTab = tab;
+        this.renderDedicatedReconcileList();
+    },
+
+    renderDedicatedReconcileList() {
+        if (!this._pendingReconcileData) return;
+
+        const container = document.getElementById('reconcile-list-container');
+        if (!container) return;
+
+        // 1. Update Tab button styles
+        const tabBtns = {
+            'review': document.getElementById('tab-btn-recon-review'),
+            'auto': document.getElementById('tab-btn-recon-auto'),
+            'duplicates': document.getElementById('tab-btn-recon-dup'),
+            'all': document.getElementById('tab-btn-recon-all')
+        };
+
+        const activeClasses = ['bg-white', 'dark:bg-dark-card', 'shadow-sm', 'text-dtech-600', 'dark:text-dtech-400', 'font-semibold', 'ring-1', 'ring-black/5', 'dark:ring-white/10'];
+        const inactiveClasses = ['text-gray-600', 'dark:text-gray-400', 'hover:text-gray-900', 'dark:hover:text-white', 'font-medium'];
+
+        Object.keys(tabBtns).forEach(tabKey => {
+            const btn = tabBtns[tabKey];
+            if (!btn) return;
+            if (tabKey === this._reconcileTab) {
+                btn.classList.add(...activeClasses);
+                btn.classList.remove(...inactiveClasses);
+            } else {
+                btn.classList.remove(...activeClasses);
+                btn.classList.add(...inactiveClasses);
+            }
+        });
+
+        // 2. Filter data for the active dedicated tab
+        const searchQuery = (document.getElementById('recon-search-filter')?.value || '').toLowerCase().trim();
+        const itemsWithIndex = this._pendingReconcileData.map((row, idx) => ({ row, idx }));
+
+        const filtered = itemsWithIndex.filter(item => {
+            const { row } = item;
+            const hasCat = row.category && row.category.trim() !== '';
+
+            if (this._reconcileTab === 'review') {
+                if (hasCat && !row.isDuplicate) return false;
+                if (row.skip && row.isDuplicate) return false;
+            } else if (this._reconcileTab === 'auto') {
+                if (!hasCat || row.isDuplicate) return false;
+            } else if (this._reconcileTab === 'duplicates') {
+                if (!row.isDuplicate) return false;
+            }
+
+            if (searchQuery) {
+                const searchStr = `${row.date} ${row.description} ${row.amount} ${row.category || ''} ${row.matchedInvoice || ''}`.toLowerCase();
+                if (!searchStr.includes(searchQuery)) return false;
+            }
+
+            return true;
+        });
+
+        // 3. Render empty states or list
+        if (filtered.length === 0) {
+            let emptyHtml = '';
+            if (this._reconcileTab === 'review') {
+                emptyHtml = `
+                    <div class="text-center py-12 px-4 bg-white dark:bg-dark-card rounded-2xl border border-dashed border-gray-200 dark:border-dark-border">
+                        <div class="w-14 h-14 rounded-full bg-green-50 dark:bg-green-950/40 text-green-500 flex items-center justify-center mx-auto mb-3 text-2xl">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                        <h3 class="text-base font-bold text-gray-900 dark:text-white">All Transactions Categorized!</h3>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 max-w-sm mx-auto">Zero transactions currently need manual review in this statement.</p>
+                        <div class="mt-4 flex items-center justify-center gap-3">
+                            <button type="button" onclick="financialsManager.setReconcileTab('auto')" class="px-4 py-2 text-xs font-semibold rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200">
+                                View Auto-Matched <i class="fas fa-arrow-right ml-1"></i>
+                            </button>
+                            <button type="button" onclick="financialsManager.saveReconciled()" class="btn-primary px-4 py-2 text-xs font-semibold shadow">
+                                <i class="fas fa-check-double mr-1"></i> Save to Ledger
+                            </button>
+                        </div>
+                    </div>
+                `;
+            } else if (this._reconcileTab === 'auto') {
+                emptyHtml = `
+                    <div class="text-center py-10 px-4 bg-white dark:bg-dark-card rounded-2xl border border-dashed border-gray-200 dark:border-dark-border">
+                        <i class="fas fa-info-circle text-gray-400 text-3xl mb-2"></i>
+                        <h3 class="text-sm font-bold text-gray-800 dark:text-white">No Auto-Matched Transactions</h3>
+                        <p class="text-xs text-gray-500 mt-1">None of the transactions matched existing rules or invoice numbers automatically.</p>
+                    </div>
+                `;
+            } else if (this._reconcileTab === 'duplicates') {
+                emptyHtml = `
+                    <div class="text-center py-10 px-4 bg-white dark:bg-dark-card rounded-2xl border border-dashed border-gray-200 dark:border-dark-border">
+                        <i class="fas fa-copy text-green-500 text-3xl mb-2"></i>
+                        <h3 class="text-sm font-bold text-gray-800 dark:text-white">No Duplicates Found</h3>
+                        <p class="text-xs text-gray-500 mt-1">Great! All statement lines are unique and do not conflict with previous imports.</p>
+                    </div>
+                `;
+            } else {
+                emptyHtml = `
+                    <div class="text-center py-10 px-4 bg-white dark:bg-dark-card rounded-2xl border border-dashed border-gray-200 dark:border-dark-border">
+                        <i class="fas fa-search text-gray-400 text-3xl mb-2"></i>
+                        <h3 class="text-sm font-bold text-gray-800 dark:text-white">No Transactions Found</h3>
+                        <p class="text-xs text-gray-500 mt-1">No transactions match your current search query.</p>
+                    </div>
+                `;
+            }
+
+            container.innerHTML = emptyHtml;
+            return;
+        }
+
+        // Build Chart of Accounts optgroups
+        const groups = {};
+        this.chartOfAccounts.forEach(acc => {
+            const groupName = acc.type || 'Other';
+            if (!groups[groupName]) groups[groupName] = [];
+            groups[groupName].push(acc);
+        });
+
+        // 4. Render transaction cards
+        const cardsHtml = filtered.map(item => {
+            const { row, idx } = item;
             const isExpense = row.type === 'Expense';
             const amountColor = isExpense ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400';
             const amountSign = isExpense ? '-' : '+';
             const hasCategory = row.category && row.category.trim() !== '';
 
-            const rowHtml = `
-                <div class="bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-lg p-4 shadow-sm flex flex-col md:flex-row gap-4 items-start md:items-center ${row.isDuplicate ? 'opacity-80 bg-amber-50/30 dark:bg-amber-950/20' : ''}">
+            let borderClass = 'border-gray-200 dark:border-dark-border';
+            if (!hasCategory) {
+                borderClass = 'border-amber-300 dark:border-amber-700/80 bg-amber-50/15 dark:bg-amber-950/10 ring-1 ring-amber-300/40';
+            } else if (row.isDuplicate) {
+                borderClass = 'border-gray-200 dark:border-dark-border opacity-75 bg-gray-50/50 dark:bg-dark-card/50';
+            }
+
+            const catOptions = Object.keys(groups).map(grp => `
+                <optgroup label="${grp}">
+                    ${groups[grp].map(acc => `<option value="${acc.name}" ${row.category === acc.name ? 'selected' : ''}>${acc.name}</option>`).join('')}
+                </optgroup>
+            `).join('');
+
+            return `
+                <div id="recon-card-${idx}" class="bg-white dark:bg-dark-card border rounded-xl p-4 sm:p-5 shadow-sm transition hover:shadow-md flex flex-col md:flex-row gap-4 items-start md:items-center justify-between ${borderClass}">
                     <div class="flex-1 min-w-0 w-full">
-                        <div class="flex justify-between md:justify-start items-center gap-2 mb-1 flex-wrap">
-                            <span class="text-sm font-medium text-gray-500 dark:text-gray-400">${row.date}</span>
-                            <span class="text-base font-bold ${amountColor} md:ml-4">${amountSign}R${row.amount.toFixed(2)}</span>
-                            ${row.matchedInvoice ? `<span class="bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300 text-xs px-2 py-0.5 rounded font-mono flex items-center gap-1"><i class="fas fa-file-invoice"></i> ${row.matchedInvoice}</span>` : ''}
-                            ${row.isDuplicate ? `<span class="bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 text-xs px-2 py-0.5 rounded flex items-center gap-1"><i class="fas fa-exclamation-triangle"></i> ${row.duplicateReason}</span>` : ''}
+                        <div class="flex items-center gap-2 flex-wrap mb-1.5">
+                            <span class="inline-flex items-center gap-1 text-xs font-medium text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2.5 py-0.5 rounded-full">
+                                <i class="far fa-calendar-alt text-[10px]"></i> ${row.date}
+                            </span>
+                            <span class="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-0.5 rounded-full ${isExpense ? 'bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-400' : 'bg-green-50 text-green-700 dark:bg-green-950/40 dark:text-green-400'}">
+                                <i class="fas ${isExpense ? 'fa-arrow-up text-[10px]' : 'fa-arrow-down text-[10px]'}"></i> ${row.type}
+                            </span>
+                            ${row.matchedInvoice ? `
+                                <span class="inline-flex items-center gap-1 text-xs font-semibold bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300 px-2.5 py-0.5 rounded-full border border-blue-200 dark:border-blue-900/60 font-mono">
+                                    <i class="fas fa-file-invoice-dollar text-[10px]"></i> ${row.matchedInvoice}
+                                </span>
+                            ` : ''}
+                            ${row.isDuplicate ? `
+                                <span class="inline-flex items-center gap-1 text-xs font-medium bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400 px-2.5 py-0.5 rounded-full border border-amber-200 dark:border-amber-900/60">
+                                    <i class="fas fa-copy text-[10px]"></i> ${row.duplicateReason || 'Duplicate'}
+                                </span>
+                            ` : ''}
+                            <span id="recon-status-badge-${idx}" class="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full ${hasCategory ? 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300' : 'bg-amber-100 text-amber-800 dark:bg-amber-900/60 dark:text-amber-200'}">
+                                <i class="fas ${hasCategory ? 'fa-check' : 'fa-exclamation-triangle'} text-[10px]"></i> ${hasCategory ? 'Categorized' : 'Needs Category'}
+                            </span>
                         </div>
-                        <p class="text-gray-900 dark:text-gray-100 font-medium truncate" title="${row.description}">${row.description}</p>
-                        ${row.isDuplicate ? `
-                            <label class="inline-flex items-center gap-1.5 text-xs text-amber-700 dark:text-amber-400 mt-1 cursor-pointer">
-                                <input type="checkbox" id="recon-skip-${index}" ${row.skip ? 'checked' : ''} class="rounded text-amber-600 focus:ring-amber-500">
-                                <span>Skip transaction (Already in records / prevent duplicate)</span>
+
+                        <p class="text-sm sm:text-base font-semibold text-gray-900 dark:text-white truncate ${row.skip ? 'line-through text-gray-400' : ''}" id="recon-desc-${idx}" title="${row.description}">
+                            ${row.description}
+                        </p>
+
+                        <div class="mt-2.5 flex items-center gap-4">
+                            <label class="inline-flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 cursor-pointer select-none">
+                                <input type="checkbox" id="recon-skip-${idx}" onchange="financialsManager.toggleSkipReconcile(${idx}, this.checked)" ${row.skip ? 'checked' : ''} class="rounded border-gray-300 text-amber-600 focus:ring-amber-500 h-3.5 w-3.5">
+                                <span class="${row.skip ? 'text-amber-600 dark:text-amber-400 font-medium' : ''}">${row.isDuplicate ? 'Skip duplicate (Do not import)' : 'Skip this transaction'}</span>
                             </label>
-                        ` : ''}
+                        </div>
                     </div>
-                    <div class="w-full md:w-64 flex-shrink-0">
-                        <select id="recon-cat-${index}" class="w-full rounded-md border-gray-300 shadow-sm focus:border-dtech-500 focus:ring-dtech-500 sm:text-sm dark:bg-dark-bg dark:border-dark-border dark:text-white">
-                            <option value="">Select Category...</option>
-                            ${this.chartOfAccounts.map(acc => `<option value="${acc.name}" ${row.category === acc.name ? 'selected' : ''}>${acc.name} (${acc.type})</option>`).join('')}
-                        </select>
+
+                    <div class="flex flex-col sm:flex-row md:flex-col lg:flex-row items-start sm:items-center md:items-end lg:items-center gap-3 w-full md:w-auto flex-shrink-0 pt-3 md:pt-0 border-t md:border-t-0 border-gray-100 dark:border-dark-border">
+                        <div class="text-right sm:text-left md:text-right">
+                            <span class="text-base sm:text-lg font-bold font-mono ${amountColor}">
+                                ${amountSign}R${Number(row.amount).toFixed(2)}
+                            </span>
+                        </div>
+                        <div class="w-full sm:w-64 md:w-60">
+                            <select id="recon-cat-${idx}" onchange="financialsManager.onReconcileCatChange(${idx}, this.value)" class="w-full text-xs sm:text-sm rounded-lg border-gray-300 dark:border-dark-border dark:bg-dark-bg dark:text-white shadow-sm focus:border-dtech-500 focus:ring-dtech-500 py-2 ${!hasCategory ? 'border-amber-400 ring-1 ring-amber-400/50 bg-amber-50/20 dark:bg-amber-950/20' : ''}">
+                                <option value="">Select Category...</option>
+                                ${catOptions}
+                            </select>
+                        </div>
                     </div>
                 </div>
             `;
+        }).join('');
 
-            if (hasCategory) {
-                autoHtml += rowHtml;
-                autoCount++;
-            } else {
-                manualHtml += rowHtml;
-                manualCount++;
+        container.innerHTML = cardsHtml;
+    },
+
+    onReconcileCatChange(idx, newCategory) {
+        if (!this._pendingReconcileData || !this._pendingReconcileData[idx]) return;
+
+        const row = this._pendingReconcileData[idx];
+        row.category = newCategory;
+
+        this.updateReconcileKPIs();
+
+        const card = document.getElementById(`recon-card-${idx}`);
+        const badge = document.getElementById(`recon-status-badge-${idx}`);
+        const select = document.getElementById(`recon-cat-${idx}`);
+
+        if (newCategory) {
+            if (badge) {
+                badge.className = "inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300";
+                badge.innerHTML = '<i class="fas fa-check text-[10px]"></i> Categorized';
             }
-        });
-
-        if (autoCount === 0) {
-            autoHtml = '<p class="text-gray-500 italic">No transactions were auto-categorized.</p>';
+            if (select) {
+                select.classList.remove('border-amber-400', 'ring-1', 'ring-amber-400/50', 'bg-amber-50/20', 'dark:bg-amber-950/20');
+            }
+            if (card && !row.isDuplicate) {
+                card.classList.remove('border-amber-300', 'dark:border-amber-700/80', 'bg-amber-50/15', 'dark:bg-amber-950/10', 'ring-1', 'ring-amber-300/40');
+                card.classList.add('border-gray-200', 'dark:border-dark-border');
+            }
+        } else {
+            if (badge) {
+                badge.className = "inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900/60 dark:text-amber-200";
+                badge.innerHTML = '<i class="fas fa-exclamation-triangle text-[10px]"></i> Needs Category';
+            }
+            if (select) {
+                select.classList.add('border-amber-400', 'ring-1', 'ring-amber-400/50', 'bg-amber-50/20', 'dark:bg-amber-950/20');
+            }
+            if (card && !row.isDuplicate) {
+                card.classList.add('border-amber-300', 'dark:border-amber-700/80', 'bg-amber-50/15', 'dark:bg-amber-950/10', 'ring-1', 'ring-amber-300/40');
+                card.classList.remove('border-gray-200', 'dark:border-dark-border');
+            }
         }
-        if (manualCount === 0) {
-            manualHtml = '<p class="text-gray-500 italic">All transactions were auto-categorized!</p>';
+    },
+
+    toggleSkipReconcile(idx, isChecked) {
+        if (!this._pendingReconcileData || !this._pendingReconcileData[idx]) return;
+
+        const row = this._pendingReconcileData[idx];
+        row.skip = isChecked;
+
+        this.updateReconcileKPIs();
+
+        const desc = document.getElementById(`recon-desc-${idx}`);
+        if (desc) {
+            if (isChecked) {
+                desc.classList.add('line-through', 'text-gray-400');
+            } else {
+                desc.classList.remove('line-through', 'text-gray-400');
+            }
         }
+    },
 
-        autoContainer.innerHTML = autoHtml;
-        manualContainer.innerHTML = manualHtml;
-
-        if (emptyState) emptyState.classList.add('hidden');
-        if (splitView) splitView.classList.remove('hidden');
-        if (btnSave) btnSave.classList.remove('hidden');
-        if (btnCancel) btnCancel.classList.remove('hidden');
-
-
+    filterReconcileList() {
+        this.renderDedicatedReconcileList();
     },
 
     closeReconciliationView() {
         this._pendingReconcileData = null;
-        const autoContainer = document.getElementById('reconcile-auto-container');
-        const manualContainer = document.getElementById('reconcile-manual-container');
         const emptyState = document.getElementById('reconcile-empty-state');
         const splitView = document.getElementById('reconcile-split-view');
+        const listContainer = document.getElementById('reconcile-list-container');
+        const fileInput = document.getElementById('csvFileInput');
 
-        const btnSave = document.getElementById('btn-save-reconciled');
-        const btnCancel = document.getElementById('btn-cancel-reconciled');
-
-        if (autoContainer) autoContainer.innerHTML = '';
-        if (manualContainer) manualContainer.innerHTML = '';
-        if (emptyState) emptyState.classList.remove('hidden');
+        if (listContainer) listContainer.innerHTML = '';
+        if (fileInput) fileInput.value = '';
         if (splitView) splitView.classList.add('hidden');
-        if (btnSave) btnSave.classList.add('hidden');
-        if (btnCancel) btnCancel.classList.add('hidden');
+        if (emptyState) emptyState.classList.remove('hidden');
 
-        window.location.href = window.location.pathname.includes('public_') ? 'public_financials.html' : 'financials.html';
+        const isPublic = window.location.pathname.includes('public_');
+        window.location.href = isPublic ? 'public_financials.html' : 'financials.html';
     },
 
     async saveReconciled() {
-        if (!this._pendingReconcileData) return;
-
-        const finalData = [];
-        const newMappings = this.settings.mappings || {};
-
-        this._pendingReconcileData.forEach((row, index) => {
-            const skipBox = document.getElementById(`recon-skip-${index}`);
-            if (skipBox && skipBox.checked) {
-                return; // User explicitly skipped this duplicate transaction
-            }
-
-            const catSelect = document.getElementById(`recon-cat-${index}`);
-            if (catSelect && catSelect.value) {
-                finalData.push({
-                    ...row,
-                    category: catSelect.value
-                });
-                const words = row.description.split(' ').slice(0, 3).join(' '); // Use first 3 words as key
-                if (words && !newMappings[words.toLowerCase()]) {
-                    newMappings[words.toLowerCase()] = catSelect.value;
-                }
-            }
-        });
-
-        if (finalData.length === 0) {
-            Swal.fire('Info', 'No transactions were selected to save.', 'info');
+        if (!this._pendingReconcileData || this._pendingReconcileData.length === 0) {
+            Swal.fire('Info', 'No statement data to save.', 'info');
             return;
         }
 
+        const readyData = this._pendingReconcileData.filter(r => !r.skip && r.category && r.category.trim() !== '');
+
+        if (readyData.length === 0) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'No Transactions Selected',
+                text: 'Please select a category for at least one transaction to import, or uncheck "Skip".'
+            });
+            return;
+        }
+
+        const unassignedCount = this._pendingReconcileData.filter(r => !r.skip && (!r.category || !r.category.trim())).length;
+        if (unassignedCount > 0) {
+            const result = await Swal.fire({
+                title: 'Uncategorized Transactions',
+                html: `<b>${unassignedCount} transaction(s)</b> have no category assigned and will be skipped.<br><br>Do you want to proceed and import the <b>${readyData.length} categorized transaction(s)</b>?`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#0284c7',
+                cancelButtonColor: '#6b7280',
+                confirmButtonText: 'Yes, Import Now',
+                cancelButtonText: 'Review More'
+            });
+            if (!result.isConfirmed) {
+                this.setReconcileTab('review');
+                return;
+            }
+        }
+
+        // Save learned word mappings
+        const newMappings = { ...(this.settings.mappings || {}) };
+        readyData.forEach(row => {
+            if (row.description) {
+                const words = row.description.split(' ').slice(0, 3).join(' ').trim();
+                if (words && words.length > 2 && !newMappings[words.toLowerCase()]) {
+                    newMappings[words.toLowerCase()] = row.category;
+                }
+            }
+        });
         this.settings.mappings = newMappings;
         await this.syncFinancialSettings();
 
-        this.closeReconciliationView();
-
         Swal.fire({
-            title: 'Saving...',
+            title: 'Posting to Ledger...',
+            html: `Saving ${readyData.length} transactions and updating reconciled invoice statuses.`,
             allowOutsideClick: false,
             didOpen: () => {
                 Swal.showLoading();
@@ -1014,17 +1334,33 @@ const financialsManager = {
         });
 
         let successCount = 0;
-        for (const t of finalData) {
+        let invoiceUpdates = 0;
+
+        for (const t of readyData) {
             try {
-                const response = await API.request('/api/transactions', { method: 'POST', body: JSON.stringify(t) });
-                if (response.success) {
+                const response = await API.request('/api/transactions', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        date: t.date,
+                        description: t.description,
+                        amount: t.amount,
+                        type: t.type,
+                        category: t.category,
+                        reference: t.matchedInvoice || ''
+                    })
+                });
+
+                if (response && response.success) {
                     successCount++;
-                    // If matched to an invoice, auto-update the invoice to Paid
                     if (t.matchedInvoiceId) {
                         try {
-                            await API.request(`/api/invoices/${t.matchedInvoiceId}`, { method: 'PUT', body: JSON.stringify({ status: 'Paid', balanceDue: '0.00' }) });
+                            await API.request(`/api/invoices/${t.matchedInvoiceId}`, {
+                                method: 'PUT',
+                                body: JSON.stringify({ status: 'Paid', balanceDue: '0.00' })
+                            });
+                            invoiceUpdates++;
                         } catch (invErr) {
-                            console.warn("Could not auto-mark matched invoice as paid", invErr);
+                            console.warn("Could not mark matched invoice as paid", invErr);
                         }
                     }
                 }
@@ -1033,9 +1369,22 @@ const financialsManager = {
             }
         }
 
-        app.logActivity(`Imported and reconciled ${successCount} transactions`);
-        Swal.fire('Complete', `Successfully saved ${successCount} transactions.`, 'success');
-        this.loadTransactions();
+        if (typeof app !== 'undefined' && app.logActivity) {
+            app.logActivity(`Imported and reconciled ${successCount} transactions`);
+        }
+
+        this._pendingReconcileData = null;
+
+        await Swal.fire({
+            icon: 'success',
+            title: 'Reconciliation Complete!',
+            html: `Successfully posted <b>${successCount}</b> transactions to your Financial Ledger.<br>${invoiceUpdates > 0 ? `Updated <b>${invoiceUpdates}</b> matched invoice(s) to Paid.` : ''}`,
+            confirmButtonText: 'Go to Financials',
+            confirmButtonColor: '#0284c7'
+        });
+
+        const isPublic = window.location.pathname.includes('public_');
+        window.location.href = isPublic ? 'public_financials.html' : 'financials.html';
     },
 
     generateIncomeStatement() {
