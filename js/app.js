@@ -112,25 +112,92 @@ const app = {
         }
     },
 
+    chartInstance: null,
+    _lastChartData: null,
+
     toggleDarkMode() {
         if (document.documentElement.classList.contains('dark')) {
             document.documentElement.classList.remove('dark');
             localStorage.theme = 'light';
-            document.getElementById('theme-icon').classList.replace('fa-sun', 'fa-moon');
+            document.getElementById('theme-icon')?.classList.replace('fa-sun', 'fa-moon');
         } else {
             document.documentElement.classList.add('dark');
             localStorage.theme = 'dark';
-            document.getElementById('theme-icon').classList.replace('fa-moon', 'fa-sun');
+            document.getElementById('theme-icon')?.classList.replace('fa-moon', 'fa-sun');
+        }
+        if (this.chartInstance && this._lastChartData) {
+            this.renderChart(this._lastChartData);
         }
     },
 
+    renderChart(chartData) {
+        const ctx = document.getElementById('revenueChart');
+        if (!ctx) return;
+        if (typeof Chart === 'undefined') {
+            console.warn("Chart.js library not loaded");
+            return;
+        }
+
+        if (this.chartInstance) {
+            this.chartInstance.destroy();
+        }
+
+        const isDark = document.documentElement.classList.contains('dark');
+        const textColor = isDark ? '#9ca3af' : '#4b5563';
+        const gridColor = isDark ? '#374151' : '#e5e7eb';
+
+        const labels = (chartData && chartData.labels && chartData.labels.length) ? chartData.labels : ['Month 1', 'Month 2', 'Month 3', 'Month 4', 'Month 5', 'Month 6'];
+        const dataVals = (chartData && chartData.data && chartData.data.length) ? chartData.data : [0, 0, 0, 0, 0, 0];
+
+        this.chartInstance = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Monthly Revenue (ZAR)',
+                    data: dataVals,
+                    backgroundColor: '#0284c7',
+                    hoverBackgroundColor: '#0369a1',
+                    borderRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            color: textColor,
+                            callback: (val) => 'R ' + Number(val).toLocaleString()
+                        },
+                        grid: { color: gridColor }
+                    },
+                    x: {
+                        ticks: { color: textColor },
+                        grid: { display: false }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        labels: { color: textColor }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: (ctx) => ` Revenue: R ${Number(ctx.raw || 0).toLocaleString()}`
+                        }
+                    }
+                }
+            }
+        });
+    },
 
     async loadDashboardData() {
         try {
             const data = await API.request('/api/dashboard');
             if (data.success && data.stats) {
-                document.getElementById('stat-clients').innerText = data.stats.totalClients;
-                document.getElementById('stat-licenses').innerText = data.stats.activeLicenses;
+                if (document.getElementById('stat-clients')) document.getElementById('stat-clients').innerText = data.stats.totalClients;
+                if (document.getElementById('stat-licenses')) document.getElementById('stat-licenses').innerText = data.stats.activeLicenses;
                 // Formatting currency
                 if (document.getElementById('stat-today-rev')) document.getElementById('stat-today-rev').innerText = 'R ' + (data.stats.todayRevenue || 0).toLocaleString();
                 if (document.getElementById('stat-week-rev')) document.getElementById('stat-week-rev').innerText = 'R ' + (data.stats.weekRevenue || 0).toLocaleString();
@@ -138,6 +205,12 @@ const app = {
                 if (document.getElementById('stat-last-month-rev')) document.getElementById('stat-last-month-rev').innerText = 'R ' + (data.stats.lastMonthRevenue || 0).toLocaleString();
                 if (document.getElementById('stat-year-rev')) document.getElementById('stat-year-rev').innerText = 'R ' + (data.stats.yearRevenue || 0).toLocaleString();
                 if (document.getElementById('stat-total-rev')) document.getElementById('stat-total-rev').innerText = 'R ' + (data.stats.totalRevenue || 0).toLocaleString();
+
+                const chartData = data.chartData || (data.stats && data.stats.chartData);
+                if (chartData) {
+                    this._lastChartData = chartData;
+                    this.renderChart(chartData);
+                }
             }
         } catch (error) {
             console.error('Failed to load dashboard stats', error);

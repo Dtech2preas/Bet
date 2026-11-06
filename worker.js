@@ -577,6 +577,10 @@ export default {
         const allInvoices = invoicesData ? JSON.parse(invoicesData) : [];
         let invoices = allInvoices.filter(i => i.business_id === business_id);
 
+        const txData = await env.DTECH_KV.get('transactions');
+        const allTx = txData ? JSON.parse(txData) : [];
+        let transactions = allTx.filter(t => t.business_id === business_id);
+
         let customChartData = null;
 
         if (filter === 'custom' && customStart && customEnd) {
@@ -586,6 +590,11 @@ export default {
 
             invoices = invoices.filter(inv => {
                 const d = new Date(inv.dateAdded);
+                return d >= startD && d <= endD;
+            });
+
+            transactions = transactions.filter(t => {
+                const d = new Date(t.date || t.dateAdded);
                 return d >= startD && d <= endD;
             });
 
@@ -607,7 +616,12 @@ export default {
                         return inv.status === 'Paid' && d.toDateString() === currentD.toDateString();
                     }).reduce((sum, inv) => sum + (Number(inv.total) || 0), 0);
 
-                    customChartData.data.push(dayRev);
+                    const dayTx = transactions.filter(t => {
+                        const d = new Date(t.date || t.dateAdded);
+                        return t.type === 'Income' && d.toDateString() === currentD.toDateString();
+                    }).reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+
+                    customChartData.data.push(dayRev + dayTx);
                     currentD.setDate(currentD.getDate() + 1);
                 }
             } else {
@@ -625,13 +639,30 @@ export default {
                         return inv.status === 'Paid' && d.getMonth() === currentD.getMonth() && d.getFullYear() === currentD.getFullYear();
                     }).reduce((sum, inv) => sum + (Number(inv.total) || 0), 0);
 
-                    customChartData.data.push(monthRev);
+                    const monthTx = transactions.filter(t => {
+                        const d = new Date(t.date || t.dateAdded);
+                        return t.type === 'Income' && d.getMonth() === currentD.getMonth() && d.getFullYear() === currentD.getFullYear();
+                    }).reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+
+                    customChartData.data.push(monthRev + monthTx);
                     currentD.setMonth(currentD.getMonth() + 1);
                  }
             }
         }
 
-        const totalRevenue = invoices.filter(i => i.status === 'Paid').reduce((sum, inv) => sum + (Number(inv.total) || 0), 0);
+        const paidInvoices = invoices.filter(i => i.status === 'Paid');
+        const incomeTransactions = transactions.filter(t => t.type === 'Income');
+
+        // Helper to check if an income transaction matches an already counted paid invoice
+        const isTxFromPaidInvoice = (t) => {
+            if (!t.reference) return false;
+            const ref = t.reference.toUpperCase().trim();
+            return paidInvoices.some(inv => inv.reference && inv.reference.toUpperCase().trim() === ref);
+        };
+        const standaloneIncome = incomeTransactions.filter(t => !isTxFromPaidInvoice(t));
+
+        let totalRevenue = paidInvoices.reduce((sum, inv) => sum + (Number(inv.total) || 0), 0);
+        totalRevenue += standaloneIncome.reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
 
         // Today, This Week, This Month, Last Month, This Year
         const now = new Date();
@@ -665,9 +696,32 @@ export default {
         }
         const fyStartDate = new Date(`${fyStartYear}-${String(fyStartMonth).padStart(2, '0')}-01`);
 
-        invoices.filter(i => i.status === 'Paid').forEach(inv => {
+        paidInvoices.forEach(inv => {
             const amount = Number(inv.total) || 0;
             const d = new Date(inv.dateAdded);
+
+            // Today
+            if (d.toDateString() === today) todayRevenue += amount;
+
+            // This week
+            if (d >= startOfWeek && d <= now) weekRevenue += amount;
+
+            // This month
+            if (d.getMonth() === currentMonth && d.getFullYear() === currentYear) monthlyRevenue += amount;
+
+            // Last month
+            if (d.getMonth() === lastMonth && d.getFullYear() === lastMonthYear) lastMonthRevenue += amount;
+
+            // This year
+            if (d.getFullYear() === currentYear) yearRevenue += amount;
+
+            // Year to Date (Financial Year)
+            if (d >= fyStartDate) ytdRevenue += amount;
+        });
+
+        standaloneIncome.forEach(t => {
+            const amount = Number(t.amount) || 0;
+            const d = new Date(t.date || t.dateAdded);
 
             // Today
             if (d.toDateString() === today) todayRevenue += amount;
@@ -702,13 +756,20 @@ export default {
           const year = d.getFullYear();
           chartData.labels.push(`${month} ${year}`);
 
-          const monthRev = invoices.filter(inv => {
+          const monthInvRev = paidInvoices.filter(inv => {
             const invDate = new Date(inv.dateAdded);
-            return inv.status === 'Paid' && invDate.getMonth() === d.getMonth() && invDate.getFullYear() === year;
+            return invDate.getMonth() === d.getMonth() && invDate.getFullYear() === year;
           }).reduce((sum, inv) => sum + (Number(inv.total) || 0), 0);
 
-          chartData.data.push(monthRev);
+          const monthTxRev = standaloneIncome.filter(t => {
+            const tDate = new Date(t.date || t.dateAdded);
+            return tDate.getMonth() === d.getMonth() && tDate.getFullYear() === year;
+          }).reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+
+          chartData.data.push(monthInvRev + monthTxRev);
         }
+
+        const finalChartData = customChartData || chartData;
 
         return jsonResponse({
           success: true,
@@ -720,9 +781,10 @@ export default {
             monthlyRevenue,
             lastMonthRevenue,
             yearRevenue,
-            totalRevenue
+            totalRevenue,
+            chartData: finalChartData
           },
-          chartData: customChartData || chartData
+          chartData: finalChartData
         });
       } catch (e) {
         return jsonResponse({ success: false, message: 'Failed to fetch dashboard' }, 500);
