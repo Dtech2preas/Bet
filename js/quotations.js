@@ -2,6 +2,8 @@
 
 const quotationsManager = {
     quotations: [],
+    clients: [],
+    currentQuote: null,
 
     async loadQuotations() {
         const container = document.getElementById('quotations-container');
@@ -49,6 +51,7 @@ const quotationsManager = {
         this.quotations.forEach(q => {
             const client = this.clients.find(c => c.id === q.clientId);
             const checkboxCell = isPremium ? `<td class="px-0 md:px-6 py-2 md:py-4 flex md:table-cell justify-start"><input type="checkbox" class="quotation-checkbox" value="${q.id}"></td>` : '';
+            const statusClass = q.status === 'Accepted' ? 'bg-green-100 text-green-800' : (q.status === 'Declined' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800');
             html += `
                 <tr class="block md:table-row mb-4 md:mb-0 border-b md:border-0 p-4 md:p-0">
                     ${checkboxCell}
@@ -69,15 +72,16 @@ const quotationsManager = {
                     </td>
                     <td class="px-0 md:px-6 py-2 md:py-4 flex md:table-cell justify-between items-center">
                         <div class="md:hidden font-bold text-xs uppercase text-gray-500 mr-2">Status:</div>
-                        <div class="text-right md:text-left"><span class="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800">${q.status}</span></div>
+                        <div class="text-right md:text-left"><span class="px-2 py-1 text-xs rounded-full ${statusClass}">${q.status}</span></div>
                     </td>
                     <td class="px-0 md:px-6 py-2 md:py-4 flex md:table-cell justify-between items-center text-right text-sm">
                         <div class="md:hidden font-bold text-xs uppercase text-gray-500 mr-2">Actions:</div>
-                        <div>
-                            <button onclick="quotationsManager.editQuote('${q.id}')" class="text-blue-600 hover:text-blue-900 mr-2" title="Edit"><i class="fas fa-edit"></i></button>
-                            <button onclick="quotationsManager.download('${q.id}')" class="text-gray-600 hover:text-gray-900 mr-2" title="Download PDF"><i class="fas fa-file-pdf"></i></button>
-                            <button onclick="quotationsManager.sendWhatsApp('${q.id}')" class="text-green-600 hover:text-green-900 mr-2" title="WhatsApp"><i class="fab fa-whatsapp"></i></button>
-                            <button onclick="quotationsManager.deleteQuote('${q.id}')" class="text-red-600 hover:text-red-900"><i class="fas fa-trash"></i></button>
+                        <div class="flex items-center space-x-2 md:justify-end">
+                            <button onclick="quotationsManager.convertToInvoice('${q.id}')" class="text-indigo-600 hover:text-indigo-900" title="Convert to Invoice"><i class="fas fa-file-invoice-dollar"></i></button>
+                            <button onclick="quotationsManager.editQuote('${q.id}')" class="text-blue-600 hover:text-blue-900" title="Edit"><i class="fas fa-edit"></i></button>
+                            <button onclick="quotationsManager.download('${q.id}')" class="text-gray-600 hover:text-gray-900" title="Download PDF"><i class="fas fa-file-pdf"></i></button>
+                            <button onclick="quotationsManager.sendWhatsApp('${q.id}')" class="text-green-600 hover:text-green-900" title="WhatsApp"><i class="fab fa-whatsapp"></i></button>
+                            <button onclick="quotationsManager.deleteQuote('${q.id}')" class="text-red-600 hover:text-red-900" title="Delete"><i class="fas fa-trash"></i></button>
                         </div>
                     </td>
                 </tr>
@@ -86,265 +90,484 @@ const quotationsManager = {
         container.innerHTML = html + `</tbody></table></div>`;
     },
 
-    async openModal(quotation = null) {
+    async convertToInvoice(id) {
+        const q = this.quotations.find(x => x.id === id);
+        if (!q) return;
+
+        const confirm = await Swal.fire({
+            title: 'Convert to Invoice?',
+            html: `Generate a new Invoice from Quotation <b>${q.reference}</b>?<br><br>The quotation status will be updated to <span class="text-green-600 font-semibold">Accepted</span>.`,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#4f46e5',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: '<i class="fas fa-file-invoice-dollar mr-1"></i> Convert to Invoice'
+        });
+
+        if (!confirm.isConfirmed) return;
+
+        Swal.fire({ title: 'Converting to Invoice...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
+        try {
+            const invRef = 'INV-' + Math.floor(1000 + Math.random() * 9000);
+            const invPayload = {
+                reference: invRef,
+                quotationId: q.id,
+                clientId: q.clientId,
+                title: q.title || '',
+                items: q.items || [],
+                subtotal: q.subtotal,
+                discountPct: q.discountPct || 0,
+                discountAmt: q.discountAmt || 0,
+                vatPct: q.vatPct !== undefined ? q.vatPct : 15,
+                vatAmt: q.vatAmt || 0,
+                total: q.total,
+                balanceDue: q.total,
+                currency: q.currency || 'ZAR',
+                status: 'Unpaid',
+                date: new Date().toISOString(),
+                dueDate: q.validUntil || new Date(Date.now() + 14 * 86400000).toISOString(),
+                validUntil: q.validUntil || null,
+                paymentTerms: q.paymentTerms || 'Due on Receipt',
+                expectedStartDate: q.expectedStartDate || null,
+                deliveryTime: q.deliveryTime || '',
+                customerNotes: q.customerNotes || '',
+                notes: `Converted from Quotation ${q.reference}`,
+                poNumber: '',
+                salesperson: ''
+            };
+
+            await API.request('/api/invoices', {
+                method: 'POST',
+                body: JSON.stringify(invPayload)
+            });
+
+            // Update Quotation Status to 'Accepted'
+            const updatedQuote = { ...q, status: 'Accepted' };
+            await API.request(`/api/quotations/${q.id}`, {
+                method: 'PUT',
+                body: JSON.stringify(updatedQuote)
+            });
+
+            if (typeof app !== 'undefined' && app.logActivity) {
+                app.logActivity(`Converted Quotation ${q.reference} to Invoice ${invRef}`);
+            }
+
+            await this.loadQuotations();
+
+            const isPublic = window.location.pathname.includes('public_');
+            const invUrl = isPublic ? 'public_invoices.html' : 'invoices.html';
+
+            Swal.fire({
+                title: 'Quotation Converted!',
+                html: `Invoice <b>${invRef}</b> created successfully and Quotation <b>${q.reference}</b> marked as <b>Accepted</b>.`,
+                icon: 'success',
+                showCancelButton: true,
+                confirmButtonText: 'View Invoices',
+                cancelButtonText: 'Stay on Quotations',
+                confirmButtonColor: '#4f46e5'
+            }).then((res) => {
+                if (res.isConfirmed) {
+                    window.location.href = invUrl;
+                }
+            });
+        } catch (err) {
+            Swal.fire('Error', err.message || 'Failed to convert quotation', 'error');
+        }
+    },
+
+    ensureDrawer() {
+        let modal = document.getElementById('quotationDrawerModal');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'quotationDrawerModal';
+            modal.className = 'fixed inset-0 bg-black bg-opacity-50 hidden z-50 overflow-hidden';
+            modal.innerHTML = `
+                <div class="absolute inset-y-0 right-0 max-w-full flex">
+                    <div class="w-screen max-w-2xl lg:max-w-3xl bg-white dark:bg-dark-card shadow-2xl h-full flex flex-col transform transition-transform duration-300 ease-in-out translate-x-full" id="quotationDrawerPanel">
+                        <div class="px-6 py-4 border-b dark:border-dark-border flex justify-between items-center bg-gray-50 dark:bg-gray-800 sticky top-0 z-10">
+                            <div>
+                                <h3 class="text-lg md:text-xl font-bold text-gray-900 dark:text-white" id="quotationDrawerTitle">Create Quotation</h3>
+                                <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Fill in project and financial details</p>
+                            </div>
+                            <button type="button" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition" onclick="quotationsManager.closeDrawer()">
+                                <i class="fas fa-times text-xl"></i>
+                            </button>
+                        </div>
+                        <form id="quotationDrawerForm" class="flex flex-col flex-grow overflow-hidden" onsubmit="quotationsManager.saveQuotation(event)">
+                            <div class="p-4 sm:p-6 overflow-y-auto flex-grow space-y-6" id="quotationDrawerContent"></div>
+                            <div class="px-6 py-4 border-t dark:border-dark-border bg-gray-50 dark:bg-gray-800 flex justify-between items-center sticky bottom-0 z-10">
+                                <span id="quotationDrawerStatus" class="text-xs text-gray-500"></span>
+                                <div class="flex space-x-3">
+                                    <button type="button" onclick="quotationsManager.closeDrawer()" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 transition">Cancel</button>
+                                    <button type="submit" id="quotationDrawerSubmitBtn" class="px-5 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-dtech-600 hover:bg-dtech-700 shadow-sm transition">Save Quotation</button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) quotationsManager.closeDrawer();
+            });
+        }
+        return modal;
+    },
+
+    openModal(quotation = null) {
         if (!this.clients || this.clients.length === 0) return Swal.fire('Error', 'Add a client first', 'error');
 
+        this.currentQuote = quotation;
         const q = quotation || {};
         const isEdit = !!quotation;
-        const title = isEdit ? 'Edit Quotation' : 'Create Quotation';
+        const modal = this.ensureDrawer();
+        const panel = document.getElementById('quotationDrawerPanel');
+
+        document.getElementById('quotationDrawerTitle').textContent = isEdit ? `Edit Quotation (${q.reference || ''})` : 'Create New Quotation';
+        document.getElementById('quotationDrawerSubmitBtn').textContent = isEdit ? 'Save Changes' : 'Create Quotation';
 
         const clientOptions = this.clients.map(c => `<option value="${c.id}" ${q.clientId === c.id ? 'selected' : ''}>${c.companyName}</option>`).join('');
 
-
         const d = new Date();
-        d.setDate(d.getDate() + 30); // Valid until default 30 days
+        d.setDate(d.getDate() + 30);
         const validStr = isEdit && q.validUntil ? q.validUntil.split('T')[0] : d.toISOString().split('T')[0];
         const projStartStr = isEdit && q.expectedStartDate ? q.expectedStartDate.split('T')[0] : '';
 
-        const { value: formValues } = await Swal.fire({
-            title: title,
-            html: `
-                <div class="text-left text-sm space-y-3 max-h-[70vh] overflow-y-auto pr-2">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
-                        <div><label class="font-medium">Client *</label><select id="swal-q-client" class="swal2-input mt-1 w-full m-0"><option value="" disabled ${!isEdit?'selected':''}>Select Client</option>${clientOptions}</select></div>
-                        <div><label class="font-medium">Quotation Title</label><p class="text-xs text-gray-500 mb-1">A short description of the project.</p><input id="swal-q-title" class="swal2-input mt-1 w-full m-0" value="${q.title || ''}" placeholder="e.g. Website Redesign"></div>
+        const content = document.getElementById('quotationDrawerContent');
+        content.innerHTML = `
+            <!-- Client & Project Info -->
+            <div class="bg-gray-50/70 dark:bg-gray-800/40 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
+                <h4 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3 flex items-center">
+                    <i class="fas fa-building mr-1.5 text-dtech-500"></i> Client & Project Info
+                </h4>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Client *</label>
+                        <select id="drawer-q-client" required class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm border shadow-sm focus:border-dtech-500 focus:ring-dtech-500">
+                            <option value="" disabled ${!isEdit ? 'selected' : ''}>Select Client</option>
+                            ${clientOptions}
+                        </select>
                     </div>
-
-
-                    <div class="flex justify-between items-center border-b pb-1 mt-4">
-                        <h4 class="font-semibold">Item Details</h4>
-                        <button type="button" id="add-q-item-btn" class="text-xs bg-dtech-100 text-dtech-700 px-2 py-1 rounded hover:bg-dtech-200">+ Add Item</button>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Quotation Title</label>
+                        <input type="text" id="drawer-q-title" value="${q.title || ''}" placeholder="e.g. Website Redesign" class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm border shadow-sm focus:border-dtech-500 focus:ring-dtech-500">
                     </div>
-                    <div id="swal-q-items-container" class="space-y-2 mt-2"></div>
-
-
-                    <h4 class="font-semibold border-b pb-1 mt-4">Financials & Terms</h4>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
-                        <div><label class="font-medium">Currency</label><input id="swal-q-currency" class="swal2-input mt-1 w-full m-0" value="${q.currency || 'ZAR'}" placeholder="ZAR"></div>
-                        <div><label class="font-medium">Discount (%)</label><p class="text-xs text-gray-500 mb-1">Leave at 0 if no discount.</p><input id="swal-q-discount" type="number" class="swal2-input mt-1 w-full m-0" value="${q.discount || 0}" placeholder="0"></div>
-                        <div><label class="font-medium">VAT (%)</label><p class="text-xs text-gray-500 mb-1">Standard rate is 15%.</p><input id="swal-q-vat" type="number" class="swal2-input mt-1 w-full m-0" value="${q.vat || 15}" placeholder="15"></div>
-                    </div>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
-                        <div><label class="font-medium">Valid Until</label><input type="date" id="swal-q-valid" class="swal2-input mt-1 w-full m-0" value="${validStr}"></div>
-                        <div><label class="font-medium">Payment Terms</label><select id="swal-q-terms" class="swal2-input mt-1 w-full m-0">
-                            <option value="Due on Receipt" ${q.paymentTerms==='Due on Receipt'?'selected':''}>Due on Receipt</option>
-                            <option value="50% Deposit" ${q.paymentTerms==='50% Deposit'?'selected':''}>50% Deposit</option>
-                            <option value="7 Days" ${q.paymentTerms==='7 Days'?'selected':''}>7 Days</option>
-                            <option value="14 Days" ${q.paymentTerms==='14 Days'?'selected':''}>14 Days</option>
-                            <option value="30 Days" ${q.paymentTerms==='30 Days'?'selected':''}>30 Days</option>
-                        </select></div>
-                    </div>
-
-                    <!-- Live Summary / Total Price -->
-                    <div class="bg-gray-50 dark:bg-gray-800 p-3 rounded-md border border-gray-200 dark:border-gray-700 mt-4 space-y-1 text-sm" id="swal-q-summary-box">
-                        <div class="flex justify-between text-gray-600 dark:text-gray-300">
-                            <span>Subtotal:</span>
-                            <span id="swal-q-subtotal-disp" class="font-medium">R 0.00</span>
-                        </div>
-                        <div class="flex justify-between text-gray-600 dark:text-gray-300" id="swal-q-discount-row" style="display: none;">
-                            <span>Discount:</span>
-                            <span id="swal-q-discount-disp" class="font-medium">- R 0.00</span>
-                        </div>
-                        <div class="flex justify-between text-gray-600 dark:text-gray-300" id="swal-q-vat-row" style="display: none;">
-                            <span>VAT:</span>
-                            <span id="swal-q-vat-disp" class="font-medium">R 0.00</span>
-                        </div>
-                        <div class="flex justify-between font-bold text-base border-t border-gray-200 dark:border-gray-700 pt-1 text-gray-900 dark:text-white">
-                            <span>Final Price (Total):</span>
-                            <span id="swal-q-total-disp">R 0.00</span>
-                        </div>
-                        <div class="flex justify-between items-center font-semibold text-sm text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/30 p-2 rounded mt-2 border border-blue-200 dark:border-blue-800" id="swal-q-deposit-row" style="display: none;">
-                            <span>Due Before Project Start (50%):</span>
-                            <span id="swal-q-deposit-disp" class="font-bold">R 0.00</span>
-                        </div>
-                    </div>
-
-                    <h4 class="font-semibold border-b pb-1 mt-4">Logistics & Notes</h4>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
-                        <div><label class="font-medium">Expected Project Start</label><input type="date" id="swal-q-start" class="swal2-input mt-1 w-full m-0" value="${projStartStr}"></div>
-                        <div><label class="font-medium">Delivery Time</label><input id="swal-q-delivery" class="swal2-input mt-1 w-full m-0" value="${q.deliveryTime || ''}" placeholder="e.g. 2 weeks"></div>
-                    </div>
-                    <div><label class="font-medium">Customer Notes</label><textarea id="swal-q-cnotes" class="swal2-input mt-1 w-full m-0 p-2 text-sm" rows="2" placeholder="Visible on PDF">${q.customerNotes || ''}</textarea></div>
-                    <div><label class="font-medium">Internal Notes</label><textarea id="swal-q-inotes" class="swal2-input mt-1 w-full m-0 p-2 text-sm" rows="2" placeholder="Internal only">${q.internalNotes || ''}</textarea></div>
-                    <div><label class="font-medium">Attachments (URL)</label><input id="swal-q-attach" class="swal2-input mt-1 w-full m-0" value="${q.attachments || ''}" placeholder="Link to Google Drive / Dropbox"></div>
                 </div>
-            `,
-            focusConfirm: false,
-            showCancelButton: true,
-            width: 'min(95%, 700px)',
-            didOpen: () => {
-                const container = document.getElementById('swal-q-items-container');
-                const addBtn = document.getElementById('add-q-item-btn');
+            </div>
 
-                const updateTotals = () => {
-                    const curr = (document.getElementById('swal-q-currency')?.value || 'ZAR').trim() || 'R';
-                    const currPrefix = curr === 'ZAR' ? 'R' : curr;
-                    let subtotal = 0;
-                    document.querySelectorAll('.quote-item-row').forEach(row => {
-                        const price = parseFloat(row.querySelector('.q-item-price')?.value || 0);
-                        const qty = parseFloat(row.querySelector('.q-item-qty')?.value || 0);
-                        if (!isNaN(price) && !isNaN(qty)) {
-                            subtotal += (price * qty);
-                        }
-                    });
+            <!-- Line Items -->
+            <div>
+                <div class="flex justify-between items-center mb-3">
+                    <h4 class="text-xs font-semibold text-gray-500 uppercase tracking-wider flex items-center">
+                        <i class="fas fa-list-ul mr-1.5 text-dtech-500"></i> Item Details
+                    </h4>
+                    <button type="button" onclick="quotationsManager.addRow('', '', 1)" class="inline-flex items-center text-xs font-medium bg-dtech-50 dark:bg-dtech-900/30 text-dtech-700 dark:text-dtech-300 px-3 py-1.5 rounded-md hover:bg-dtech-100 dark:hover:bg-dtech-900/50 transition">
+                        <i class="fas fa-plus mr-1"></i> Add Line Item
+                    </button>
+                </div>
+                <div id="drawer-q-items-container" class="space-y-2.5"></div>
+            </div>
 
-                    const discountPct = parseFloat(document.getElementById('swal-q-discount')?.value || 0) || 0;
-                    const vatPct = parseFloat(document.getElementById('swal-q-vat')?.value || 0) || 0;
-                    const discountAmt = subtotal * (discountPct / 100);
-                    const total = Math.max(0, subtotal - discountAmt);
-                    const vatAmt = vatPct > 0 ? (total - (total / (1 + (vatPct / 100)))) : 0;
+            <!-- Financials & Payment Terms -->
+            <div>
+                <h4 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3 flex items-center">
+                    <i class="fas fa-calculator mr-1.5 text-dtech-500"></i> Financials & Terms
+                </h4>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Currency</label>
+                        <input type="text" id="drawer-q-currency" value="${q.currency || 'ZAR'}" placeholder="ZAR" class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm border shadow-sm focus:border-dtech-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Discount (%)</label>
+                        <input type="number" id="drawer-q-discount" min="0" max="100" step="any" value="${q.discount !== undefined ? q.discount : (q.discountPct !== undefined ? q.discountPct : 0)}" placeholder="0" class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm border shadow-sm focus:border-dtech-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">VAT (%)</label>
+                        <input type="number" id="drawer-q-vat" min="0" max="100" step="any" value="${q.vat !== undefined ? q.vat : (q.vatPct !== undefined ? q.vatPct : 15)}" placeholder="15" class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm border shadow-sm focus:border-dtech-500">
+                    </div>
+                </div>
 
-                    const subtotalEl = document.getElementById('swal-q-subtotal-disp');
-                    if (subtotalEl) subtotalEl.textContent = `${currPrefix} ${subtotal.toFixed(2)}`;
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Valid Until</label>
+                        <input type="date" id="drawer-q-valid" value="${validStr}" class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm border shadow-sm focus:border-dtech-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Payment Terms</label>
+                        <select id="drawer-q-terms" class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm border shadow-sm focus:border-dtech-500">
+                            <option value="Due on Receipt" ${q.paymentTerms === 'Due on Receipt' ? 'selected' : ''}>Due on Receipt</option>
+                            <option value="50% Deposit" ${q.paymentTerms === '50% Deposit' ? 'selected' : ''}>50% Deposit</option>
+                            <option value="7 Days" ${q.paymentTerms === '7 Days' ? 'selected' : ''}>7 Days</option>
+                            <option value="14 Days" ${q.paymentTerms === '14 Days' ? 'selected' : ''}>14 Days</option>
+                            <option value="30 Days" ${q.paymentTerms === '30 Days' ? 'selected' : ''}>30 Days</option>
+                        </select>
+                    </div>
+                </div>
 
-                    const discRow = document.getElementById('swal-q-discount-row');
-                    const discEl = document.getElementById('swal-q-discount-disp');
-                    if (discRow && discEl) {
-                        if (discountPct > 0) {
-                            discRow.style.display = 'flex';
-                            discEl.textContent = `- ${currPrefix} ${discountAmt.toFixed(2)} (${discountPct}%)`;
-                        } else {
-                            discRow.style.display = 'none';
-                        }
-                    }
+                <!-- Price Summary Card -->
+                <div class="mt-4 bg-gray-50 dark:bg-gray-800/80 p-4 rounded-lg border border-gray-200 dark:border-gray-700 space-y-2">
+                    <div class="flex justify-between text-sm text-gray-600 dark:text-gray-300">
+                        <span>Subtotal:</span>
+                        <span id="drawer-q-subtotal-disp" class="font-medium">R 0.00</span>
+                    </div>
+                    <div class="flex justify-between text-sm text-gray-600 dark:text-gray-300" id="drawer-q-discount-row" style="display: none;">
+                        <span>Discount:</span>
+                        <span id="drawer-q-discount-disp" class="font-medium">- R 0.00</span>
+                    </div>
+                    <div class="flex justify-between text-sm text-gray-600 dark:text-gray-300" id="drawer-q-vat-row" style="display: none;">
+                        <span>VAT:</span>
+                        <span id="drawer-q-vat-disp" class="font-medium">R 0.00</span>
+                    </div>
+                    <div class="flex justify-between text-base font-bold text-gray-900 dark:text-white border-t border-gray-200 dark:border-gray-700 pt-2">
+                        <span>Final Price (Total):</span>
+                        <span id="drawer-q-total-disp">R 0.00</span>
+                    </div>
+                    <div class="flex justify-between items-center text-sm font-semibold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/30 p-2.5 rounded-md border border-blue-200 dark:border-blue-800 mt-2" id="drawer-q-deposit-row" style="display: none;">
+                        <span>Due Before Project Start (50%):</span>
+                        <span id="drawer-q-deposit-disp" class="font-bold">R 0.00</span>
+                    </div>
+                </div>
+            </div>
 
-                    const vatRow = document.getElementById('swal-q-vat-row');
-                    const vatEl = document.getElementById('swal-q-vat-disp');
-                    if (vatRow && vatEl) {
-                        if (vatPct > 0) {
-                            vatRow.style.display = 'flex';
-                            vatEl.textContent = `${currPrefix} ${vatAmt.toFixed(2)} (${vatPct}%)`;
-                        } else {
-                            vatRow.style.display = 'none';
-                        }
-                    }
+            <!-- Logistics & Notes -->
+            <div>
+                <h4 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3 flex items-center">
+                    <i class="fas fa-truck mr-1.5 text-dtech-500"></i> Logistics & Notes
+                </h4>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Expected Project Start</label>
+                        <input type="date" id="drawer-q-start" value="${projStartStr}" class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm border shadow-sm focus:border-dtech-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Delivery Time</label>
+                        <input type="text" id="drawer-q-delivery" value="${q.deliveryTime || ''}" placeholder="e.g. 2 weeks" class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm border shadow-sm focus:border-dtech-500">
+                    </div>
+                </div>
+                <div class="space-y-3">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Customer Notes <span class="text-xs text-gray-400 font-normal">(Printed on PDF)</span></label>
+                        <textarea id="drawer-q-cnotes" rows="2" placeholder="Notes for the client..." class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm border shadow-sm focus:border-dtech-500">${q.customerNotes || ''}</textarea>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Internal Notes <span class="text-xs text-gray-400 font-normal">(Private)</span></label>
+                        <textarea id="drawer-q-inotes" rows="2" placeholder="Private internal notes..." class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm border shadow-sm focus:border-dtech-500">${q.internalNotes || ''}</textarea>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Attachments (URL)</label>
+                        <input type="text" id="drawer-q-attach" value="${q.attachments || ''}" placeholder="Link to Google Drive / Dropbox" class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm border shadow-sm focus:border-dtech-500">
+                    </div>
+                </div>
+            </div>
+        `;
 
-                    const totalEl = document.getElementById('swal-q-total-disp');
-                    if (totalEl) totalEl.textContent = `${currPrefix} ${total.toFixed(2)}`;
+        // Render line item rows
+        const itemsContainer = document.getElementById('drawer-q-items-container');
+        itemsContainer.innerHTML = '';
+        if (isEdit && q.items && q.items.length > 0) {
+            q.items.forEach(it => this.addRow(it.description, it.price, it.quantity));
+        } else {
+            this.addRow('', '', 1);
+        }
 
-                    const terms = document.getElementById('swal-q-terms')?.value;
-                    const depRow = document.getElementById('swal-q-deposit-row');
-                    const depEl = document.getElementById('swal-q-deposit-disp');
-                    if (depRow && depEl) {
-                        if (terms === '50% Deposit') {
-                            depRow.style.display = 'flex';
-                            const depAmt = total * 0.5;
-                            depEl.textContent = `${currPrefix} ${depAmt.toFixed(2)}`;
-                        } else {
-                            depRow.style.display = 'none';
-                        }
-                    }
-                };
+        // Setup event listeners for live totals
+        itemsContainer.addEventListener('input', () => this.updateTotals());
+        document.getElementById('drawer-q-discount')?.addEventListener('input', () => this.updateTotals());
+        document.getElementById('drawer-q-vat')?.addEventListener('input', () => this.updateTotals());
+        document.getElementById('drawer-q-currency')?.addEventListener('input', () => this.updateTotals());
+        document.getElementById('drawer-q-terms')?.addEventListener('change', () => this.updateTotals());
 
-                window.removeQItemRow = function(btn) {
-                    btn.closest('.quote-item-row').remove();
-                    updateTotals();
-                };
+        this.updateTotals();
 
-                function createRow(desc, price, qty) {
-                    const div = document.createElement('div');
-                    div.className = 'quote-item-row grid grid-cols-1 md:grid-cols-12 gap-2 items-center border-b md:border-0 pb-2 md:pb-0 mb-2 md:mb-0';
-                    div.innerHTML = `
-                        <div class="md:col-span-6 flex"><input type="text" class="q-item-desc swal2-input m-0 flex-1 w-full" placeholder="Description" value="${desc || ''}"></div>
-                        <div class="md:col-span-3 flex"><input type="number" class="q-item-price swal2-input m-0 w-full" placeholder="Price" value="${price || ''}"></div>
-                        <div class="md:col-span-2 flex"><input type="number" class="q-item-qty swal2-input m-0 w-full" placeholder="Qty" value="${qty || 1}"></div>
-                        <div class="md:col-span-1 flex justify-end md:justify-center"><button type="button" onclick="window.removeQItemRow(this)" class="text-red-500 hover:text-red-700 p-2"><i class="fas fa-times"></i></button></div>
-                    `;
-                    container.appendChild(div);
-                }
+        // Slide in
+        modal.classList.remove('hidden');
+        requestAnimationFrame(() => {
+            panel.classList.remove('translate-x-full');
+        });
+    },
 
-                if (isEdit && q.items && q.items.length > 0) {
-                    q.items.forEach(item => createRow(item.description, item.price, item.quantity));
-                } else {
-                    createRow('', '', 1);
-                }
+    closeDrawer() {
+        const modal = document.getElementById('quotationDrawerModal');
+        const panel = document.getElementById('quotationDrawerPanel');
+        if (!modal || !panel) return;
+        panel.classList.add('translate-x-full');
+        setTimeout(() => {
+            modal.classList.add('hidden');
+        }, 300);
+    },
 
-                addBtn.addEventListener('click', () => {
-                    createRow('', '', 1);
-                    updateTotals();
-                });
+    addRow(desc = '', price = '', qty = 1) {
+        const container = document.getElementById('drawer-q-items-container');
+        if (!container) return;
+        const div = document.createElement('div');
+        div.className = 'quote-item-row bg-gray-50/70 dark:bg-gray-800/40 p-2.5 rounded-lg border border-gray-200 dark:border-gray-700 grid grid-cols-1 sm:grid-cols-12 gap-2 items-center';
+        div.innerHTML = `
+            <div class="sm:col-span-6">
+                <input type="text" class="q-item-desc w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-1.5 text-sm border shadow-sm focus:border-dtech-500" placeholder="Description *" value="${desc || ''}" required>
+            </div>
+            <div class="sm:col-span-3">
+                <input type="number" step="any" min="0" class="q-item-price w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-1.5 text-sm border shadow-sm focus:border-dtech-500" placeholder="Price" value="${price || ''}">
+            </div>
+            <div class="sm:col-span-2">
+                <input type="number" step="any" min="1" class="q-item-qty w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-1.5 text-sm border shadow-sm focus:border-dtech-500" placeholder="Qty" value="${qty || 1}">
+            </div>
+            <div class="sm:col-span-1 flex justify-end sm:justify-center">
+                <button type="button" onclick="quotationsManager.removeRow(this)" class="text-red-500 hover:text-red-700 p-1.5 rounded hover:bg-red-50 dark:hover:bg-red-900/30 transition" title="Remove Item">
+                    <i class="fas fa-trash-alt text-sm"></i>
+                </button>
+            </div>
+        `;
+        container.appendChild(div);
+        this.updateTotals();
+    },
 
-                container.addEventListener('input', updateTotals);
-                document.getElementById('swal-q-terms')?.addEventListener('change', updateTotals);
-                document.getElementById('swal-q-discount')?.addEventListener('input', updateTotals);
-                document.getElementById('swal-q-vat')?.addEventListener('input', updateTotals);
-                document.getElementById('swal-q-currency')?.addEventListener('input', updateTotals);
+    removeRow(btn) {
+        const row = btn.closest('.quote-item-row');
+        if (row) {
+            row.remove();
+            this.updateTotals();
+        }
+    },
 
-                updateTotals();
-            },
-            preConfirm: () => {
-                const cid = document.getElementById('swal-q-client').value;
-                const rowElements = document.querySelectorAll('.quote-item-row');
-                const items = [];
-                let subtotal = 0;
-
-                rowElements.forEach(row => {
-                    const desc = row.querySelector('.q-item-desc').value;
-                    const price = parseFloat(row.querySelector('.q-item-price').value || 0);
-                    const qty = parseFloat(row.querySelector('.q-item-qty').value || 1);
-                    if (desc) {
-                        items.push({ description: desc, price: price, quantity: qty });
-                        subtotal += (price * qty);
-                    }
-                });
-
-                if (!cid || items.length === 0) {
-                    Swal.showValidationMessage('Client and at least one Item Description are required');
-                    return false;
-                }
-
-                const discountPct = parseFloat(document.getElementById('swal-q-discount').value || 0);
-                const vatPct = parseFloat(document.getElementById('swal-q-vat').value || 0);
-                const discountAmt = subtotal * (discountPct / 100);
-                const total = subtotal - discountAmt;
-                const vatAmt = total - (total / (1 + (vatPct / 100)));
-
-                const validDate = document.getElementById('swal-q-valid').value;
-                const startDate = document.getElementById('swal-q-start').value;
-                const paymentTerms = document.getElementById('swal-q-terms').value;
-                const depositAmt = paymentTerms === '50% Deposit' ? (total * 0.5).toFixed(2) : null;
-
-                return {
-                    clientId: cid,
-                    title: document.getElementById('swal-q-title').value,
-                    items: items,
-                    subtotal: subtotal.toFixed(2),
-                    discountPct: discountPct,
-                    discountAmt: discountAmt.toFixed(2),
-                    vatPct: vatPct,
-                    vatAmt: vatAmt.toFixed(2),
-                    total: total.toFixed(2),
-                    depositAmt: depositAmt,
-                    currency: document.getElementById('swal-q-currency').value,
-                    validUntil: validDate ? new Date(validDate).toISOString() : null,
-                    paymentTerms: paymentTerms,
-                    expectedStartDate: startDate ? new Date(startDate).toISOString() : null,
-                    deliveryTime: document.getElementById('swal-q-delivery').value,
-                    customerNotes: document.getElementById('swal-q-cnotes').value,
-                    internalNotes: document.getElementById('swal-q-inotes').value,
-                    attachments: document.getElementById('swal-q-attach').value,
-                }
+    updateTotals() {
+        const curr = (document.getElementById('drawer-q-currency')?.value || 'ZAR').trim() || 'R';
+        const prefix = curr === 'ZAR' ? 'R' : curr;
+        let subtotal = 0;
+        document.querySelectorAll('.quote-item-row').forEach(row => {
+            const price = parseFloat(row.querySelector('.q-item-price')?.value || 0);
+            const qty = parseFloat(row.querySelector('.q-item-qty')?.value || 0);
+            if (!isNaN(price) && !isNaN(qty)) {
+                subtotal += (price * qty);
             }
         });
 
-        if (formValues) {
-            try {
-                if (isEdit) {
-                    await API.request(`/api/quotations/${q.id}`, { method: 'PUT', body: JSON.stringify(formValues) });
-                    if (typeof app !== 'undefined' && app.logActivity) app.logActivity(`Updated Quotation`);
-                    Swal.fire('Success', 'Quotation updated', 'success');
-                } else {
-                    formValues.reference = 'QT-' + Math.floor(1000 + Math.random() * 9000);
-                    formValues.status = 'Draft';
-                    formValues.date = new Date().toISOString();
-                    await API.request('/api/quotations', { method: 'POST', body: JSON.stringify(formValues) });
-                    if (typeof app !== 'undefined' && app.logActivity) app.logActivity(`Created Quotation`);
-                    Swal.fire('Success', 'Quotation created', 'success');
-                }
-                this.loadQuotations();
-            } catch (e) {
-                Swal.fire('Error', e.message, 'error');
+        const discountPct = parseFloat(document.getElementById('drawer-q-discount')?.value || 0) || 0;
+        const vatPct = parseFloat(document.getElementById('drawer-q-vat')?.value || 0) || 0;
+        const discountAmt = subtotal * (discountPct / 100);
+        const total = Math.max(0, subtotal - discountAmt);
+        const vatAmt = vatPct > 0 ? (total - (total / (1 + (vatPct / 100)))) : 0;
+
+        const subtotalEl = document.getElementById('drawer-q-subtotal-disp');
+        if (subtotalEl) subtotalEl.textContent = `${prefix} ${subtotal.toFixed(2)}`;
+
+        const discRow = document.getElementById('drawer-q-discount-row');
+        const discEl = document.getElementById('drawer-q-discount-disp');
+        if (discRow && discEl) {
+            if (discountPct > 0) {
+                discRow.style.display = 'flex';
+                discEl.textContent = `- ${prefix} ${discountAmt.toFixed(2)} (${discountPct}%)`;
+            } else {
+                discRow.style.display = 'none';
             }
+        }
+
+        const vatRow = document.getElementById('drawer-q-vat-row');
+        const vatEl = document.getElementById('drawer-q-vat-disp');
+        if (vatRow && vatEl) {
+            if (vatPct > 0) {
+                vatRow.style.display = 'flex';
+                vatEl.textContent = `${prefix} ${vatAmt.toFixed(2)} (${vatPct}%)`;
+            } else {
+                vatRow.style.display = 'none';
+            }
+        }
+
+        const totalEl = document.getElementById('drawer-q-total-disp');
+        if (totalEl) totalEl.textContent = `${prefix} ${total.toFixed(2)}`;
+
+        const terms = document.getElementById('drawer-q-terms')?.value;
+        const depRow = document.getElementById('drawer-q-deposit-row');
+        const depEl = document.getElementById('drawer-q-deposit-disp');
+        if (depRow && depEl) {
+            if (terms === '50% Deposit') {
+                depRow.style.display = 'flex';
+                const depAmt = total * 0.5;
+                depEl.textContent = `${prefix} ${depAmt.toFixed(2)}`;
+            } else {
+                depRow.style.display = 'none';
+            }
+        }
+    },
+
+    async saveQuotation(e) {
+        e.preventDefault();
+        const cid = document.getElementById('drawer-q-client').value;
+        const rowElements = document.querySelectorAll('.quote-item-row');
+        const items = [];
+        let subtotal = 0;
+
+        rowElements.forEach(row => {
+            const desc = (row.querySelector('.q-item-desc')?.value || '').trim();
+            const price = parseFloat(row.querySelector('.q-item-price')?.value || 0);
+            const qty = parseFloat(row.querySelector('.q-item-qty')?.value || 1);
+            if (desc) {
+                items.push({ description: desc, price: price, quantity: qty });
+                subtotal += (price * qty);
+            }
+        });
+
+        if (!cid) return Swal.fire('Error', 'Please select a client', 'error');
+        if (items.length === 0) return Swal.fire('Error', 'At least one item with a description is required', 'error');
+
+        const discountPct = parseFloat(document.getElementById('drawer-q-discount').value || 0);
+        const vatPct = parseFloat(document.getElementById('drawer-q-vat').value || 0);
+        const discountAmt = subtotal * (discountPct / 100);
+        const total = subtotal - discountAmt;
+        const vatAmt = total - (total / (1 + (vatPct / 100)));
+
+        const validDate = document.getElementById('drawer-q-valid').value;
+        const startDate = document.getElementById('drawer-q-start').value;
+        const paymentTerms = document.getElementById('drawer-q-terms').value;
+        const depositAmt = paymentTerms === '50% Deposit' ? (total * 0.5).toFixed(2) : null;
+
+        const formValues = {
+            clientId: cid,
+            title: document.getElementById('drawer-q-title').value,
+            items: items,
+            subtotal: subtotal.toFixed(2),
+            discountPct: discountPct,
+            discountAmt: discountAmt.toFixed(2),
+            vatPct: vatPct,
+            vatAmt: vatAmt.toFixed(2),
+            total: total.toFixed(2),
+            depositAmt: depositAmt,
+            currency: document.getElementById('drawer-q-currency').value,
+            validUntil: validDate ? new Date(validDate).toISOString() : null,
+            paymentTerms: paymentTerms,
+            expectedStartDate: startDate ? new Date(startDate).toISOString() : null,
+            deliveryTime: document.getElementById('drawer-q-delivery').value,
+            customerNotes: document.getElementById('drawer-q-cnotes').value,
+            internalNotes: document.getElementById('drawer-q-inotes').value,
+            attachments: document.getElementById('drawer-q-attach').value,
+        };
+
+        const submitBtn = document.getElementById('quotationDrawerSubmitBtn');
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1.5"></i> Saving...';
+
+        try {
+            if (this.currentQuote && this.currentQuote.id) {
+                await API.request(`/api/quotations/${this.currentQuote.id}`, { method: 'PUT', body: JSON.stringify(formValues) });
+                if (typeof app !== 'undefined' && app.logActivity) app.logActivity(`Updated Quotation`);
+                Swal.fire({ icon: 'success', title: 'Quotation Updated', timer: 1500, showConfirmButton: false });
+            } else {
+                formValues.reference = 'QT-' + Math.floor(1000 + Math.random() * 9000);
+                formValues.status = 'Draft';
+                formValues.date = new Date().toISOString();
+                await API.request('/api/quotations', { method: 'POST', body: JSON.stringify(formValues) });
+                if (typeof app !== 'undefined' && app.logActivity) app.logActivity(`Created Quotation`);
+                Swal.fire({ icon: 'success', title: 'Quotation Created', timer: 1500, showConfirmButton: false });
+            }
+            this.closeDrawer();
+            this.loadQuotations();
+        } catch (err) {
+            Swal.fire('Error', err.message || 'Failed to save quotation', 'error');
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.textContent = this.currentQuote ? 'Save Changes' : 'Create Quotation';
         }
     },
 
