@@ -315,13 +315,16 @@ const clientsManager = {
                 <span class="px-2 py-1 text-xs rounded-full ${l.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">${l.status}</span>
             `);
 
-            html += renderList('Quotations', cQuotations, q => `
+            html += renderList('Quotations', cQuotations, q => {
+                const depStr = q.paymentTerms === '50% Deposit' ? ` (Due before start: ${q.currency || 'R'} ${(Number(q.total) * 0.5).toFixed(2)})` : '';
+                return `
                 <div>
                     <div class="font-medium">${q.reference || 'No Number'}</div>
-                    <div class="text-xs text-gray-500">${new Date(q.date).toLocaleDateString()} - ${q.currency || 'R'} ${q.total}</div>
+                    <div class="text-xs text-gray-500">${new Date(q.date).toLocaleDateString()} - ${q.currency || 'R'} ${q.total}${depStr}</div>
                 </div>
                 <span class="px-2 py-1 text-xs rounded-full ${q.status === 'Accepted' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}">${q.status || 'Draft'}</span>
-            `);
+            `;
+            });
 
             html += renderList('Invoices', cInvoices, i => `
                 <div>

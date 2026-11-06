@@ -62,7 +62,10 @@ const quotationsManager = {
                     </td>
                     <td class="px-0 md:px-6 py-2 md:py-4 flex md:table-cell justify-between items-center text-sm font-semibold">
                         <div class="md:hidden font-bold text-xs uppercase text-gray-500 mr-2">Total:</div>
-                        <div class="text-right md:text-left">R ${q.total}</div>
+                        <div class="text-right md:text-left">
+                            <div>R ${q.total}</div>
+                            ${q.paymentTerms === '50% Deposit' ? `<div class="text-xs text-blue-600 dark:text-blue-400 font-normal">Due before start: R ${(Number(q.total) * 0.5).toFixed(2)}</div>` : ''}
+                        </div>
                     </td>
                     <td class="px-0 md:px-6 py-2 md:py-4 flex md:table-cell justify-between items-center">
                         <div class="md:hidden font-bold text-xs uppercase text-gray-500 mr-2">Status:</div>
@@ -125,10 +128,35 @@ const quotationsManager = {
                         <div><label class="font-medium">Valid Until</label><input type="date" id="swal-q-valid" class="swal2-input mt-1 w-full m-0" value="${validStr}"></div>
                         <div><label class="font-medium">Payment Terms</label><select id="swal-q-terms" class="swal2-input mt-1 w-full m-0">
                             <option value="Due on Receipt" ${q.paymentTerms==='Due on Receipt'?'selected':''}>Due on Receipt</option>
+                            <option value="50% Deposit" ${q.paymentTerms==='50% Deposit'?'selected':''}>50% Deposit</option>
                             <option value="7 Days" ${q.paymentTerms==='7 Days'?'selected':''}>7 Days</option>
                             <option value="14 Days" ${q.paymentTerms==='14 Days'?'selected':''}>14 Days</option>
                             <option value="30 Days" ${q.paymentTerms==='30 Days'?'selected':''}>30 Days</option>
                         </select></div>
+                    </div>
+
+                    <!-- Live Summary / Total Price -->
+                    <div class="bg-gray-50 dark:bg-gray-800 p-3 rounded-md border border-gray-200 dark:border-gray-700 mt-4 space-y-1 text-sm" id="swal-q-summary-box">
+                        <div class="flex justify-between text-gray-600 dark:text-gray-300">
+                            <span>Subtotal:</span>
+                            <span id="swal-q-subtotal-disp" class="font-medium">R 0.00</span>
+                        </div>
+                        <div class="flex justify-between text-gray-600 dark:text-gray-300" id="swal-q-discount-row" style="display: none;">
+                            <span>Discount:</span>
+                            <span id="swal-q-discount-disp" class="font-medium">- R 0.00</span>
+                        </div>
+                        <div class="flex justify-between text-gray-600 dark:text-gray-300" id="swal-q-vat-row" style="display: none;">
+                            <span>VAT:</span>
+                            <span id="swal-q-vat-disp" class="font-medium">R 0.00</span>
+                        </div>
+                        <div class="flex justify-between font-bold text-base border-t border-gray-200 dark:border-gray-700 pt-1 text-gray-900 dark:text-white">
+                            <span>Final Price (Total):</span>
+                            <span id="swal-q-total-disp">R 0.00</span>
+                        </div>
+                        <div class="flex justify-between items-center font-semibold text-sm text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/30 p-2 rounded mt-2 border border-blue-200 dark:border-blue-800" id="swal-q-deposit-row" style="display: none;">
+                            <span>Due Before Project Start (50%):</span>
+                            <span id="swal-q-deposit-disp" class="font-bold">R 0.00</span>
+                        </div>
                     </div>
 
                     <h4 class="font-semibold border-b pb-1 mt-4">Logistics & Notes</h4>
@@ -148,8 +176,69 @@ const quotationsManager = {
                 const container = document.getElementById('swal-q-items-container');
                 const addBtn = document.getElementById('add-q-item-btn');
 
+                const updateTotals = () => {
+                    const curr = (document.getElementById('swal-q-currency')?.value || 'ZAR').trim() || 'R';
+                    const currPrefix = curr === 'ZAR' ? 'R' : curr;
+                    let subtotal = 0;
+                    document.querySelectorAll('.quote-item-row').forEach(row => {
+                        const price = parseFloat(row.querySelector('.q-item-price')?.value || 0);
+                        const qty = parseFloat(row.querySelector('.q-item-qty')?.value || 0);
+                        if (!isNaN(price) && !isNaN(qty)) {
+                            subtotal += (price * qty);
+                        }
+                    });
+
+                    const discountPct = parseFloat(document.getElementById('swal-q-discount')?.value || 0) || 0;
+                    const vatPct = parseFloat(document.getElementById('swal-q-vat')?.value || 0) || 0;
+                    const discountAmt = subtotal * (discountPct / 100);
+                    const total = Math.max(0, subtotal - discountAmt);
+                    const vatAmt = vatPct > 0 ? (total - (total / (1 + (vatPct / 100)))) : 0;
+
+                    const subtotalEl = document.getElementById('swal-q-subtotal-disp');
+                    if (subtotalEl) subtotalEl.textContent = `${currPrefix} ${subtotal.toFixed(2)}`;
+
+                    const discRow = document.getElementById('swal-q-discount-row');
+                    const discEl = document.getElementById('swal-q-discount-disp');
+                    if (discRow && discEl) {
+                        if (discountPct > 0) {
+                            discRow.style.display = 'flex';
+                            discEl.textContent = `- ${currPrefix} ${discountAmt.toFixed(2)} (${discountPct}%)`;
+                        } else {
+                            discRow.style.display = 'none';
+                        }
+                    }
+
+                    const vatRow = document.getElementById('swal-q-vat-row');
+                    const vatEl = document.getElementById('swal-q-vat-disp');
+                    if (vatRow && vatEl) {
+                        if (vatPct > 0) {
+                            vatRow.style.display = 'flex';
+                            vatEl.textContent = `${currPrefix} ${vatAmt.toFixed(2)} (${vatPct}%)`;
+                        } else {
+                            vatRow.style.display = 'none';
+                        }
+                    }
+
+                    const totalEl = document.getElementById('swal-q-total-disp');
+                    if (totalEl) totalEl.textContent = `${currPrefix} ${total.toFixed(2)}`;
+
+                    const terms = document.getElementById('swal-q-terms')?.value;
+                    const depRow = document.getElementById('swal-q-deposit-row');
+                    const depEl = document.getElementById('swal-q-deposit-disp');
+                    if (depRow && depEl) {
+                        if (terms === '50% Deposit') {
+                            depRow.style.display = 'flex';
+                            const depAmt = total * 0.5;
+                            depEl.textContent = `${currPrefix} ${depAmt.toFixed(2)}`;
+                        } else {
+                            depRow.style.display = 'none';
+                        }
+                    }
+                };
+
                 window.removeQItemRow = function(btn) {
                     btn.closest('.quote-item-row').remove();
+                    updateTotals();
                 };
 
                 function createRow(desc, price, qty) {
@@ -170,7 +259,18 @@ const quotationsManager = {
                     createRow('', '', 1);
                 }
 
-                addBtn.addEventListener('click', () => createRow('', '', 1));
+                addBtn.addEventListener('click', () => {
+                    createRow('', '', 1);
+                    updateTotals();
+                });
+
+                container.addEventListener('input', updateTotals);
+                document.getElementById('swal-q-terms')?.addEventListener('change', updateTotals);
+                document.getElementById('swal-q-discount')?.addEventListener('input', updateTotals);
+                document.getElementById('swal-q-vat')?.addEventListener('input', updateTotals);
+                document.getElementById('swal-q-currency')?.addEventListener('input', updateTotals);
+
+                updateTotals();
             },
             preConfirm: () => {
                 const cid = document.getElementById('swal-q-client').value;
@@ -201,6 +301,8 @@ const quotationsManager = {
 
                 const validDate = document.getElementById('swal-q-valid').value;
                 const startDate = document.getElementById('swal-q-start').value;
+                const paymentTerms = document.getElementById('swal-q-terms').value;
+                const depositAmt = paymentTerms === '50% Deposit' ? (total * 0.5).toFixed(2) : null;
 
                 return {
                     clientId: cid,
@@ -212,9 +314,10 @@ const quotationsManager = {
                     vatPct: vatPct,
                     vatAmt: vatAmt.toFixed(2),
                     total: total.toFixed(2),
+                    depositAmt: depositAmt,
                     currency: document.getElementById('swal-q-currency').value,
                     validUntil: validDate ? new Date(validDate).toISOString() : null,
-                    paymentTerms: document.getElementById('swal-q-terms').value,
+                    paymentTerms: paymentTerms,
                     expectedStartDate: startDate ? new Date(startDate).toISOString() : null,
                     deliveryTime: document.getElementById('swal-q-delivery').value,
                     customerNotes: document.getElementById('swal-q-cnotes').value,
@@ -264,7 +367,12 @@ const quotationsManager = {
         const userStr = localStorage.getItem('dtech_user');
         const user = userStr ? JSON.parse(userStr) : {};
         const bName = user.businessName || "D-TECH";
-        const msg = encodeURIComponent(`Hi ${client.contactPerson || client.companyName},\n\nHere is the summary for Quotation ${q.reference}:\nTotal: R ${q.total}\n\nPlease let us know if you have any questions.\n\nRegards,\n${bName}`);
+        let totalInfo = `Total: R ${q.total}`;
+        if (q.paymentTerms === '50% Deposit') {
+            const dep = (Number(q.total) * 0.5).toFixed(2);
+            totalInfo += `\nPayment Terms: 50% Deposit\nDue Before Project Start (50%): R ${dep}`;
+        }
+        const msg = encodeURIComponent(`Hi ${client.contactPerson || client.companyName},\n\nHere is the summary for Quotation ${q.reference}:\n${totalInfo}\n\nPlease let us know if you have any questions.\n\nRegards,\n${bName}`);
         const phone = client.phone.replace(/[^0-9]/g, '');
         window.open(`https://wa.me/${phone}?text=${msg}`, '_blank');
     },
@@ -308,12 +416,14 @@ const quotationsManager = {
         const selectedQuotations = this.quotations.filter(q => selected.includes(q.id));
         if (selectedQuotations.length === 0) return;
 
-        let csv = "Quotation Number,Client,Status,Date,Valid Until,Subtotal,Discount,VAT,Total,Notes\n";
+        let csv = "Quotation Number,Client,Status,Date,Valid Until,Payment Terms,Deposit Due (50%),Subtotal,Discount,VAT,Total,Notes\n";
         selectedQuotations.forEach(q => {
             const client = this.clients.find(c => c.id === q.clientId);
             const cName = client ? client.companyName.replace(/,/g, '') : 'Unknown';
             const notes = (q.customerNotes || '').replace(/,/g, ' ').replace(/\n/g, ' ');
-            csv += `${q.reference},${cName},${q.status},${new Date(q.date).toLocaleDateString()},${new Date(q.validUntil).toLocaleDateString()},${q.subtotal},${q.discount || 0},${q.vatAmt || 0},${q.total},${notes}\n`;
+            const terms = (q.paymentTerms || '').replace(/,/g, ' ');
+            const deposit = q.paymentTerms === '50% Deposit' ? (Number(q.total) * 0.5).toFixed(2) : '0.00';
+            csv += `${q.reference},${cName},${q.status},${new Date(q.date).toLocaleDateString()},${new Date(q.validUntil).toLocaleDateString()},${terms},${deposit},${q.subtotal},${q.discount || 0},${q.vatAmt || 0},${q.total},${notes}\n`;
         });
 
         const blob = new Blob([csv], { type: 'text/csv' });

@@ -143,6 +143,7 @@ const invoicesManager = {
                         <div><label class="font-medium">Valid Until</label><input type="date" id="swal-i-valid" class="swal2-input mt-1 w-full m-0" value="${validStr}"></div>
                         <div><label class="font-medium">Payment Terms</label><select id="swal-i-terms" class="swal2-input mt-1 w-full m-0">
                             <option value="Due on Receipt" ${i.paymentTerms==='Due on Receipt'?'selected':''}>Due on Receipt</option>
+                            <option value="50% Deposit" ${i.paymentTerms==='50% Deposit'?'selected':''}>50% Deposit</option>
                             <option value="7 Days" ${i.paymentTerms==='7 Days'?'selected':''}>7 Days</option>
                             <option value="14 Days" ${i.paymentTerms==='14 Days'?'selected':''}>14 Days</option>
                             <option value="30 Days" ${i.paymentTerms==='30 Days'?'selected':''}>30 Days</option>
@@ -225,6 +226,10 @@ const invoicesManager = {
                                     if (q.vatPct !== undefined) {
                                         const vatInput = document.getElementById('swal-i-vat');
                                         if (vatInput) vatInput.value = q.vatPct;
+                                    }
+                                    if (q.paymentTerms) {
+                                        const termsInput = document.getElementById('swal-i-terms');
+                                        if (termsInput) termsInput.value = q.paymentTerms;
                                     }
                                 }
                             }

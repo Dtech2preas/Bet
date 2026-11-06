@@ -361,6 +361,22 @@ const pdfEngine = {
                 doc.text("Total:", totalWidth - 50, finalY, { align: 'right' });
                 doc.text(`R ${total.toFixed(2)}`, totalWidth - 14, finalY, { align: 'right' });
 
+                if (type === 'Quotation' && data.paymentTerms === '50% Deposit') {
+                    finalY += 7;
+                    doc.setFontSize(11);
+                    doc.setFont('helvetica', 'bold');
+                    doc.setTextColor(...primaryColor);
+                    doc.text("Due Before Project Start (50%):", totalWidth - 50, finalY, { align: 'right' });
+                    doc.text(`R ${(total * 0.5).toFixed(2)}`, totalWidth - 14, finalY, { align: 'right' });
+                    finalY += 5;
+                    doc.setFontSize(9);
+                    doc.setFont('helvetica', 'normal');
+                    doc.setTextColor(...grayColor);
+                    doc.text("Balance Due on Completion (50%):", totalWidth - 50, finalY, { align: 'right' });
+                    doc.text(`R ${(total * 0.5).toFixed(2)}`, totalWidth - 14, finalY, { align: 'right' });
+                    doc.setTextColor(0, 0, 0);
+                }
+
                 finalY += 8;
                 doc.setFontSize(9);
                 doc.setFont('helvetica', 'italic');
@@ -380,6 +396,22 @@ const pdfEngine = {
                 doc.setFont('helvetica', 'bold');
                 doc.text("Total Due:", totalWidth - 50, finalY, { align: 'right' });
                 doc.text(`R ${total.toFixed(2)}`, totalWidth - 14, finalY, { align: 'right' });
+
+                if (type === 'Quotation' && data.paymentTerms === '50% Deposit') {
+                    finalY += 7;
+                    doc.setFontSize(11);
+                    doc.setFont('helvetica', 'bold');
+                    doc.setTextColor(...primaryColor);
+                    doc.text("Due Before Project Start (50%):", totalWidth - 50, finalY, { align: 'right' });
+                    doc.text(`R ${(total * 0.5).toFixed(2)}`, totalWidth - 14, finalY, { align: 'right' });
+                    finalY += 5;
+                    doc.setFontSize(9);
+                    doc.setFont('helvetica', 'normal');
+                    doc.setTextColor(...grayColor);
+                    doc.text("Balance Due on Completion (50%):", totalWidth - 50, finalY, { align: 'right' });
+                    doc.text(`R ${(total * 0.5).toFixed(2)}`, totalWidth - 14, finalY, { align: 'right' });
+                    doc.setTextColor(0, 0, 0);
+                }
             }
         }
 
