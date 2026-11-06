@@ -60,7 +60,7 @@ async function checkLimits(business_id, env, collectionName, items) {
 
     const limits = {
         'Free': { clients: 5, products: 5, documents: 10, contracts: false },
-        'Pro': { clients: 25, products: 25, documents: 40, contracts: true }
+        'Pro': { clients: 50, products: 50, documents: Infinity, contracts: true }
     };
 
     // Default to Free if plan is somehow unrecognized
@@ -369,10 +369,10 @@ export default {
 
         let amountParsed = parseFloat(body.amount);
 
-        let planTier = [79, 237, 790].includes(amountParsed) ? 'Premium' : 'Pro';
+        let planTier = [129, 350, 1290, 79, 237, 790].includes(amountParsed) ? 'Premium' : 'Pro';
         let planDesc = '1 Month';
-        if (amountParsed === 87 || amountParsed === 237) planDesc = '3 Months';
-        if (amountParsed === 290 || amountParsed === 790) planDesc = '1 Year';
+        if (amountParsed === 135 || amountParsed === 350 || amountParsed === 87 || amountParsed === 237) planDesc = '3 Months';
+        if (amountParsed === 490 || amountParsed === 1290 || amountParsed === 290 || amountParsed === 790) planDesc = '1 Year';
 
         // Generate a secure token to verify the callback
         const paymentToken = crypto.randomUUID() + crypto.randomUUID();
@@ -453,7 +453,7 @@ export default {
           let isTestToken = isTestEnvironment && (token === 'TEST_PRO_TOKEN' || token === 'TEST_PREMIUM_TOKEN');
 
           if (isTestToken) {
-              amount = token === 'TEST_PREMIUM_TOKEN' ? 790 : 290; // Default to yearly amount for testing
+              amount = token === 'TEST_PREMIUM_TOKEN' ? 1290 : 490; // Default to yearly amount for testing
           } else {
               // Verify token against pending payments
               let pendingPaymentsData = await env.DTECH_KV.get('pending_payments');
@@ -469,10 +469,10 @@ export default {
           }
 
           let durationMonths = 1;
-          if (amount === 87 || amount === 237) durationMonths = 3;
-          if (amount === 290 || amount === 790) durationMonths = 12;
+          if (amount === 135 || amount === 350 || amount === 87 || amount === 237) durationMonths = 3;
+          if (amount === 490 || amount === 1290 || amount === 290 || amount === 790) durationMonths = 12;
 
-          let planName = [79, 237, 790].includes(amount) ? 'Premium' : 'Pro';
+          let planName = [129, 350, 1290, 79, 237, 790].includes(amount) ? 'Premium' : 'Pro';
 
           let startDate = new Date();
           if (mySub.endDate && new Date(mySub.endDate) > startDate) {

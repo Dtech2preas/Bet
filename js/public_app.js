@@ -392,23 +392,23 @@ const app = {
         // Set active button
         if (interval === 'monthly') {
             btnMonthly.className = "px-4 py-2 text-sm font-medium rounded-md bg-white dark:bg-gray-600 shadow-sm text-gray-900 dark:text-white transition-all";
-            pricePro.innerText = 'R29';
-            pricePremium.innerText = 'R79';
+            pricePro.innerText = 'R49';
+            pricePremium.innerText = 'R129';
             periodPro.innerText = '/mo';
             periodPremium.innerText = '/mo';
             this.currentBillingInterval = 'monthly';
         } else if (interval === 'quarterly') {
             btnQuarterly.className = "px-4 py-2 text-sm font-medium rounded-md bg-white dark:bg-gray-600 shadow-sm text-gray-900 dark:text-white transition-all";
-            pricePro.innerText = 'R87';
-            pricePremium.innerText = 'R237';
+            pricePro.innerText = 'R135';
+            pricePremium.innerText = 'R350';
             periodPro.innerText = '/3mo';
             periodPremium.innerText = '/3mo';
             this.currentBillingInterval = 'quarterly';
         } else if (interval === 'yearly') {
             btnYearly.className = "px-4 py-2 text-sm font-medium rounded-md bg-white dark:bg-gray-600 shadow-sm text-gray-900 dark:text-white transition-all flex items-center";
             btnYearly.innerHTML = 'Yearly <span class="ml-2 bg-green-100 text-green-800 text-[10px] font-bold px-1.5 py-0.5 rounded">SAVE</span>';
-            pricePro.innerText = 'R290';
-            pricePremium.innerText = 'R790';
+            pricePro.innerText = 'R490';
+            pricePremium.innerText = 'R1,290';
             periodPro.innerText = '/yr';
             periodPremium.innerText = '/yr';
             this.currentBillingInterval = 'yearly';
@@ -420,13 +420,13 @@ async paySubscription(planTier) {
         const interval = this.currentBillingInterval || 'monthly';
 
         if (planTier === 'Pro') {
-            if (interval === 'monthly') amount = 29;
-            if (interval === 'quarterly') amount = 87;
-            if (interval === 'yearly') amount = 290;
+            if (interval === 'monthly') amount = 49;
+            if (interval === 'quarterly') amount = 135;
+            if (interval === 'yearly') amount = 490;
         } else if (planTier === 'Premium') {
-            if (interval === 'monthly') amount = 79;
-            if (interval === 'quarterly') amount = 237;
-            if (interval === 'yearly') amount = 790;
+            if (interval === 'monthly') amount = 129;
+            if (interval === 'quarterly') amount = 350;
+            if (interval === 'yearly') amount = 1290;
         }
 
         try {

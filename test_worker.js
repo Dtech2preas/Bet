@@ -13,7 +13,7 @@ async function checkLimits(business_id, collectionName, items) {
 
     const limits = {
         'Free': { clients: 5, products: 5, documents: 10, contracts: false },
-        'Pro': { clients: 25, products: 25, documents: 25, contracts: true }
+        'Pro': { clients: 50, products: 50, documents: Infinity, contracts: true }
     };
 
     // Default to Free if plan is somehow unrecognized
@@ -58,21 +58,22 @@ async function checkLimits(business_id, collectionName, items) {
 
 
 async function runTest() {
-    let items = new Array(24).fill({ dateAdded: new Date().toISOString() });
+    let items = new Array(49).fill({ dateAdded: new Date().toISOString() });
 
     // Test Pro limits logic
     let res = await checkLimits('b_123', 'clients', items);
-    assert(res.allowed === true, "24 clients should be allowed on Pro");
+    assert(res.allowed === true, "49 clients should be allowed on Pro");
 
     items.push({ dateAdded: new Date().toISOString() });
     res = await checkLimits('b_123', 'clients', items);
-    assert(res.allowed === false, "25 clients should hit limit on Pro");
+    assert(res.allowed === false, "50 clients should hit limit on Pro");
 
     res = await checkLimits('b_123', 'contracts', []);
     assert(res.allowed === true, "Contracts should be allowed on Pro");
 
+    // Pro has unlimited documents
     res = await checkLimits('b_123', 'invoices', items);
-    assert(res.allowed === false, "25 invoices should hit limit on Pro");
+    assert(res.allowed === true, "Documents should be unlimited on Pro");
 
     console.log("All limit tests passed!");
 }
