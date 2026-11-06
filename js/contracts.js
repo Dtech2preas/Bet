@@ -73,152 +73,236 @@ const contractsManager = {
         container.innerHTML = html + `</tbody></table></div>`;
     },
 
+    ensureDrawer() {
+        let modal = document.getElementById('contractDrawerModal');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'contractDrawerModal';
+            modal.className = 'fixed inset-0 z-50 overflow-hidden hidden';
+            modal.innerHTML = `
+                <div class="absolute inset-0 bg-gray-900 bg-opacity-50 transition-opacity" id="contractDrawerOverlay"></div>
+                <div class="fixed inset-y-0 right-0 max-w-full flex pl-0 sm:pl-10">
+                    <div class="w-screen max-w-2xl bg-white dark:bg-dark-card shadow-2xl h-full flex flex-col transform transition-transform duration-300 ease-in-out translate-x-full" id="contractDrawerPanel">
+                        <div class="p-4 sm:p-6 border-b dark:border-dark-border flex justify-between items-center bg-gray-50 dark:bg-dark-card">
+                            <h3 class="text-lg md:text-xl font-bold text-gray-900 dark:text-white" id="contractDrawerTitle">Generate Contract</h3>
+                            <button type="button" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition" onclick="contractsManager.closeModal()">
+                                <i class="fas fa-times text-xl"></i>
+                            </button>
+                        </div>
+                        <form id="contractDrawerForm" class="flex flex-col flex-grow overflow-hidden" onsubmit="contractsManager.saveContract(event)">
+                            <div class="p-4 sm:p-6 overflow-y-auto flex-grow space-y-5" id="contractDrawerContent">
+                                <input id="drawer-c-id" type="hidden">
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Client *</label>
+                                        <select id="drawer-c-client" required class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm border shadow-sm focus:border-dtech-500"></select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Contract Type</label>
+                                        <select id="drawer-c-type" class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm border shadow-sm focus:border-dtech-500">
+                                            <option value="SLA">SLA (Service Level Agreement)</option>
+                                            <option value="NDA">NDA (Non-Disclosure Agreement)</option>
+                                            <option value="Maintenance">Maintenance Agreement</option>
+                                            <option value="License">License Agreement</option>
+                                            <option value="General">General Contract</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Start Date</label>
+                                        <input type="date" id="drawer-c-start" class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm border shadow-sm focus:border-dtech-500">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">End Date</label>
+                                        <input type="date" id="drawer-c-end" class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm border shadow-sm focus:border-dtech-500">
+                                    </div>
+                                </div>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Renewal Option</label>
+                                        <select id="drawer-c-renew" class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm border shadow-sm focus:border-dtech-500">
+                                            <option value="Yes">Yes (Auto-Renew)</option>
+                                            <option value="No">No</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Signing Status</label>
+                                        <select id="drawer-c-status" class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm border shadow-sm focus:border-dtech-500">
+                                            <option value="Draft">Draft</option>
+                                            <option value="Sent">Sent</option>
+                                            <option value="Signed">Signed</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Client Sign Date</label>
+                                        <input type="date" id="drawer-c-csign" class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm border shadow-sm focus:border-dtech-500">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Company Sign Date</label>
+                                        <input type="date" id="drawer-c-dsign" class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm border shadow-sm focus:border-dtech-500">
+                                    </div>
+                                </div>
+                                <div class="border-t dark:border-gray-700 pt-3">
+                                    <h4 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Linked Records</h4>
+                                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Related License</label>
+                                            <select id="drawer-c-license" class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm border shadow-sm focus:border-dtech-500"></select>
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Related Invoice</label>
+                                            <select id="drawer-c-invoice" class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm border shadow-sm focus:border-dtech-500"></select>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Contract Terms & Conditions</label>
+                                    <textarea id="drawer-c-content" rows="7" class="w-full font-mono text-xs rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white p-3 border shadow-sm focus:border-dtech-500"></textarea>
+                                </div>
+                            </div>
+                            <div class="p-4 sm:p-6 border-t dark:border-dark-border flex justify-end space-x-3 bg-gray-50 dark:bg-dark-card flex-shrink-0">
+                                <button type="button" onclick="contractsManager.closeModal()" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 transition">Cancel</button>
+                                <button type="submit" id="contractDrawerSubmitBtn" class="px-5 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-dtech-600 hover:bg-dtech-700 shadow-sm transition">Save Contract</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal || e.target.id === 'contractDrawerOverlay') contractsManager.closeModal();
+            });
+        }
+        return modal;
+    },
+
     async openModal(contract = null) {
-        if (!this.clients || this.clients.length === 0) return Swal.fire('Error', 'Add a client first', 'error');
+        if (!this.clients || this.clients.length === 0) return Swal.fire('Error', 'Please add a client first', 'error');
+
+        const modal = this.ensureDrawer();
+        const panel = document.getElementById('contractDrawerPanel');
+        const form = document.getElementById('contractDrawerForm');
+        if (form) form.reset();
 
         const con = contract || {};
         const isEdit = !!contract;
-        const title = isEdit ? 'Edit Contract' : 'Generate Contract';
 
-        const clientOptions = this.clients.map(c => `<option value="${c.id}" ${con.clientId === c.id ? 'selected' : ''}>${c.companyName}</option>`).join('');
+        document.getElementById('contractDrawerTitle').innerText = isEdit ? 'Edit Contract' : 'Generate Contract';
+        document.getElementById('contractDrawerSubmitBtn').innerText = isEdit ? 'Save Changes' : 'Save Contract';
 
-        let licenseOptions = '<option value="">No License Linked</option>';
+        const clientSelect = document.getElementById('drawer-c-client');
+        clientSelect.innerHTML = '<option value="" disabled ' + (!isEdit ? 'selected' : '') + '>Select Client</option>' +
+            this.clients.map(c => `<option value="${c.id}" ${con.clientId === c.id ? 'selected' : ''}>${c.companyName}</option>`).join('');
+
+        const licenseSelect = document.getElementById('drawer-c-license');
+        licenseSelect.innerHTML = '<option value="">No License Linked</option>';
         try {
             const lRes = await API.request('/api/licenses');
             if (lRes.success && lRes.licenses) {
-                licenseOptions += lRes.licenses.map(l => `<option value="${l.id}" ${con.licenseId === l.id ? 'selected' : ''}>${l.licenseKey}</option>`).join('');
+                licenseSelect.innerHTML += lRes.licenses.map(l => `<option value="${l.id}" ${con.licenseId === l.id ? 'selected' : ''}>${l.licenseKey}</option>`).join('');
             }
         } catch(e) {}
 
-        let invoiceOptions = '<option value="">No Invoice Linked</option>';
+        const invoiceSelect = document.getElementById('drawer-c-invoice');
+        invoiceSelect.innerHTML = '<option value="">No Invoice Linked</option>';
         try {
             const iRes = await API.request('/api/invoices');
             if (iRes.success && iRes.invoices) {
-                invoiceOptions += iRes.invoices.map(i => `<option value="${i.id}" ${con.invoiceId === i.id ? 'selected' : ''}>${i.reference}</option>`).join('');
+                invoiceSelect.innerHTML += iRes.invoices.map(i => `<option value="${i.id}" ${con.invoiceId === i.id ? 'selected' : ''}>${i.reference}</option>`).join('');
             }
         } catch(e) {}
 
         const userStr = localStorage.getItem('dtech_user');
         const user = userStr ? JSON.parse(userStr) : {};
-        const bName = user.businessName || "THE D-TECH ECOSYSTEM (Pty) Ltd";
+        const bName = user.businessName || "Your Company";
 
-        const defaultTemplate = `This Software License Agreement ("Agreement") is entered into by and between ${bName} ("Licensor") and the Client ("Licensee").
-
-1. Grant of License:
-Licensor grants Licensee a non-exclusive, non-transferable license to use the Software.
-
-2. Intellectual Property:
-All intellectual property rights belong exclusively to ${bName}.
-
-3. Payment Terms:
-The Licensee agrees to pay all fees associated with the product subscription. Failure to pay may result in immediate termination of the license.
-
-4. Termination:
-Either party may terminate this Agreement with 30 days written notice.
-
-5. Confidentiality:
-Both parties agree to maintain the confidentiality of proprietary information.`;
+        const defaultTemplate = `This Software License & Services Agreement ("Agreement") is entered into by and between ${bName} ("Service Provider") and the Client ("Client").\n\n1. Grant of License & Services:\nService Provider grants Client a non-exclusive license and/or service commitment according to the selected plan.\n\n2. Intellectual Property:\nAll intellectual property rights remain exclusively with ${bName}.\n\n3. Payment Terms:\nClient agrees to pay all fees associated with products/invoices on time. Non-payment may lead to service interruption.\n\n4. Confidentiality:\nBoth parties agree to treat proprietary and sensitive company data strictly confidential.\n\n5. Termination:\nEither party may terminate this agreement with 30 days written notice.`;
 
         const sDate = isEdit && con.startDate ? con.startDate.split('T')[0] : new Date().toISOString().split('T')[0];
-
         const d = new Date();
         d.setMonth(d.getMonth() + 12);
         const eDate = isEdit && con.endDate ? con.endDate.split('T')[0] : d.toISOString().split('T')[0];
 
-        const { value: formValues } = await Swal.fire({
-            title: title,
-            html: `
-                <div class="text-left text-sm space-y-3 max-h-[70vh] overflow-y-auto pr-2">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
-                        <div><label class="font-medium">Client *</label><select id="swal-c-client" class="swal2-input mt-1 w-full m-0"><option value="" disabled ${!isEdit?'selected':''}>Select Client</option>${clientOptions}</select></div>
-                        <div><label class="font-medium">Contract Type</label><select id="swal-c-type" class="swal2-input mt-1 w-full m-0">
-                            <option value="SLA" ${con.contractType==='SLA'?'selected':''}>SLA (Service Level Agreement)</option>
-                            <option value="NDA" ${con.contractType==='NDA'?'selected':''}>NDA (Non-Disclosure Agreement)</option>
-                            <option value="Maintenance" ${con.contractType==='Maintenance'?'selected':''}>Maintenance</option>
-                            <option value="License" ${con.contractType==='License'?'selected':''}>License Agreement</option>
-                            <option value="General" ${con.contractType==='General'?'selected':''}>General Contract</option>
-                        </select></div>
-                    </div>
+        document.getElementById('drawer-c-id').value = isEdit ? con.id : '';
+        document.getElementById('drawer-c-type').value = isEdit ? (con.contractType || 'SLA') : 'SLA';
+        document.getElementById('drawer-c-start').value = sDate;
+        document.getElementById('drawer-c-end').value = eDate;
+        document.getElementById('drawer-c-renew').value = isEdit ? (con.renewalOption || 'Yes') : 'Yes';
+        document.getElementById('drawer-c-status').value = isEdit ? (con.signingStatus || 'Draft') : 'Draft';
+        document.getElementById('drawer-c-csign').value = con.clientSignDate ? con.clientSignDate.split('T')[0] : '';
+        document.getElementById('drawer-c-dsign').value = con.dtechSignDate ? con.dtechSignDate.split('T')[0] : '';
+        document.getElementById('drawer-c-content').value = con.content || defaultTemplate;
 
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
-                        <div><label class="font-medium">Start Date</label><input type="date" id="swal-c-start" class="swal2-input mt-1 w-full m-0" value="${sDate}"></div>
-                        <div><label class="font-medium">End Date</label><input type="date" id="swal-c-end" class="swal2-input mt-1 w-full m-0" value="${eDate}"></div>
-                    </div>
+        modal.classList.remove('hidden');
+        setTimeout(() => {
+            if (panel) panel.classList.remove('translate-x-full');
+        }, 10);
+    },
 
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
-                        <div><label class="font-medium">Renewal Option</label><select id="swal-c-renew" class="swal2-input mt-1 w-full m-0">
-                            <option value="Yes" ${con.renewalOption==='Yes'?'selected':''}>Yes</option>
-                            <option value="No" ${con.renewalOption==='No'?'selected':''}>No</option>
-                        </select></div>
-                        <div><label class="font-medium">Signing Status</label><select id="swal-c-status" class="swal2-input mt-1 w-full m-0">
-                            <option value="Draft" ${con.signingStatus==='Draft'?'selected':''}>Draft</option>
-                            <option value="Sent" ${con.signingStatus==='Sent'?'selected':''}>Sent</option>
-                            <option value="Signed" ${con.signingStatus==='Signed'?'selected':''}>Signed</option>
-                        </select></div>
-                    </div>
+    closeModal() {
+        const modal = document.getElementById('contractDrawerModal');
+        const panel = document.getElementById('contractDrawerPanel');
+        if (panel) panel.classList.add('translate-x-full');
+        setTimeout(() => {
+            if (modal) modal.classList.add('hidden');
+        }, 300);
+    },
 
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
-                        <div><label class="font-medium">Client Sign Date</label><input type="date" id="swal-c-csign" class="swal2-input mt-1 w-full m-0" value="${con.clientSignDate ? con.clientSignDate.split('T')[0] : ''}"></div>
-                        <div><label class="font-medium">${bName} Sign Date</label><input type="date" id="swal-c-dsign" class="swal2-input mt-1 w-full m-0" value="${con.dtechSignDate ? con.dtechSignDate.split('T')[0] : ''}"></div>
-                    </div>
+    async saveContract(e) {
+        e.preventDefault();
+        const id = document.getElementById('drawer-c-id').value;
+        const cid = document.getElementById('drawer-c-client').value;
+        if (!cid) {
+            Swal.fire('Error', 'Client is required', 'warning');
+            return;
+        }
 
-                    <h4 class="font-semibold border-b pb-1 mt-4">Linked Records</h4>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
-                        <div><label class="font-medium">Related License</label><select id="swal-c-license" class="swal2-input mt-1 w-full m-0">${licenseOptions}</select></div>
-                        <div><label class="font-medium">Related Invoice</label><select id="swal-c-invoice" class="swal2-input mt-1 w-full m-0">${invoiceOptions}</select></div>
-                    </div>
+        const cSign = document.getElementById('drawer-c-csign').value;
+        const dSign = document.getElementById('drawer-c-dsign').value;
+        const startD = document.getElementById('drawer-c-start').value;
+        const endD = document.getElementById('drawer-c-end').value;
+        const sigStatus = document.getElementById('drawer-c-status').value;
 
-                    <div><label class="font-medium">Contract Terms / Content</label><textarea id="swal-c-content" class="w-full mt-1 p-2 border border-gray-300 dark:border-gray-600 rounded-md" rows="8" style="font-size: 14px;">${con.content || defaultTemplate}</textarea></div>
-                </div>
-            `,
-            width: 'min(95%, 700px)',
-            focusConfirm: false,
-            showCancelButton: true,
-            preConfirm: () => {
-                const cid = document.getElementById('swal-c-client').value;
-                if (!cid) {
-                    Swal.showValidationMessage('Client is required');
-                    return false;
-                }
+        const formValues = {
+            clientId: cid,
+            contractType: document.getElementById('drawer-c-type').value,
+            startDate: startD ? new Date(startD).toISOString() : new Date().toISOString(),
+            endDate: endD ? new Date(endD).toISOString() : new Date().toISOString(),
+            renewalOption: document.getElementById('drawer-c-renew').value,
+            signingStatus: sigStatus,
+            status: sigStatus === 'Signed' ? 'Signed' : 'Unsigned',
+            clientSignDate: cSign ? new Date(cSign).toISOString() : null,
+            dtechSignDate: dSign ? new Date(dSign).toISOString() : null,
+            licenseId: document.getElementById('drawer-c-license').value,
+            invoiceId: document.getElementById('drawer-c-invoice').value,
+            content: document.getElementById('drawer-c-content').value
+        };
 
-                const cSign = document.getElementById('swal-c-csign').value;
-                const dSign = document.getElementById('swal-c-dsign').value;
-                const startD = document.getElementById('swal-c-start').value;
-                const endD = document.getElementById('swal-c-end').value;
-                const sigStatus = document.getElementById('swal-c-status').value;
+        const submitBtn = document.getElementById('contractDrawerSubmitBtn');
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Saving...';
 
-                return {
-                    clientId: cid,
-                    contractType: document.getElementById('swal-c-type').value,
-                    startDate: startD ? new Date(startD).toISOString() : new Date().toISOString(),
-                    endDate: endD ? new Date(endD).toISOString() : new Date().toISOString(),
-                    renewalOption: document.getElementById('swal-c-renew').value,
-                    signingStatus: sigStatus,
-                    status: sigStatus === 'Signed' ? 'Signed' : 'Unsigned', // fallback mapping for renderTable compatibility
-                    clientSignDate: cSign ? new Date(cSign).toISOString() : null,
-                    dtechSignDate: dSign ? new Date(dSign).toISOString() : null,
-                    licenseId: document.getElementById('swal-c-license').value,
-                    invoiceId: document.getElementById('swal-c-invoice').value,
-                    content: document.getElementById('swal-c-content').value,
-                }
+        try {
+            if (id) {
+                await API.request(`/api/contracts/${id}`, { method: 'PUT', body: JSON.stringify(formValues) });
+                Swal.fire({ icon: 'success', title: 'Updated', text: 'Contract updated successfully', timer: 1500, showConfirmButton: false });
+            } else {
+                formValues.reference = 'AGR-' + Math.floor(1000 + Math.random() * 9000);
+                formValues.date = new Date().toISOString();
+                await API.request('/api/contracts', { method: 'POST', body: JSON.stringify(formValues) });
+                Swal.fire({ icon: 'success', title: 'Generated', text: 'Contract generated successfully', timer: 1500, showConfirmButton: false });
             }
-        });
-
-        if (formValues) {
-            try {
-                if (isEdit) {
-                    await API.request(`/api/contracts/${con.id}`, { method: 'PUT', body: JSON.stringify(formValues) });
-                    Swal.fire('Success', 'Contract updated', 'success');
-                } else {
-                    formValues.reference = 'AGR-' + Math.floor(1000 + Math.random() * 9000);
-                    formValues.date = new Date().toISOString();
-                    await API.request('/api/contracts', { method: 'POST', body: JSON.stringify(formValues) });
-                    Swal.fire('Success', 'Contract generated', 'success');
-                }
-                this.loadContracts();
-            } catch (e) {
-                Swal.fire('Error', e.message, 'error');
-            }
+            this.closeModal();
+            this.loadContracts();
+            if (typeof app !== 'undefined' && app.loadDashboardData) app.loadDashboardData();
+        } catch (err) {
+            Swal.fire({ icon: 'error', title: 'Error', text: err.message });
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = id ? 'Save Changes' : 'Save Contract';
         }
     },
 

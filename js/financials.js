@@ -651,7 +651,7 @@ const financialsManager = {
         document.getElementById('csvFileInput').click();
     },
 
-        handleCSVUpload(event) {
+    handleCSVUpload(event) {
         const file = event.target.files[0];
         if (!file) return;
 
@@ -659,20 +659,20 @@ const financialsManager = {
         if (overlay) overlay.classList.remove('hidden');
 
         const reader = new FileReader();
-        reader.onload = (e) => {
+        reader.onload = async (e) => {
             const text = e.target.result;
-            // Add a small delay so UI can update
-            setTimeout(() => {
-                this.parseCSV(text);
+            try {
+                await this.parseCSV(text);
+            } finally {
                 if (overlay) overlay.classList.add('hidden');
-            }, 100);
+            }
         };
         reader.readAsText(file);
         // Reset input so the same file can be uploaded again if needed
         event.target.value = '';
     },
 
-parseCSV(csvText) {
+    async parseCSV(csvText) {
         // Parse CSV with support for quoted strings
         function parseCSVRow(str) {
             const arr = [];
@@ -723,6 +723,16 @@ parseCSV(csvText) {
             return;
         }
 
+        // Fetch existing invoices and transactions for smart cross-referencing
+        let existingInvoices = [];
+        try {
+            const invRes = await API.request('/api/invoices');
+            if (invRes && invRes.success) existingInvoices = invRes.invoices || [];
+        } catch (e) {
+            console.warn("Could not pre-load invoices for reconciliation", e);
+        }
+
+        const existingTransactions = this.transactions || [];
         const parsedData = [];
 
         for (let i = 1; i < lines.length; i++) {
@@ -774,26 +784,84 @@ parseCSV(csvText) {
                 }
             }
 
-            let autoCategory = '';
-            const lowerDesc = desc.toLowerCase();
-            if (lowerDesc.includes('fee')) {
-                autoCategory = 'Bank Fees';
+            // Smart Reference & Invoice Matching
+            let matchedInvoice = null;
+            const descUpper = desc.toUpperCase();
+
+            if (existingInvoices.length > 0) {
+                matchedInvoice = existingInvoices.find(inv => {
+                    if (!inv.reference) return false;
+                    return descUpper.includes(inv.reference.toUpperCase());
+                });
             }
-            // Get saved mappings
-            const savedMappings = this.settings.mappings || {};
-            for (const [key, cat] of Object.entries(savedMappings)) {
-                if (lowerDesc.includes(key.toLowerCase())) {
-                    autoCategory = cat;
-                    break;
+
+            if (!matchedInvoice) {
+                const invMatch = descUpper.match(/INV-\d+/i);
+                if (invMatch) {
+                    matchedInvoice = existingInvoices.find(inv => inv.reference && inv.reference.toUpperCase() === invMatch[0]);
                 }
             }
+
+            let autoCategory = '';
+            let isDuplicate = false;
+            let duplicateReason = '';
+
+            if (matchedInvoice) {
+                autoCategory = 'Sales / Services Revenue';
+                type = 'Income';
+
+                // Check if a transaction for this invoice already exists in ledger
+                const existingTx = existingTransactions.find(t =>
+                    (t.reference && matchedInvoice.reference && t.reference.toUpperCase().includes(matchedInvoice.reference.toUpperCase())) ||
+                    (t.description && matchedInvoice.reference && t.description.toUpperCase().includes(matchedInvoice.reference.toUpperCase()))
+                );
+
+                if (existingTx) {
+                    isDuplicate = true;
+                    duplicateReason = `Already in ledger (${matchedInvoice.reference})`;
+                } else if (matchedInvoice.status === 'Paid') {
+                    duplicateReason = `Invoice ${matchedInvoice.reference} already marked Paid`;
+                }
+            } else {
+                // Check if identical date, description, and amount already exists in ledger
+                const existingTx = existingTransactions.find(t =>
+                    t.date === dateStr &&
+                    Math.abs(Number(t.amount) - amount) < 0.01 &&
+                    t.description && t.description.toLowerCase().trim() === desc.toLowerCase().trim()
+                );
+                if (existingTx) {
+                    isDuplicate = true;
+                    duplicateReason = 'Exact duplicate already in ledger';
+                }
+            }
+
+            const lowerDesc = desc.toLowerCase();
+            if (!autoCategory) {
+                if (lowerDesc.includes('fee')) {
+                    autoCategory = 'Bank Fees';
+                }
+                // Get saved mappings
+                const savedMappings = this.settings.mappings || {};
+                for (const [key, cat] of Object.entries(savedMappings)) {
+                    if (lowerDesc.includes(key.toLowerCase())) {
+                        autoCategory = cat;
+                        break;
+                    }
+                }
+            }
+
             if (!isNaN(amount) && amount !== 0) {
                 parsedData.push({
                     date: dateStr,
                     description: desc,
                     amount: amount,
                     type: type,
-                    category: autoCategory
+                    category: autoCategory,
+                    matchedInvoice: matchedInvoice ? matchedInvoice.reference : null,
+                    matchedInvoiceId: matchedInvoice ? matchedInvoice.id : null,
+                    isDuplicate: isDuplicate,
+                    duplicateReason: duplicateReason,
+                    skip: isDuplicate
                 });
             }
         }
@@ -830,13 +898,21 @@ parseCSV(csvText) {
             const hasCategory = row.category && row.category.trim() !== '';
 
             const rowHtml = `
-                <div class="bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-lg p-4 shadow-sm flex flex-col md:flex-row gap-4 items-start md:items-center">
+                <div class="bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-lg p-4 shadow-sm flex flex-col md:flex-row gap-4 items-start md:items-center ${row.isDuplicate ? 'opacity-80 bg-amber-50/30 dark:bg-amber-950/20' : ''}">
                     <div class="flex-1 min-w-0 w-full">
-                        <div class="flex justify-between md:justify-start items-center gap-2 mb-1">
+                        <div class="flex justify-between md:justify-start items-center gap-2 mb-1 flex-wrap">
                             <span class="text-sm font-medium text-gray-500 dark:text-gray-400">${row.date}</span>
                             <span class="text-base font-bold ${amountColor} md:ml-4">${amountSign}R${row.amount.toFixed(2)}</span>
+                            ${row.matchedInvoice ? `<span class="bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300 text-xs px-2 py-0.5 rounded font-mono flex items-center gap-1"><i class="fas fa-file-invoice"></i> ${row.matchedInvoice}</span>` : ''}
+                            ${row.isDuplicate ? `<span class="bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 text-xs px-2 py-0.5 rounded flex items-center gap-1"><i class="fas fa-exclamation-triangle"></i> ${row.duplicateReason}</span>` : ''}
                         </div>
                         <p class="text-gray-900 dark:text-gray-100 font-medium truncate" title="${row.description}">${row.description}</p>
+                        ${row.isDuplicate ? `
+                            <label class="inline-flex items-center gap-1.5 text-xs text-amber-700 dark:text-amber-400 mt-1 cursor-pointer">
+                                <input type="checkbox" id="recon-skip-${index}" ${row.skip ? 'checked' : ''} class="rounded text-amber-600 focus:ring-amber-500">
+                                <span>Skip transaction (Already in records / prevent duplicate)</span>
+                            </label>
+                        ` : ''}
                     </div>
                     <div class="w-full md:w-64 flex-shrink-0">
                         <select id="recon-cat-${index}" class="w-full rounded-md border-gray-300 shadow-sm focus:border-dtech-500 focus:ring-dtech-500 sm:text-sm dark:bg-dark-bg dark:border-dark-border dark:text-white">
@@ -901,6 +977,11 @@ parseCSV(csvText) {
         const newMappings = this.settings.mappings || {};
 
         this._pendingReconcileData.forEach((row, index) => {
+            const skipBox = document.getElementById(`recon-skip-${index}`);
+            if (skipBox && skipBox.checked) {
+                return; // User explicitly skipped this duplicate transaction
+            }
+
             const catSelect = document.getElementById(`recon-cat-${index}`);
             if (catSelect && catSelect.value) {
                 finalData.push({
@@ -915,7 +996,7 @@ parseCSV(csvText) {
         });
 
         if (finalData.length === 0) {
-            Swal.fire('Info', 'No transactions were categorized to save.', 'info');
+            Swal.fire('Info', 'No transactions were selected to save.', 'info');
             return;
         }
 
@@ -936,7 +1017,17 @@ parseCSV(csvText) {
         for (const t of finalData) {
             try {
                 const response = await API.request('/api/transactions', { method: 'POST', body: JSON.stringify(t) });
-                if (response.success) successCount++;
+                if (response.success) {
+                    successCount++;
+                    // If matched to an invoice, auto-update the invoice to Paid
+                    if (t.matchedInvoiceId) {
+                        try {
+                            await API.request(`/api/invoices/${t.matchedInvoiceId}`, { method: 'PUT', body: JSON.stringify({ status: 'Paid', balanceDue: '0.00' }) });
+                        } catch (invErr) {
+                            console.warn("Could not auto-mark matched invoice as paid", invErr);
+                        }
+                    }
+                }
             } catch (e) {
                 console.error('Failed to save transaction', t, e);
             }

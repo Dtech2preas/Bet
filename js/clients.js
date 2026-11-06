@@ -114,13 +114,154 @@ const clientsManager = {
         container.innerHTML = tableHtml;
     },
 
+    ensureDrawer() {
+        let modal = document.getElementById('clientDrawerModal');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'clientDrawerModal';
+            modal.className = 'fixed inset-0 z-50 overflow-hidden hidden';
+            modal.innerHTML = `
+                <div class="absolute inset-0 bg-gray-900 bg-opacity-50 transition-opacity" id="clientDrawerOverlay"></div>
+                <div class="fixed inset-y-0 right-0 max-w-full flex pl-0 sm:pl-10">
+                    <div class="w-screen max-w-2xl bg-white dark:bg-dark-card shadow-2xl h-full flex flex-col transform transition-transform duration-300 ease-in-out translate-x-full" id="clientDrawerPanel">
+                        <div class="p-4 sm:p-6 border-b dark:border-dark-border flex justify-between items-center bg-gray-50 dark:bg-dark-card">
+                            <h3 class="text-lg md:text-xl font-bold text-gray-900 dark:text-white" id="clientDrawerTitle">Add New Client</h3>
+                            <button type="button" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition" onclick="clientsManager.closeModal()">
+                                <i class="fas fa-times text-xl"></i>
+                            </button>
+                        </div>
+                        <form id="clientDrawerForm" class="flex flex-col flex-grow overflow-hidden" onsubmit="clientsManager.saveClient(event)">
+                            <div class="p-4 sm:p-6 overflow-y-auto flex-grow space-y-6" id="clientDrawerContent">
+                                <input id="clientId" type="hidden">
+                                
+                                <!-- Basic Info -->
+                                <div>
+                                    <h4 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3 flex items-center">
+                                        <i class="fas fa-building mr-1.5 text-dtech-500"></i> Basic Information
+                                    </h4>
+                                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Company Name *</label>
+                                            <input type="text" id="clientCompany" required placeholder="Official Registered Name" class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm border shadow-sm focus:border-dtech-500">
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Company Reg Number</label>
+                                            <input type="text" id="clientRegNum" placeholder="e.g. 2023/123456/07" class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm border shadow-sm focus:border-dtech-500">
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">VAT Number</label>
+                                            <input type="text" id="clientVatNum" placeholder="Tax / VAT Number" class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm border shadow-sm focus:border-dtech-500">
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Industry</label>
+                                            <input type="text" id="clientIndustry" placeholder="e.g. Technology, Retail" class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm border shadow-sm focus:border-dtech-500">
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Website</label>
+                                            <input type="url" id="clientWebsite" placeholder="https://..." class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm border shadow-sm focus:border-dtech-500">
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Status</label>
+                                            <select id="clientStatus" class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm border shadow-sm focus:border-dtech-500">
+                                                <option value="Active">Active</option>
+                                                <option value="Inactive">Inactive</option>
+                                                <option value="Archived">Archived</option>
+                                            </select>
+                                        </div>
+                                        <div class="sm:col-span-2">
+                                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">LinkedIn Profile</label>
+                                            <input type="url" id="clientLinkedin" placeholder="https://linkedin.com/company/..." class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm border shadow-sm focus:border-dtech-500">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Addresses -->
+                                <div>
+                                    <h4 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3 flex items-center">
+                                        <i class="fas fa-map-marker-alt mr-1.5 text-dtech-500"></i> Addresses
+                                    </h4>
+                                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Physical Address</label>
+                                            <textarea id="clientPhysicalAddress" rows="2" placeholder="Street Address, City, Postal Code" class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm border shadow-sm focus:border-dtech-500"></textarea>
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Postal Address</label>
+                                            <textarea id="clientPostalAddress" rows="2" placeholder="P.O. Box or Postal Address" class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm border shadow-sm focus:border-dtech-500"></textarea>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Contacts -->
+                                <div>
+                                    <h4 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3 flex items-center">
+                                        <i class="fas fa-address-book mr-1.5 text-dtech-500"></i> Contact Details
+                                    </h4>
+                                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Primary Contact Person</label>
+                                            <input type="text" id="clientContact" placeholder="e.g. John Doe" class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm border shadow-sm focus:border-dtech-500">
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Primary Email *</label>
+                                            <input type="email" id="clientEmail" required placeholder="invoices@client.co.za" class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm border shadow-sm focus:border-dtech-500">
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Phone Number</label>
+                                            <input type="tel" id="clientPhone" placeholder="+27 82 123 4567" class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm border shadow-sm focus:border-dtech-500">
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Preferred Contact Method</label>
+                                            <select id="clientPreferredContact" class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm border shadow-sm focus:border-dtech-500">
+                                                <option value="Email">Email</option>
+                                                <option value="Phone">Phone</option>
+                                                <option value="WhatsApp">WhatsApp</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Billing Contact</label>
+                                            <input type="text" id="clientBillingContact" placeholder="accounts@client.co.za" class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm border shadow-sm focus:border-dtech-500">
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Technical Contact</label>
+                                            <input type="text" id="clientTechContact" placeholder="tech@client.co.za" class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm border shadow-sm focus:border-dtech-500">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Notes -->
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Internal Notes</label>
+                                    <textarea id="clientNotes" rows="2" placeholder="Private internal client notes..." class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm border shadow-sm focus:border-dtech-500"></textarea>
+                                </div>
+                            </div>
+                            <div class="p-4 sm:p-6 border-t dark:border-dark-border flex justify-end space-x-3 bg-gray-50 dark:bg-dark-card flex-shrink-0">
+                                <button type="button" onclick="clientsManager.closeModal()" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 transition">Cancel</button>
+                                <button type="submit" id="saveClientBtn" class="px-5 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-dtech-600 hover:bg-dtech-700 shadow-sm transition">Save Client</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal || e.target.id === 'clientDrawerOverlay') clientsManager.closeModal();
+            });
+        }
+        return modal;
+    },
+
     openModal(client = null) {
-        document.getElementById('clientForm').reset();
+        const modal = this.ensureDrawer();
+        const panel = document.getElementById('clientDrawerPanel');
+        const form = document.getElementById('clientDrawerForm');
+        if (form) form.reset();
+
         document.getElementById('clientId').value = '';
-        document.getElementById('clientModalTitle').innerText = 'Add New Client';
+        document.getElementById('clientDrawerTitle').innerText = 'Add New Client';
 
         if (client) {
-            document.getElementById('clientModalTitle').innerText = 'Edit Client';
+            document.getElementById('clientDrawerTitle').innerText = 'Edit Client';
             document.getElementById('clientId').value = client.id;
             document.getElementById('clientCompany').value = client.companyName || '';
             document.getElementById('clientContact').value = client.contactPerson || '';
@@ -140,13 +281,35 @@ const clientsManager = {
             document.getElementById('clientNotes').value = client.notes || '';
         }
 
-        document.getElementById('clientModal').classList.remove('hidden');
-        document.getElementById('clientModal').classList.add('flex');
+        // Hide legacy static modal if present
+        const legacyModal = document.getElementById('clientModal');
+        if (legacyModal) {
+            legacyModal.classList.add('hidden');
+            legacyModal.classList.remove('flex');
+        }
+
+        // Open drawer with slide transition
+        modal.classList.remove('hidden');
+        setTimeout(() => {
+            if (panel) panel.classList.remove('translate-x-full');
+        }, 10);
     },
 
     closeModal() {
-        document.getElementById('clientModal').classList.add('hidden');
-        document.getElementById('clientModal').classList.remove('flex');
+        const modal = document.getElementById('clientDrawerModal');
+        const panel = document.getElementById('clientDrawerPanel');
+        if (panel) panel.classList.add('translate-x-full');
+
+        setTimeout(() => {
+            if (modal) modal.classList.add('hidden');
+        }, 300);
+
+        // Also clean up legacy modal if open
+        const legacyModal = document.getElementById('clientModal');
+        if (legacyModal) {
+            legacyModal.classList.add('hidden');
+            legacyModal.classList.remove('flex');
+        }
     },
 
     editClient(id) {
@@ -252,6 +415,11 @@ const clientsManager = {
 
         // Open modal and slide panel in
         modal.classList.remove('hidden');
+        modal.onclick = (e) => {
+            if (e.target === modal || e.target.id === 'clientDetailsOverlay') {
+                clientsManager.closeDetails();
+            }
+        };
         // small timeout to allow display:block to apply before transition
         setTimeout(() => {
             panel.classList.remove('translate-x-full');

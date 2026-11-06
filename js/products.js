@@ -67,72 +67,178 @@ const productsManager = {
         container.innerHTML = html + `</tbody></table></div>`;
     },
 
-    async openModal(product = null) {
-        const title = product ? 'Edit Product' : 'Add Product';
-        const p = product || {};
-
-        const { value: formValues } = await Swal.fire({
-            title: title,
-            html: `
-                <div class="text-left text-sm space-y-3">
-                    <div><label class="font-medium">Product Name *</label><p class="text-xs text-gray-500 mb-1">The main title of the product.</p><input id="swal-p-name" class="swal2-input mt-1 w-full m-0" value="${p.name || ''}" placeholder="Product Name"></div>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
-                        <div><label class="font-medium">Category</label><input id="swal-p-category" class="swal2-input mt-1 w-full m-0" value="${p.category || ''}" placeholder="Category"></div>
-                        <div><label class="font-medium">Version</label><input id="swal-p-version" class="swal2-input mt-1 w-full m-0" value="${p.version || ''}" placeholder="Version"></div>
-                        <div><label class="font-medium">SKU / Code</label><p class="text-xs text-gray-500 mb-1">Optional internal reference code.</p><input id="swal-p-sku" class="swal2-input mt-1 w-full m-0" value="${p.sku || ''}" placeholder="SKU"></div>
-                        <div><label class="font-medium">Status</label><select id="swal-p-status" class="swal2-input mt-1 w-full m-0"><option value="Active" ${p.status==='Active'?'selected':''}>Active</option><option value="Discontinued" ${p.status==='Discontinued'?'selected':''}>Discontinued</option></select></div>
-                    </div>
-                    <div><label class="font-medium">Description</label><p class="text-xs text-gray-500 mb-1">Briefly explain what this is.</p><input id="swal-p-desc" class="swal2-input mt-1 w-full m-0" value="${p.description || ''}" placeholder="Description"></div>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
-                        <div><label class="font-medium">Once-off/Setup (ZAR)</label><input id="swal-p-setup" type="number" class="swal2-input mt-1 w-full m-0" value="${p.setupFee || p.onceOffPrice || ''}" placeholder="0"></div>
-                        <div><label class="font-medium">Monthly (ZAR)</label><input id="swal-p-monthly" type="number" class="swal2-input mt-1 w-full m-0" value="${p.monthlyFee || ''}" placeholder="0"></div>
-                        <div><label class="font-medium">Renewal (ZAR)</label><input id="swal-p-renewal" type="number" class="swal2-input mt-1 w-full m-0" value="${p.renewalPrice || ''}" placeholder="0"></div>
-                    </div>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
-                        <div><label class="font-medium">Download Link (URL)</label><input id="swal-p-link" class="swal2-input mt-1 w-full m-0" value="${p.downloadLink || ''}" placeholder="https://..."></div>
-                        <div><label class="font-medium">Support Period</label><input id="swal-p-support" class="swal2-input mt-1 w-full m-0" value="${p.supportPeriod || ''}" placeholder="e.g. 12 months"></div>
+    ensureDrawer() {
+        let modal = document.getElementById('productDrawerModal');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'productDrawerModal';
+            modal.className = 'fixed inset-0 z-50 overflow-hidden hidden';
+            modal.innerHTML = `
+                <div class="absolute inset-0 bg-gray-900 bg-opacity-50 transition-opacity" id="productDrawerOverlay"></div>
+                <div class="fixed inset-y-0 right-0 max-w-full flex pl-0 sm:pl-10">
+                    <div class="w-screen max-w-xl bg-white dark:bg-dark-card shadow-2xl h-full flex flex-col transform transition-transform duration-300 ease-in-out translate-x-full" id="productDrawerPanel">
+                        <div class="p-4 sm:p-6 border-b dark:border-dark-border flex justify-between items-center bg-gray-50 dark:bg-dark-card">
+                            <h3 class="text-lg md:text-xl font-bold text-gray-900 dark:text-white" id="productDrawerTitle">Add Product</h3>
+                            <button type="button" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition" onclick="productsManager.closeModal()">
+                                <i class="fas fa-times text-xl"></i>
+                            </button>
+                        </div>
+                        <form id="productDrawerForm" class="flex flex-col flex-grow overflow-hidden" onsubmit="productsManager.saveProduct(event)">
+                            <div class="p-4 sm:p-6 overflow-y-auto flex-grow space-y-5" id="productDrawerContent">
+                                <input id="drawer-p-id" type="hidden">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Product / Service Name *</label>
+                                    <input type="text" id="drawer-p-name" required placeholder="e.g. Website Maintenance" class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm border shadow-sm focus:border-dtech-500">
+                                </div>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Category</label>
+                                        <input type="text" id="drawer-p-category" placeholder="Software / Service" class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm border shadow-sm focus:border-dtech-500">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Version / Edition</label>
+                                        <input type="text" id="drawer-p-version" placeholder="v1.0" class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm border shadow-sm focus:border-dtech-500">
+                                    </div>
+                                </div>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">SKU / Code</label>
+                                        <input type="text" id="drawer-p-sku" placeholder="SKU-100" class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm border shadow-sm focus:border-dtech-500">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Status</label>
+                                        <select id="drawer-p-status" class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm border shadow-sm focus:border-dtech-500">
+                                            <option value="Active">Active</option>
+                                            <option value="Discontinued">Discontinued</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Description</label>
+                                    <textarea id="drawer-p-desc" rows="3" placeholder="Briefly explain what this product or service is..." class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm border shadow-sm focus:border-dtech-500"></textarea>
+                                </div>
+                                <div class="border-t dark:border-gray-700 pt-4">
+                                    <h4 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Pricing Structure (ZAR)</h4>
+                                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                        <div>
+                                            <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Setup / Once-off</label>
+                                            <input type="number" id="drawer-p-setup" step="any" placeholder="0.00" class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm border shadow-sm focus:border-dtech-500">
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Monthly Fee</label>
+                                            <input type="number" id="drawer-p-monthly" step="any" placeholder="0.00" class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm border shadow-sm focus:border-dtech-500">
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Renewal Price</label>
+                                            <input type="number" id="drawer-p-renewal" step="any" placeholder="0.00" class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm border shadow-sm focus:border-dtech-500">
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Download Link (URL)</label>
+                                        <input type="url" id="drawer-p-link" placeholder="https://..." class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm border shadow-sm focus:border-dtech-500">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Support Period</label>
+                                        <input type="text" id="drawer-p-support" placeholder="e.g. 12 months" class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm border shadow-sm focus:border-dtech-500">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="p-4 sm:p-6 border-t dark:border-dark-border flex justify-end space-x-3 bg-gray-50 dark:bg-dark-card flex-shrink-0">
+                                <button type="button" onclick="productsManager.closeModal()" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 transition">Cancel</button>
+                                <button type="submit" id="productDrawerSubmitBtn" class="px-5 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-dtech-600 hover:bg-dtech-700 shadow-sm transition">Save Product</button>
+                            </div>
+                        </form>
                     </div>
                 </div>
-            `,
-            focusConfirm: false,
-            showCancelButton: true,
-            width: 'min(95%, 600px)',
-            preConfirm: () => {
-                const name = document.getElementById('swal-p-name').value;
-                if (!name) {
-                    Swal.showValidationMessage('Product Name is required');
-                    return false;
-                }
-                return {
-                    name: name,
-                    category: document.getElementById('swal-p-category').value,
-                    version: document.getElementById('swal-p-version').value,
-                    sku: document.getElementById('swal-p-sku').value,
-                    status: document.getElementById('swal-p-status').value,
-                    description: document.getElementById('swal-p-desc').value,
-                    setupFee: document.getElementById('swal-p-setup').value,
-                    onceOffPrice: document.getElementById('swal-p-setup').value,
-                    monthlyFee: document.getElementById('swal-p-monthly').value,
-                    renewalPrice: document.getElementById('swal-p-renewal').value,
-                    downloadLink: document.getElementById('swal-p-link').value,
-                    supportPeriod: document.getElementById('swal-p-support').value
-                }
-            }
-        });
+            `;
+            document.body.appendChild(modal);
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal || e.target.id === 'productDrawerOverlay') productsManager.closeModal();
+            });
+        }
+        return modal;
+    },
 
-        if (formValues) {
-            try {
-                if (product && product.id) {
-                    await API.request(`/api/products/${product.id}`, { method: 'PUT', body: JSON.stringify(formValues) });
-                    Swal.fire('Success', 'Product updated', 'success');
-                } else {
-                    await API.request('/api/products', { method: 'POST', body: JSON.stringify(formValues) });
-                    Swal.fire('Success', 'Product added', 'success');
-                }
-                this.loadProducts();
-            } catch (e) {
-                Swal.fire('Error', e.message, 'error');
+    openModal(product = null) {
+        const modal = this.ensureDrawer();
+        const panel = document.getElementById('productDrawerPanel');
+        const form = document.getElementById('productDrawerForm');
+        if (form) form.reset();
+
+        const isEdit = !!product;
+        document.getElementById('productDrawerTitle').innerText = isEdit ? 'Edit Product' : 'Add New Product';
+        document.getElementById('productDrawerSubmitBtn').innerText = isEdit ? 'Save Changes' : 'Save Product';
+
+        document.getElementById('drawer-p-id').value = isEdit ? product.id : '';
+        document.getElementById('drawer-p-name').value = isEdit ? (product.name || '') : '';
+        document.getElementById('drawer-p-category').value = isEdit ? (product.category || '') : '';
+        document.getElementById('drawer-p-version').value = isEdit ? (product.version || '') : '';
+        document.getElementById('drawer-p-sku').value = isEdit ? (product.sku || '') : '';
+        document.getElementById('drawer-p-status').value = isEdit ? (product.status || 'Active') : 'Active';
+        document.getElementById('drawer-p-desc').value = isEdit ? (product.description || '') : '';
+        document.getElementById('drawer-p-setup').value = isEdit ? (product.setupFee || product.onceOffPrice || '') : '';
+        document.getElementById('drawer-p-monthly').value = isEdit ? (product.monthlyFee || '') : '';
+        document.getElementById('drawer-p-renewal').value = isEdit ? (product.renewalPrice || '') : '';
+        document.getElementById('drawer-p-link').value = isEdit ? (product.downloadLink || '') : '';
+        document.getElementById('drawer-p-support').value = isEdit ? (product.supportPeriod || '') : '';
+
+        modal.classList.remove('hidden');
+        setTimeout(() => {
+            if (panel) panel.classList.remove('translate-x-full');
+        }, 10);
+    },
+
+    closeModal() {
+        const modal = document.getElementById('productDrawerModal');
+        const panel = document.getElementById('productDrawerPanel');
+        if (panel) panel.classList.add('translate-x-full');
+        setTimeout(() => {
+            if (modal) modal.classList.add('hidden');
+        }, 300);
+    },
+
+    async saveProduct(e) {
+        e.preventDefault();
+        const id = document.getElementById('drawer-p-id').value;
+        const submitBtn = document.getElementById('productDrawerSubmitBtn');
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Saving...';
+
+        const productData = {
+            name: document.getElementById('drawer-p-name').value.trim(),
+            category: document.getElementById('drawer-p-category').value.trim(),
+            version: document.getElementById('drawer-p-version').value.trim(),
+            sku: document.getElementById('drawer-p-sku').value.trim(),
+            status: document.getElementById('drawer-p-status').value,
+            description: document.getElementById('drawer-p-desc').value.trim(),
+            setupFee: document.getElementById('drawer-p-setup').value,
+            onceOffPrice: document.getElementById('drawer-p-setup').value,
+            monthlyFee: document.getElementById('drawer-p-monthly').value,
+            renewalPrice: document.getElementById('drawer-p-renewal').value,
+            downloadLink: document.getElementById('drawer-p-link').value.trim(),
+            supportPeriod: document.getElementById('drawer-p-support').value.trim()
+        };
+
+        try {
+            if (id) {
+                await API.request(`/api/products/${id}`, { method: 'PUT', body: JSON.stringify(productData) });
+                if (typeof app !== 'undefined' && app.logActivity) app.logActivity(`Updated Product: ${productData.name}`);
+                Swal.fire({ icon: 'success', title: 'Updated!', text: 'Product updated successfully', timer: 1500, showConfirmButton: false });
+            } else {
+                await API.request('/api/products', { method: 'POST', body: JSON.stringify(productData) });
+                if (typeof app !== 'undefined' && app.logActivity) app.logActivity(`Added Product: ${productData.name}`);
+                Swal.fire({ icon: 'success', title: 'Created!', text: 'Product added successfully', timer: 1500, showConfirmButton: false });
             }
+            this.closeModal();
+            this.loadProducts();
+            if (typeof app !== 'undefined' && app.loadDashboardData) app.loadDashboardData();
+        } catch (err) {
+            Swal.fire({ icon: 'error', title: 'Error', text: err.message });
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = id ? 'Save Changes' : 'Save Product';
         }
     },
 
@@ -142,9 +248,23 @@ const productsManager = {
     },
 
     async deleteProduct(id) {
-        if (confirm("Are you sure?")) {
-            await API.request(`/api/products/${id}`, { method: 'DELETE' });
-            this.loadProducts();
+        const result = await Swal.fire({
+            title: 'Are you sure?',
+            text: "This product will be permanently deleted.",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Yes, delete it!'
+        });
+        if (result.isConfirmed) {
+            try {
+                await API.request(`/api/products/${id}`, { method: 'DELETE' });
+                Swal.fire({ icon: 'success', title: 'Deleted', text: 'Product deleted', timer: 1500, showConfirmButton: false });
+                this.loadProducts();
+            } catch (e) {
+                Swal.fire('Error', e.message, 'error');
+            }
         }
     }
 };
