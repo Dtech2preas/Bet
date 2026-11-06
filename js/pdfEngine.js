@@ -322,7 +322,7 @@ const pdfEngine = {
             let bizY = bottomSectionY + 6;
             doc.setFontSize(10);
             doc.setFont('helvetica', 'normal');
-            doc.text("Email: dtech2services@gmail.com", 196, bizY, { align: 'right' });
+            doc.text("Email: info@dtech-services.co.za", 196, bizY, { align: 'right' });
             bizY += 5;
             doc.text("WhatsApp: 0670015423", 196, bizY, { align: 'right' });
             bizY += 5;
