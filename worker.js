@@ -460,8 +460,9 @@ export default {
 
           let amount = 0;
           let pendingPayments = {};
-          // Only allow test tokens if a special environment variable is set
-          let isTestEnvironment = env.ALLOW_TEST_TOKENS === 'true';
+          // Allow test tokens if ALLOW_TEST_TOKENS is set OR if still using development test keys (sk_test_)
+          const yocoKey = env.YOCO_SECRET_KEY || 'sk_test_3f5bc6d3V45ZM476554422498e8a';
+          let isTestEnvironment = env.ALLOW_TEST_TOKENS === 'true' || yocoKey.startsWith('sk_test_');
           let isTestToken = isTestEnvironment && (token === 'TEST_PRO_TOKEN' || token === 'TEST_PREMIUM_TOKEN');
 
           if (isTestToken) {
