@@ -540,6 +540,275 @@ const pdfEngine = {
         }
     }
 };
+
+pdfEngine.generateIncomeStatementPDF = function(transactions, startDate, endDate) {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+
+    let businessName = "Business Portal";
+    const userStr = localStorage.getItem('dtech_user');
+    if (userStr) {
+        try {
+            const u = JSON.parse(userStr);
+            if (u.businessName) businessName = u.businessName;
+        } catch(e) {}
+    }
+
+    let revenue = 0;
+    let cogs = 0;
+    let expenses = 0;
+
+    const revData = [];
+    const expData = [];
+    const cogsData = [];
+
+    // Aggregate by category
+    const categoryTotals = {};
+    (transactions || []).forEach(t => {
+        const cat = t.category || 'Uncategorized';
+        if (!categoryTotals[cat]) {
+            categoryTotals[cat] = { total: 0, type: t.type };
+        }
+        categoryTotals[cat].total += parseFloat(t.amount || 0);
+    });
+
+    for (const [cat, data] of Object.entries(categoryTotals)) {
+        if (data.type === 'Income') {
+            revenue += data.total;
+            revData.push([cat, `R ${data.total.toFixed(2)}`]);
+        } else if (cat === 'Cost of Goods Sold') {
+            cogs += data.total;
+            cogsData.push([cat, `R ${data.total.toFixed(2)}`]);
+        } else if (data.type === 'Expense') {
+            expenses += data.total;
+            expData.push([cat, `R ${data.total.toFixed(2)}`]);
+        }
+    }
+
+    const grossProfit = revenue - cogs;
+    const netProfit = grossProfit - expenses;
+
+    // Header styling
+    doc.setFontSize(16);
+    doc.setFont('helvetica', 'bold');
+    doc.text(businessName, 14, 18);
+    doc.setFontSize(20);
+    doc.setTextColor(30, 58, 138);
+    doc.text('Income Statement', 14, 28);
+    doc.setTextColor(100, 100, 100);
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`For the period: ${startDate} to ${endDate}`, 14, 35);
+    doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 40);
+    doc.setTextColor(0, 0, 0);
+
+    let startY = 48;
+
+    // Revenue Section
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Revenue', 14, startY - 2);
+    doc.autoTable({
+        startY: startY,
+        head: [['Account / Category', 'Amount (ZAR)']],
+        body: revData.length > 0 ? revData : [['No Revenue Recorded', 'R 0.00']],
+        theme: 'grid',
+        headStyles: { fillColor: [41, 128, 185] }
+    });
+
+    // COGS
+    if (cogsData.length > 0) {
+        startY = doc.lastAutoTable.finalY + 10;
+        doc.text('Cost of Goods Sold', 14, startY - 2);
+        doc.autoTable({
+            startY: startY,
+            head: [['Account / Category', 'Amount (ZAR)']],
+            body: cogsData,
+            theme: 'grid',
+            headStyles: { fillColor: [41, 128, 185] }
+        });
+    }
+
+    startY = doc.lastAutoTable.finalY + 10;
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.text(`Gross Profit: R ${grossProfit.toFixed(2)}`, 14, startY);
+
+    // Expenses Section
+    startY += 15;
+    doc.setFont('helvetica', 'bold');
+    doc.text('Operating Expenses', 14, startY - 2);
+    doc.autoTable({
+        startY: startY,
+        head: [['Account / Category', 'Amount (ZAR)']],
+        body: expData.length > 0 ? expData : [['No Expenses Recorded', 'R 0.00']],
+        theme: 'grid',
+        headStyles: { fillColor: [192, 57, 43] }
+    });
+
+    startY = doc.lastAutoTable.finalY + 15;
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    if (netProfit >= 0) {
+        doc.setTextColor(39, 174, 96);
+    } else {
+        doc.setTextColor(192, 57, 43);
+    }
+    doc.text(`Net Profit / (Loss): R ${netProfit.toFixed(2)}`, 14, startY);
+    doc.setTextColor(0, 0, 0);
+
+    const cleanName = `Income_Statement_${startDate}_to_${endDate}.pdf`;
+    if (window.Capacitor && window.Capacitor.isNativePlatform()) {
+        const base64 = doc.output('datauristring').split(',')[1];
+        saveFileNative(base64, cleanName);
+    } else {
+        doc.save(cleanName);
+    }
+};
+
+pdfEngine.generateBalanceSheetPDF = function(transactions, asOfDate) {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+
+    let businessName = "Business Portal";
+    const userStr = localStorage.getItem('dtech_user');
+    if (userStr) {
+        try {
+            const u = JSON.parse(userStr);
+            if (u.businessName) businessName = u.businessName;
+        } catch(e) {}
+    }
+
+    let assets = 0;
+    let liabilities = 0;
+    let equity = 0;
+    let netIncome = 0;
+
+    const assetData = [];
+    const liabilityData = [];
+    const equityData = [];
+
+    const categoryTotals = {};
+    (transactions || []).forEach(t => {
+        const cat = t.category || 'Uncategorized';
+        let accntType = 'Expense';
+        if (typeof financialsManager !== 'undefined' && financialsManager.chartOfAccounts) {
+            const accDef = financialsManager.chartOfAccounts.find(a => a.name === cat);
+            if (accDef) accntType = accDef.type;
+        }
+
+        if (!categoryTotals[cat]) {
+            categoryTotals[cat] = { total: 0, type: accntType };
+        }
+
+        const amt = parseFloat(t.amount || 0);
+        if (accntType === 'Income') categoryTotals[cat].total += amt;
+        else if (accntType === 'Expense') categoryTotals[cat].total += amt;
+        else if (accntType === 'Asset') {
+            if (t.type === 'Income') categoryTotals[cat].total += amt;
+            else categoryTotals[cat].total -= amt;
+        }
+        else if (accntType === 'Liability' || accntType === 'Equity') {
+            if (t.type === 'Income') categoryTotals[cat].total += amt;
+            else categoryTotals[cat].total -= amt;
+        }
+    });
+
+    for (const [cat, data] of Object.entries(categoryTotals)) {
+        if (data.type === 'Asset') {
+            assets += data.total;
+            assetData.push([cat, `R ${data.total.toFixed(2)}`]);
+        } else if (data.type === 'Liability') {
+            liabilities += data.total;
+            liabilityData.push([cat, `R ${data.total.toFixed(2)}`]);
+        } else if (data.type === 'Equity') {
+            equity += data.total;
+            equityData.push([cat, `R ${data.total.toFixed(2)}`]);
+        } else if (data.type === 'Income') {
+            netIncome += data.total;
+        } else if (data.type === 'Expense') {
+            netIncome -= data.total;
+        }
+    }
+
+    equity += netIncome;
+    equityData.push(['Retained Earnings (Net Income)', `R ${netIncome.toFixed(2)}`]);
+
+    doc.setFontSize(16);
+    doc.setFont('helvetica', 'bold');
+    doc.text(businessName, 14, 18);
+    doc.setFontSize(20);
+    doc.setTextColor(30, 58, 138);
+    doc.text('Balance Sheet', 14, 28);
+    doc.setTextColor(100, 100, 100);
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`As of: ${asOfDate}`, 14, 35);
+    doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 40);
+    doc.setTextColor(0, 0, 0);
+
+    let startY = 48;
+
+    // Assets
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Assets', 14, startY - 2);
+    doc.autoTable({
+        startY: startY,
+        head: [['Account / Asset Category', 'Amount (ZAR)']],
+        body: assetData.length > 0 ? assetData : [['No Assets Recorded', 'R 0.00']],
+        theme: 'grid',
+        headStyles: { fillColor: [39, 174, 96] }
+    });
+
+    startY = doc.lastAutoTable.finalY + 10;
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.text(`Total Assets: R ${assets.toFixed(2)}`, 14, startY);
+
+    // Liabilities
+    startY += 15;
+    doc.text('Liabilities', 14, startY - 2);
+    doc.autoTable({
+        startY: startY,
+        head: [['Account / Liability Category', 'Amount (ZAR)']],
+        body: liabilityData.length > 0 ? liabilityData : [['No Liabilities Recorded', 'R 0.00']],
+        theme: 'grid',
+        headStyles: { fillColor: [192, 57, 43] }
+    });
+
+    startY = doc.lastAutoTable.finalY + 10;
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.text(`Total Liabilities: R ${liabilities.toFixed(2)}`, 14, startY);
+
+    // Equity
+    startY += 15;
+    doc.text('Equity', 14, startY - 2);
+    doc.autoTable({
+        startY: startY,
+        head: [['Account / Equity Category', 'Amount (ZAR)']],
+        body: equityData,
+        theme: 'grid',
+        headStyles: { fillColor: [142, 68, 173] }
+    });
+
+    startY = doc.lastAutoTable.finalY + 10;
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.text(`Total Equity: R ${equity.toFixed(2)}`, 14, startY);
+
+    startY += 10;
+    doc.text(`Total Liabilities & Equity: R ${(liabilities + equity).toFixed(2)}`, 14, startY);
+
+    const cleanName = `Balance_Sheet_${asOfDate}.pdf`;
+    if (window.Capacitor && window.Capacitor.isNativePlatform()) {
+        const base64 = doc.output('datauristring').split(',')[1];
+        saveFileNative(base64, cleanName);
+    } else {
+        doc.save(cleanName);
+    }
+};
 async function saveFileNative(base64Data, filename) {
     try {
         const { Filesystem, Share } = window.Capacitor.Plugins;

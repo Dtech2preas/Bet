@@ -30,6 +30,18 @@ const app = {
             financialsManager.loadTransactions();
             financialsManager.switchTab('ledger');
         }
+        else if (path.includes('financials-config.html')) {
+            if (typeof financialsManager !== 'undefined') {
+                financialsManager.loadFinancialSettings().then(() => {
+                    financialsManager.renderConfigTab();
+                });
+            }
+        }
+        else if (path.includes('csv-upload.html')) {
+            if (typeof financialsManager !== 'undefined') {
+                financialsManager.loadFinancialSettings();
+            }
+        }
         else if (path.includes('dashboard.html')) this.loadDashboardData();
         else if (path.includes('plan.html') && typeof planManager !== 'undefined') planManager.loadPlanData();
 

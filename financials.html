@@ -111,47 +111,111 @@
 </div>
 <!-- FINANCIALS SECTION -->
 <section class="animate-fade-in p-4 md:p-8" id="section-financials">
-<div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
+<div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
 <div>
 <h2 class="text-2xl font-bold text-gray-800 dark:text-white">Financials &amp; Reports</h2>
 <p class="text-gray-600 dark:text-gray-400">Manage transactions, reconcile statements, and generate CIPC/SARS reports.</p>
 </div>
-<div class="mt-4 md:mt-0 flex gap-2">
-<button class="btn-primary" onclick="financialsManager.openTransactionModal()">
-<i class="fas fa-plus mr-2"></i> Add Transaction
-                    </button>
+<div class="mt-4 md:mt-0 flex flex-wrap gap-2">
+<button class="btn-primary" onclick="financialsManager.openTransactionDrawer()">
+<i class="fas fa-plus mr-1.5"></i> Add Transaction
+</button>
 <button class="bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-dark-card dark:text-white dark:hover:bg-gray-700 px-4 py-2 rounded-md font-medium transition-colors" onclick="app.showSection('csv-upload')">
-<i class="fas fa-file-csv mr-2"></i> Upload CSV
-                    </button>
+<i class="fas fa-file-csv mr-1.5"></i> Import CSV
+</button>
+<button class="bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-dark-card dark:text-white dark:hover:bg-gray-700 px-4 py-2 rounded-md font-medium transition-colors" onclick="app.showSection('financials-config')">
+<i class="fas fa-cog mr-1.5"></i> Configuration
+</button>
 </div>
 </div>
+
+<!-- Financial Health Summary Cards -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+    <div class="bg-white dark:bg-dark-card p-5 rounded-xl border dark:border-dark-border shadow-sm">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Total Inflow (Income)</p>
+                <h3 class="text-2xl font-bold text-green-600 dark:text-green-400 mt-1" id="summary-total-in">R 0.00</h3>
+            </div>
+            <div class="w-11 h-11 rounded-lg bg-green-50 dark:bg-green-950/40 text-green-600 dark:text-green-400 flex items-center justify-center text-lg">
+                <i class="fas fa-arrow-down"></i>
+            </div>
+        </div>
+        <p class="text-xs text-gray-400 mt-2">Money received for period</p>
+    </div>
+
+    <div class="bg-white dark:bg-dark-card p-5 rounded-xl border dark:border-dark-border shadow-sm">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Total Outflow (Expenses)</p>
+                <h3 class="text-2xl font-bold text-red-600 dark:text-red-400 mt-1" id="summary-total-out">R 0.00</h3>
+            </div>
+            <div class="w-11 h-11 rounded-lg bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400 flex items-center justify-center text-lg">
+                <i class="fas fa-arrow-up"></i>
+            </div>
+        </div>
+        <p class="text-xs text-gray-400 mt-2">Total spent on operations &amp; COGS</p>
+    </div>
+
+    <div class="bg-white dark:bg-dark-card p-5 rounded-xl border dark:border-dark-border shadow-sm">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Net Cashflow / Profit</p>
+                <h3 class="text-2xl font-bold text-green-600 dark:text-green-400 mt-1" id="summary-net-profit">R 0.00</h3>
+            </div>
+            <div class="w-11 h-11 rounded-lg bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 flex items-center justify-center text-lg">
+                <i class="fas fa-balance-scale"></i>
+            </div>
+        </div>
+        <p class="text-xs text-gray-400 mt-2">Operating profit after expenses</p>
+    </div>
+
+    <div class="bg-white dark:bg-dark-card p-5 rounded-xl border dark:border-dark-border shadow-sm">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Transactions</p>
+                <h3 class="text-2xl font-bold text-gray-900 dark:text-gray-100 mt-1" id="summary-tx-count">0</h3>
+            </div>
+            <div class="w-11 h-11 rounded-lg bg-purple-50 dark:bg-purple-950/40 text-purple-600 dark:text-purple-400 flex items-center justify-center text-lg">
+                <i class="fas fa-receipt"></i>
+            </div>
+        </div>
+        <div class="mt-2">
+            <span id="summary-uncat-badge" class="hidden text-xs px-2 py-0.5 rounded-full bg-yellow-100 dark:bg-yellow-900/40 text-yellow-800 dark:text-yellow-300 font-medium">0 uncategorized</span>
+        </div>
+    </div>
+</div>
+
 <!-- Tabs -->
 <div class="border-b border-gray-200 dark:border-dark-border mb-6">
-<nav class="-mb-px flex space-x-8">
-<button class="border-dtech-500 text-dtech-600 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm" id="btn-tab-ledger" onclick="financialsManager.switchTab('ledger')">
-                        Transaction Ledger
-                    </button>
-<button class="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:hover:text-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm" id="btn-tab-reports" onclick="financialsManager.switchTab('reports')">
-                        Generate Reports
-                    </button>
-<button class="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:hover:text-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm" id="btn-tab-config" onclick="window.location.href='financials-config.html'">
-                        Configuration
-                    </button>
+<nav class="-mb-px flex space-x-6 sm:space-x-8">
+<button class="border-dtech-500 text-dtech-600 whitespace-nowrap py-3 px-1 border-b-2 font-semibold text-sm flex items-center gap-2" id="btn-tab-ledger" onclick="financialsManager.switchTab('ledger')">
+    <i class="fas fa-list"></i> Transaction Ledger
+</button>
+<button class="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:hover:text-gray-300 whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm flex items-center gap-2" id="btn-tab-reports" onclick="financialsManager.switchTab('reports')">
+    <i class="fas fa-file-invoice-dollar"></i> Generate Reports
+</button>
+<button class="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:hover:text-gray-300 whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm flex items-center gap-2" id="btn-tab-config" onclick="financialsManager.switchTab('config')">
+    <i class="fas fa-cog"></i> Configuration &amp; Rules
+</button>
 </nav>
 </div>
+
 <!-- Ledger Tab -->
 <div id="financials-ledger-tab">
 <div class="mb-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-<div>
-<h3 class="text-lg font-medium text-gray-900 dark:text-gray-100">Transaction History</h3>
-<p class="text-sm text-gray-500">View and manage your categorized transactions.</p>
+<div class="relative w-full md:w-80">
+    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+        <i class="fas fa-search text-sm"></i>
+    </div>
+    <input type="text" id="financials-search-input" oninput="financialsManager.renderLedgerTable()" placeholder="Search transactions, ref, or category..." class="block w-full pl-9 pr-3 py-2 text-sm rounded-md border-gray-300 shadow-sm focus:border-dtech-500 focus:ring-dtech-500 dark:bg-dark-bg dark:border-dark-border dark:text-white">
 </div>
-<div class="flex gap-2 w-full md:w-auto">
+<div class="flex gap-2 w-full md:w-auto items-center">
 <button class="hidden bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md shadow-sm text-sm font-medium transition-colors whitespace-nowrap" id="btn-bulk-delete-transactions" onclick="financialsManager.bulkDeleteTransactions()">
-<i class="fas fa-trash mr-2"></i> Bulk Delete
-                        </button>
-<div class="w-full md:w-64">
-<select class="block w-full rounded-md border-gray-300 shadow-sm focus:border-dtech-500 focus:ring-dtech-500 sm:text-sm dark:bg-dark-bg dark:border-dark-border dark:text-white" id="financials-month-filter" onchange="financialsManager.renderLedgerTable()">
+<i class="fas fa-trash mr-1.5"></i> Bulk Delete
+</button>
+<div class="w-full md:w-56">
+<select class="block w-full rounded-md border-gray-300 shadow-sm focus:border-dtech-500 focus:ring-dtech-500 text-sm py-2 px-3 dark:bg-dark-bg dark:border-dark-border dark:text-white" id="financials-month-filter" onchange="financialsManager.renderLedgerTable()">
 <option value="all">All Months</option>
 </select>
 </div>
@@ -163,13 +227,13 @@
 <thead class="bg-gray-50 dark:bg-gray-800/50 hidden md:table-header-group">
 <tr>
 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-10">
-<input class="rounded border-gray-300 text-dtech-600 focus:ring-dtech-500" id="selectAllTransactions" onclick="financialsManager.toggleSelectAll(this)" type="checkbox"/>
+<input class="rounded border-gray-300 text-dtech-600 focus:ring-dtech-500 cursor-pointer" id="selectAllTransactions" onclick="financialsManager.toggleSelectAll(this)" type="checkbox"/>
 </th>
 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
-<th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+<th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
 </tr>
 </thead>
 <tbody class="bg-white dark:bg-dark-card divide-y divide-gray-200 dark:divide-dark-border block md:table-row-group" id="financials-ledger-tbody">
@@ -179,6 +243,7 @@
 </div>
 </div>
 </div>
+
 <!-- Reports Tab -->
 <div class="hidden space-y-6" id="financials-reports-tab">
 <div class="bg-white dark:bg-dark-card rounded-lg shadow-sm border dark:border-dark-border p-6">
@@ -189,7 +254,7 @@
 </div>
 <button class="bg-dtech-600 hover:bg-dtech-700 text-white px-4 py-2 rounded-md shadow-sm text-sm font-medium transition-colors" onclick="financialsManager.generateAnnualReports()">
 <i class="fas fa-magic mr-2"></i> Auto-Generate Now
-                        </button>
+</button>
 </div>
 <div class="overflow-x-auto">
 <table class="min-w-full divide-y divide-gray-200 dark:divide-dark-border mt-4 block md:table">
@@ -230,7 +295,7 @@
 <div class="flex items-end">
 <button class="btn-primary w-full" onclick="financialsManager.generateIncomeStatement()">
 <i class="fas fa-download mr-2"></i> Generate PDF
-                            </button>
+</button>
 </div>
 </div>
 </div>
@@ -253,16 +318,72 @@
 <div class="flex items-end">
 <button class="btn-primary w-full" onclick="financialsManager.generateBalanceSheet()">
 <i class="fas fa-download mr-2"></i> Generate PDF
-                            </button>
+</button>
 </div>
 </div>
 </div>
 </div>
+
+<!-- Configuration Tab -->
+<div class="hidden space-y-6" id="financials-config-tab">
+<!-- Financial Year Settings -->
+<div class="bg-white dark:bg-dark-card rounded-lg shadow-sm border dark:border-dark-border p-6">
+<h3 class="text-lg font-bold text-gray-800 dark:text-white mb-2">Financial Settings</h3>
+<p class="text-sm text-gray-500 mb-4">Configure your financial year start month to enable auto-generation of annual reports.</p>
+<div class="flex flex-col md:flex-row gap-4 max-w-lg">
+<div class="flex-1">
+<label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Financial Year Start Month</label>
+<select class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-dtech-500 focus:ring-dtech-500 sm:text-sm dark:bg-dark-bg dark:border-dark-border dark:text-white" id="config-fy-month">
+<option value="1">January</option>
+<option value="2">February</option>
+<option selected="" value="3">March</option>
+<option value="4">April</option>
+<option value="5">May</option>
+<option value="6">June</option>
+<option value="7">July</option>
+<option value="8">August</option>
+<option value="9">September</option>
+<option value="10">October</option>
+<option value="11">November</option>
+<option value="12">December</option>
+</select>
+</div>
+<div class="flex items-end">
+<button class="bg-dtech-600 text-white px-4 py-2 rounded-md hover:bg-dtech-700 text-sm font-medium w-full" onclick="financialsManager.saveFinancialSettings()">Save Settings</button>
+</div>
+</div>
+</div>
+<!-- Auto-Categorization Rules -->
+<div class="bg-white dark:bg-dark-card rounded-lg shadow-sm border dark:border-dark-border p-6">
+<div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
+<div>
+<h3 class="text-lg font-bold text-gray-800 dark:text-white">Auto-Categorization Rules</h3>
+<p class="text-sm text-gray-500">Map specific transaction descriptions to categories automatically during CSV uploads.</p>
+</div>
+<button type="button" class="btn-primary text-sm flex items-center gap-1.5" onclick="financialsManager.openRuleDrawer()">
+<i class="fas fa-plus"></i> Add Rule
+</button>
+</div>
+<div class="overflow-x-auto">
+<table class="min-w-full divide-y divide-gray-200 dark:divide-dark-border block md:table">
+<thead class="bg-gray-50 dark:bg-gray-800/50 hidden md:table-header-group">
+<tr>
+<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description Match (Contains)</th>
+<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
+<th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+</tr>
+</thead>
+<tbody class="bg-white dark:bg-dark-card divide-y divide-gray-200 dark:divide-dark-border block md:table-row-group" id="config-mappings-tbody">
+<!-- Populated by JS -->
+</tbody>
+</table>
+</div>
+</div>
+</div>
+
 </section>
-<!-- CSV UPLOAD SECTION -->
-<!-- FINANCIALS CONFIG SECTION -->
 </main>
-<!-- Client Modal (Hidden) -->
+
 <!-- Reconcile Modal -->
 <div class="fixed inset-0 bg-black bg-opacity-50 hidden items-start md:items-center justify-center z-50 overflow-y-auto p-4 md:p-0" id="reconcileModal">
 <div class="bg-white dark:bg-dark-card rounded-lg shadow-xl w-full max-w-4xl mx-auto my-4 md:my-8 flex flex-col max-h-[90vh]">
@@ -281,123 +402,6 @@
 <div class="flex justify-end gap-3 p-6 border-t border-gray-200 dark:border-dark-border flex-shrink-0 bg-white dark:bg-dark-card rounded-b-lg">
 <button class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 dark:bg-dark-card dark:text-gray-300 dark:border-dark-border dark:hover:bg-gray-800 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-dtech-500" onclick="financialsManager.closeReconcileModal()" type="button">Cancel</button>
 <button class="btn-primary" onclick="financialsManager.saveReconciled()" type="button">Save Reconciled</button>
-</div>
-</div>
-</div>
-<div class="fixed inset-0 bg-black bg-opacity-50 hidden items-start md:items-center justify-center z-50 overflow-y-auto" id="clientModal">
-<div class="bg-white dark:bg-dark-card rounded-lg shadow-xl w-[min(95%,56rem)] mx-auto my-8 overflow-hidden">
-<div class="px-6 py-4 border-b dark:border-dark-border flex justify-between items-center sticky top-0 bg-white dark:bg-dark-card z-10">
-<h3 class="text-lg font-medium" id="clientModalTitle">Add New Client</h3>
-<button class="text-gray-400 hover:text-gray-500" onclick="clientsManager.closeModal()">
-<i class="fas fa-times"></i>
-</button>
-</div>
-<form class="p-6" id="clientForm">
-<input id="clientId" type="hidden"/>
-<!-- Basic Info -->
-<h4 class="text-md font-semibold mb-4 border-b pb-2">Basic Info</h4>
-<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-<div>
-<label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Company Name *</label>
-<input class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm focus:border-dtech-500 focus:ring-dtech-500 sm:text-sm px-3 py-2 border" id="clientCompany" required="" type="text"/>
-</div>
-<div>
-<label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Company Reg Number</label>
-<input class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm focus:border-dtech-500 focus:ring-dtech-500 sm:text-sm px-3 py-2 border" id="clientRegNum" type="text"/>
-</div>
-<div>
-<label class="block text-sm font-medium text-gray-700 dark:text-gray-300">VAT Number</label>
-<input class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm focus:border-dtech-500 focus:ring-dtech-500 sm:text-sm px-3 py-2 border" id="clientVatNum" type="text"/>
-</div>
-<div>
-<label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Industry</label>
-<input class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm focus:border-dtech-500 focus:ring-dtech-500 sm:text-sm px-3 py-2 border" id="clientIndustry" type="text"/>
-</div>
-<div>
-<label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Website</label>
-<input class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm focus:border-dtech-500 focus:ring-dtech-500 sm:text-sm px-3 py-2 border" id="clientWebsite" type="url"/>
-</div>
-<div>
-<label class="block text-sm font-medium text-gray-700 dark:text-gray-300">LinkedIn</label>
-<input class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm focus:border-dtech-500 focus:ring-dtech-500 sm:text-sm px-3 py-2 border" id="clientLinkedin" type="url"/>
-</div>
-<div>
-<label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Status</label>
-<select class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm focus:border-dtech-500 focus:ring-dtech-500 sm:text-sm px-3 py-2 border" id="clientStatus">
-<option value="Active">Active</option>
-<option value="Inactive">Inactive</option>
-<option value="Archived">Archived</option>
-</select>
-</div>
-</div>
-<!-- Addresses -->
-<h4 class="text-md font-semibold mb-4 border-b pb-2">Addresses</h4>
-<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-<div>
-<label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Physical Address</label>
-<textarea class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm focus:border-dtech-500 focus:ring-dtech-500 sm:text-sm px-3 py-2 border" id="clientPhysicalAddress" rows="2"></textarea>
-</div>
-<div>
-<label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Postal Address</label>
-<textarea class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm focus:border-dtech-500 focus:ring-dtech-500 sm:text-sm px-3 py-2 border" id="clientPostalAddress" rows="2"></textarea>
-</div>
-</div>
-<!-- Contacts -->
-<h4 class="text-md font-semibold mb-4 border-b pb-2">Contacts</h4>
-<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-<div>
-<label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Primary Contact Person</label>
-<input class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm focus:border-dtech-500 focus:ring-dtech-500 sm:text-sm px-3 py-2 border" id="clientContact" type="text"/>
-</div>
-<div>
-<label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Primary Email *</label>
-<input class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm focus:border-dtech-500 focus:ring-dtech-500 sm:text-sm px-3 py-2 border" id="clientEmail" required="" type="email"/>
-</div>
-<div>
-<label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Primary Phone</label>
-<input class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm focus:border-dtech-500 focus:ring-dtech-500 sm:text-sm px-3 py-2 border" id="clientPhone" type="text"/>
-</div>
-<div>
-<label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Preferred Contact Method</label>
-<select class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm focus:border-dtech-500 focus:ring-dtech-500 sm:text-sm px-3 py-2 border" id="clientPreferredContact">
-<option value="Email">Email</option>
-<option value="Phone">Phone</option>
-<option value="WhatsApp">WhatsApp</option>
-</select>
-</div>
-<div class="md:col-span-2">
-<label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Billing Contact (Name/Email/Phone)</label>
-<input class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm focus:border-dtech-500 focus:ring-dtech-500 sm:text-sm px-3 py-2 border" id="clientBillingContact" placeholder="e.g. Jane Doe, jane@example.com, +123456789" type="text"/>
-</div>
-<div class="md:col-span-2">
-<label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Technical Contact (Name/Email/Phone)</label>
-<input class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm focus:border-dtech-500 focus:ring-dtech-500 sm:text-sm px-3 py-2 border" id="clientTechContact" placeholder="e.g. John Smith, john@example.com, +123456789" type="text"/>
-</div>
-<div class="md:col-span-2">
-<label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Notes</label>
-<textarea class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm focus:border-dtech-500 focus:ring-dtech-500 sm:text-sm px-3 py-2 border" id="clientNotes" rows="3"></textarea>
-</div>
-</div>
-<div class="mt-6 flex justify-end space-x-3 border-t dark:border-dark-border pt-4">
-<button class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700" onclick="clientsManager.closeModal()" type="button">Cancel</button>
-<button class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-dtech-600 hover:bg-dtech-700" id="saveClientBtn" type="submit">Save Client</button>
-</div>
-</form>
-</div>
-</div>
-<!-- Client Details Overlay / Slide-in (Hidden) -->
-<div class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 overflow-hidden" id="clientDetailsModal">
-<div class="absolute inset-y-0 right-0 max-w-full flex">
-<div class="w-screen max-w-3xl bg-white dark:bg-dark-card shadow-xl h-full flex flex-col transform transition-transform translate-x-full" id="clientDetailsPanel">
-<div class="px-6 py-4 border-b dark:border-dark-border flex justify-between items-center bg-gray-50 dark:bg-gray-800">
-<h2 class="text-xl font-semibold" id="detailsCompanyName">Client Details</h2>
-<button class="text-gray-400 hover:text-gray-500" onclick="clientsManager.closeDetails()">
-<i class="fas fa-times text-xl"></i>
-</button>
-</div>
-<div class="p-6 overflow-y-auto flex-grow" id="clientDetailsContent">
-<!-- Dynamic details inserted here -->
-</div>
 </div>
 </div>
 </div>
