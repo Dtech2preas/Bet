@@ -772,6 +772,18 @@ export default {
 
         const finalChartData = customChartData || chartData;
 
+        const expenseTransactions = transactions.filter(t => t.type === 'Expense' || Number(t.amount) < 0);
+        let todayExpense = 0;
+        let monthlyExpense = 0;
+        let totalExpense = 0;
+        expenseTransactions.forEach(t => {
+            const amount = Math.abs(Number(t.amount) || 0);
+            const d = new Date(t.date || t.dateAdded);
+            totalExpense += amount;
+            if (d.toDateString() === today) todayExpense += amount;
+            if (d.getMonth() === currentMonth && d.getFullYear() === currentYear) monthlyExpense += amount;
+        });
+
         return jsonResponse({
           success: true,
           stats: {
@@ -783,6 +795,9 @@ export default {
             lastMonthRevenue,
             yearRevenue,
             totalRevenue,
+            todayExpense,
+            monthlyExpense,
+            totalExpense,
             chartData: finalChartData
           },
           chartData: finalChartData

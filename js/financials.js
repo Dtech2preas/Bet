@@ -199,11 +199,7 @@ const financialsManager = {
 
             const sortedMonths = Array.from(uniqueMonths).sort((a, b) => b.localeCompare(a));
 
-            if (monthFilter.options.length <= 1 && sortedMonths.length > 0) {
-                selectedMonth = sortedMonths[0];
-            }
-
-            monthFilter.innerHTML = '<option value="all">All Months</option>' + sortedMonths.map(m => {
+            monthFilter.innerHTML = '<option value="all"' + (selectedMonth === 'all' ? ' selected' : '') + '>All Months</option>' + sortedMonths.map(m => {
                 const dateObj = new Date(`${m}-01`);
                 const monthName = dateObj.toLocaleString('default', { month: 'long', year: 'numeric' });
                 return `<option value="${m}" ${selectedMonth === m ? 'selected' : ''}>${monthName}</option>`;
@@ -867,6 +863,8 @@ const financialsManager = {
         const moneyOutIdx = headers.findIndex(h => h === 'money out' || h === 'debit' || h.includes('debit amount') || h.includes('payment'));
         const amountIdx = headers.findIndex(h => h === 'amount' || h === 'transaction amount');
         const feeIdx = headers.findIndex(h => h === 'fee' || h === 'bank charges' || h.includes('service fee'));
+        const catIdx = headers.findIndex(h => h === 'category' || h.includes('sub-category') || h.includes('sub category'));
+        const parentCatIdx = headers.findIndex(h => h === 'parent category' || h.includes('main category') || (h.includes('category') && h !== 'category'));
 
         if (dateIdx === -1 || descIdx === -1) {
             Swal.fire('Error', 'Could not detect required columns (Date, Description) in the CSV.', 'error');
@@ -928,8 +926,8 @@ const financialsManager = {
                     type = 'Expense';
                 } else if (!isNaN(fee) && fee !== 0) {
                     amount = Math.abs(fee);
-                    type = 'Expense';
-                    desc += ' (Fee)';
+                    type = fee > 0 ? 'Income' : 'Expense';
+                    if (!desc.toLowerCase().includes('fee')) desc += ' (Fee)';
                 }
             } else if (amountIdx !== -1) {
                 // Simple Amount column
@@ -1000,19 +998,38 @@ const financialsManager = {
                 }
             }
 
+            // Extract category if explicitly present in the CSV file (e.g. Capitec, FNB, Absa)
+            let csvCategory = '';
+            if (catIdx !== -1 && columns[catIdx] && columns[catIdx].trim()) {
+                csvCategory = columns[catIdx].trim();
+            } else if (parentCatIdx !== -1 && columns[parentCatIdx] && columns[parentCatIdx].trim()) {
+                csvCategory = columns[parentCatIdx].trim();
+            }
+            if (csvCategory.toLowerCase() === 'uncategorised' || csvCategory.toLowerCase() === 'uncategorized') {
+                csvCategory = '';
+            }
+
             const lowerDesc = desc.toLowerCase();
             if (!autoCategory) {
-                if (lowerDesc.includes('fee')) {
+                if (csvCategory) {
+                    autoCategory = csvCategory;
+                } else if (lowerDesc.includes('fee')) {
                     autoCategory = 'Bank Fees';
-                }
-                // Get saved mappings
-                const savedMappings = this.settings.mappings || {};
-                for (const [key, cat] of Object.entries(savedMappings)) {
-                    if (lowerDesc.includes(key.toLowerCase())) {
-                        autoCategory = cat;
-                        break;
+                } else {
+                    // Get saved mappings
+                    const savedMappings = this.settings.mappings || {};
+                    for (const [key, cat] of Object.entries(savedMappings)) {
+                        if (lowerDesc.includes(key.toLowerCase())) {
+                            autoCategory = cat;
+                            break;
+                        }
                     }
                 }
+            }
+
+            // Fallback for income deposits without category
+            if (!autoCategory && type === 'Income') {
+                autoCategory = 'Sales / Services Revenue';
             }
 
             if (!isNaN(amount) && amount !== 0) {
@@ -1563,11 +1580,11 @@ const financialsManager = {
                 body: JSON.stringify(txPayload)
             });
 
-            if (batchResponse && batchResponse.success) {
+            if (batchResponse && batchResponse.success && (batchResponse.count || Array.isArray(batchResponse.items))) {
                 successCount = txPayload.length;
                 updateProgress(65, 'Transactions stored in ledger!', `Committed all ${successCount} transactions cleanly in 1 KV write`, 'fas fa-check-circle text-green-500');
             } else {
-                // Fallback to sequential if batch not accepted
+                // Fallback to sequential if batch array is not unwrapped by current backend
                 for (let i = 0; i < txPayload.length; i++) {
                     const t = txPayload[i];
                     try {

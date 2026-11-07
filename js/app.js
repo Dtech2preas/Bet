@@ -217,17 +217,55 @@ const app = {
         try {
             const data = await API.request('/api/dashboard');
             if (data.success && data.stats) {
-                if (document.getElementById('stat-clients')) document.getElementById('stat-clients').innerText = data.stats.totalClients;
-                if (document.getElementById('stat-licenses')) document.getElementById('stat-licenses').innerText = data.stats.activeLicenses;
-                // Formatting currency
-                if (document.getElementById('stat-today-rev')) document.getElementById('stat-today-rev').innerText = 'R ' + (data.stats.todayRevenue || 0).toLocaleString();
-                if (document.getElementById('stat-week-rev')) document.getElementById('stat-week-rev').innerText = 'R ' + (data.stats.weekRevenue || 0).toLocaleString();
-                if (document.getElementById('stat-monthly-rev')) document.getElementById('stat-monthly-rev').innerText = 'R ' + (data.stats.monthlyRevenue || 0).toLocaleString();
-                if (document.getElementById('stat-last-month-rev')) document.getElementById('stat-last-month-rev').innerText = 'R ' + (data.stats.lastMonthRevenue || 0).toLocaleString();
-                if (document.getElementById('stat-year-rev')) document.getElementById('stat-year-rev').innerText = 'R ' + (data.stats.yearRevenue || 0).toLocaleString();
-                if (document.getElementById('stat-total-rev')) document.getElementById('stat-total-rev').innerText = 'R ' + (data.stats.totalRevenue || 0).toLocaleString();
+                const stats = { ...data.stats };
 
-                const chartData = data.chartData || (data.stats && data.stats.chartData);
+                // Ensure ledger income transactions are counted if current worker hasn't been redeployed
+                try {
+                    const txRes = await API.request('/api/transactions?limit=1000');
+                    if (txRes && txRes.success && txRes.transactions && txRes.transactions.length > 0) {
+                        const txs = txRes.transactions;
+                        const incomeTxs = txs.filter(t => t.type === 'Income' || (Number(t.amount) > 0 && t.type !== 'Expense'));
+                        const totalTxIncome = incomeTxs.reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+
+                        if (totalTxIncome > 0 && (stats.totalRevenue || 0) < totalTxIncome) {
+                            const now = new Date();
+                            const todayStr = now.toDateString();
+                            const currentMonth = now.getMonth();
+                            const currentYear = now.getFullYear();
+
+                            let txToday = 0, txMonth = 0, txYear = 0, txTotal = 0;
+                            incomeTxs.forEach(t => {
+                                const amt = Number(t.amount) || 0;
+                                const d = new Date(t.date || t.dateAdded);
+                                txTotal += amt;
+                                if (!isNaN(d.getTime())) {
+                                    if (d.toDateString() === todayStr) txToday += amt;
+                                    if (d.getMonth() === currentMonth && d.getFullYear() === currentYear) txMonth += amt;
+                                    if (d.getFullYear() === currentYear) txYear += amt;
+                                }
+                            });
+
+                            stats.todayRevenue = (stats.todayRevenue || 0) + txToday;
+                            stats.monthlyRevenue = (stats.monthlyRevenue || 0) + txMonth;
+                            stats.yearRevenue = (stats.yearRevenue || 0) + txYear;
+                            stats.totalRevenue = (stats.totalRevenue || 0) + txTotal;
+                        }
+                    }
+                } catch (txErr) {
+                    console.warn('Could not cross-check transactions for dashboard stats', txErr);
+                }
+
+                if (document.getElementById('stat-clients')) document.getElementById('stat-clients').innerText = stats.totalClients || 0;
+                if (document.getElementById('stat-licenses')) document.getElementById('stat-licenses').innerText = stats.activeLicenses || 0;
+                // Formatting currency
+                if (document.getElementById('stat-today-rev')) document.getElementById('stat-today-rev').innerText = 'R ' + (stats.todayRevenue || 0).toLocaleString();
+                if (document.getElementById('stat-week-rev')) document.getElementById('stat-week-rev').innerText = 'R ' + (stats.weekRevenue || 0).toLocaleString();
+                if (document.getElementById('stat-monthly-rev')) document.getElementById('stat-monthly-rev').innerText = 'R ' + (stats.monthlyRevenue || 0).toLocaleString();
+                if (document.getElementById('stat-last-month-rev')) document.getElementById('stat-last-month-rev').innerText = 'R ' + (stats.lastMonthRevenue || 0).toLocaleString();
+                if (document.getElementById('stat-year-rev')) document.getElementById('stat-year-rev').innerText = 'R ' + (stats.yearRevenue || 0).toLocaleString();
+                if (document.getElementById('stat-total-rev')) document.getElementById('stat-total-rev').innerText = 'R ' + (stats.totalRevenue || 0).toLocaleString();
+
+                const chartData = data.chartData || (stats && stats.chartData);
                 if (chartData) {
                     this._lastChartData = chartData;
                     this.renderChart(chartData);
