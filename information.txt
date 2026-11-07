@@ -1,5 +1,6 @@
 # D-TECH Business Portal - Comprehensive Technical Documentation
 
+
 ## 1. Project Overview
 The D-TECH Business Portal is a full-stack, serverless Customer Relationship Management (CRM) and business management application. Originally conceptualized as strictly an internal tool for "D-TECH staff" to manage software licensing clients, quotations, invoices, contracts, and payments, the application's architecture was significantly expanded to support a multi-tenant Public SaaS mode. This allows independent public businesses to register, log in, and manage their own isolated data using the exact same underlying architecture.
 
