@@ -24,7 +24,12 @@ const API = {
 
         try {
             const response = await fetch(`${API_BASE_URL}${endpoint}`, config);
-            const data = await response.json();
+            let data;
+            try {
+                data = await response.json();
+            } catch (jsonErr) {
+                data = { success: false, message: response.statusText || 'Server communication error. Please try again.' };
+            }
 
             if (!response.ok) {
                 if (response.status === 401 && endpoint !== '/api/login') {

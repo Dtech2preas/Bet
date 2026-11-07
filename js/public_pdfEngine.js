@@ -382,6 +382,8 @@ const pdfEngine = {
                 doc.setFont('helvetica', 'italic');
                 doc.text("Prices are not subject to VAT (Non-VAT vendor).", totalWidth - 14, finalY, { align: 'right' });
             } else {
+                const vatPct = Number(data.vatPct) || 15;
+
                 doc.text("Subtotal:", totalWidth - 50, finalY, { align: 'right' });
                 doc.text(`R ${subtotal.toFixed(2)}`, totalWidth - 14, finalY, { align: 'right' });
 
@@ -390,6 +392,10 @@ const pdfEngine = {
                     doc.text("Discount:", totalWidth - 50, finalY, { align: 'right' });
                     doc.text(`- R ${Number(data.discount).toFixed(2)}`, totalWidth - 14, finalY, { align: 'right' });
                 }
+
+                finalY += 6;
+                doc.text(`VAT (${vatPct}%):`, totalWidth - 50, finalY, { align: 'right' });
+                doc.text(`R ${vatAmt.toFixed(2)}`, totalWidth - 14, finalY, { align: 'right' });
 
                 finalY += 8;
                 doc.setFontSize(12);

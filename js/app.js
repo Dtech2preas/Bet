@@ -16,6 +16,7 @@ const app = {
         }
 
         this.initDarkMode();
+        this.highlightActiveNavLink();
 
         // Load specific data based on current page
         const path = window.location.pathname;
@@ -68,6 +69,18 @@ const app = {
 
     showSection(sectionId) {
         window.location.href = '' + sectionId + '.html';
+    },
+
+    highlightActiveNavLink() {
+        const currentPath = window.location.pathname.split('/').pop() || 'index.html';
+        const navLinks = document.querySelectorAll('#nav-dropdown a');
+        navLinks.forEach(link => {
+            const href = link.getAttribute('href');
+            if (href && (href === currentPath || (currentPath === '' && href.includes('dashboard')))) {
+                link.classList.remove('text-gray-700', 'dark:text-gray-300', 'hover:bg-gray-100', 'dark:hover:bg-gray-800');
+                link.classList.add('bg-dtech-50', 'dark:bg-dtech-900/40', 'text-dtech-600', 'dark:text-dtech-400', 'font-semibold', 'rounded-md');
+            }
+        });
     },
 
 

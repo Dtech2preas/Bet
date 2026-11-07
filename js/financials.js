@@ -816,6 +816,34 @@ const financialsManager = {
             return arr;
         }
 
+        // Normalize South African and standard bank date formats to standard ISO YYYY-MM-DD
+        function normalizeDateToISO(raw) {
+            if (!raw) return new Date().toISOString().split('T')[0];
+            let clean = raw.trim().split(' ')[0]; // remove time component
+            // Already YYYY-MM-DD
+            if (/^\d{4}-\d{2}-\d{2}$/.test(clean)) return clean;
+            // YYYY/MM/DD
+            if (/^\d{4}\/\d{1,2}\/\d{1,2}$/.test(clean)) {
+                const [y, m, d] = clean.split('/');
+                return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+            }
+            // DD/MM/YYYY or DD-MM-YYYY or DD.MM.YYYY
+            const parts = clean.split(/[/.-]/);
+            if (parts.length === 3) {
+                if (parts[0].length === 4) { // YYYY-MM-DD
+                    return `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
+                } else if (parts[2].length === 4) { // DD-MM-YYYY
+                    return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+                }
+            }
+            // Standard parse fallback
+            const dt = new Date(clean);
+            if (!isNaN(dt.getTime())) {
+                return dt.toISOString().split('T')[0];
+            }
+            return clean;
+        }
+
         const lines = csvText.split(/\r?\n/).filter(line => line.trim().length > 0);
         if (lines.length < 2) {
             Swal.fire('Error', 'CSV file appears to be empty or invalid.', 'error');
@@ -824,13 +852,13 @@ const financialsManager = {
 
         const headers = parseCSVRow(lines[0]).map(h => h.trim().toLowerCase());
 
-        // Find indices
-        const dateIdx = headers.findIndex(h => h.includes('posting date') || h.includes('transaction date') || h === 'date');
-        const descIdx = headers.findIndex(h => h === 'description' || h === 'original description');
-        const moneyInIdx = headers.findIndex(h => h === 'money in' || h === 'credit');
-        const moneyOutIdx = headers.findIndex(h => h === 'money out' || h === 'debit');
-        const amountIdx = headers.findIndex(h => h === 'amount');
-        const feeIdx = headers.findIndex(h => h === 'fee');
+        // Find indices with expanded bank header recognition
+        const dateIdx = headers.findIndex(h => h.includes('posting date') || h.includes('transaction date') || h.includes('tx date') || h.includes('date'));
+        const descIdx = headers.findIndex(h => h.includes('description') || h.includes('narrative') || h.includes('details') || h.includes('memo') || h.includes('reference') || h.includes('payee'));
+        const moneyInIdx = headers.findIndex(h => h === 'money in' || h === 'credit' || h.includes('credit amount') || h.includes('deposit'));
+        const moneyOutIdx = headers.findIndex(h => h === 'money out' || h === 'debit' || h.includes('debit amount') || h.includes('payment'));
+        const amountIdx = headers.findIndex(h => h === 'amount' || h === 'transaction amount');
+        const feeIdx = headers.findIndex(h => h === 'fee' || h === 'bank charges' || h.includes('service fee'));
 
         if (dateIdx === -1 || descIdx === -1) {
             Swal.fire('Error', 'Could not detect required columns (Date, Description) in the CSV.', 'error');
@@ -872,9 +900,7 @@ const financialsManager = {
             const columns = parseCSVRow(lines[i]);
             if (columns.length <= Math.max(dateIdx, descIdx)) continue;
 
-            let dateStr = columns[dateIdx] ? columns[dateIdx].trim() : '';
-            // Strip time if present (e.g. 2026-09-01 06:47 -> 2026-09-01)
-            dateStr = dateStr.split(' ')[0];
+            let dateStr = normalizeDateToISO(columns[dateIdx]);
 
             let desc = columns[descIdx] ? columns[descIdx].trim() : '';
             if (!desc) continue; // Skip empty rows
