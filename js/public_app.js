@@ -62,11 +62,28 @@ const app = {
         }
 
         this.initTourUI();
-        const isDashboard = path.includes('dashboard.html') || path === '/' || path.endsWith('/');
-        const isNewUser = localStorage.getItem('dtech_new_user') === 'true';
-        if ((isDashboard || isNewUser) && !localStorage.getItem('portal_tour_completed')) {
-            localStorage.removeItem('dtech_new_user');
-            setTimeout(() => this.showWelcomeTour(false), 500);
+        this.checkActiveTour();
+
+        if (window.location.search.includes('tour=complete')) {
+            window.history.replaceState({}, document.title, window.location.pathname);
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    icon: 'success',
+                    title: '🎉 Walkthrough Complete!',
+                    text: 'You have seen the core flow! You can reopen this guide anytime from the menu.',
+                    timer: 3500,
+                    showConfirmButton: false,
+                    toast: true,
+                    position: 'top-end'
+                });
+            }
+        } else {
+            const isDashboard = path.includes('dashboard.html') || path === '/' || path.endsWith('/');
+            const isNewUser = localStorage.getItem('dtech_new_user') === 'true';
+            if ((isDashboard || isNewUser) && !localStorage.getItem('portal_tour_completed') && !localStorage.getItem('dtech_tour_step')) {
+                localStorage.removeItem('dtech_new_user');
+                setTimeout(() => this.startGuidedTour(), 600);
+            }
         }
     },
 
@@ -902,9 +919,9 @@ async paySubscription(planTier) {
             guideBtn.id = 'headerQuickGuideBtn';
             guideBtn.type = 'button';
             guideBtn.className = 'w-10 h-10 inline-flex items-center justify-center rounded-md text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors mr-1';
-            guideBtn.title = 'Quick Guide / How to use';
-            guideBtn.setAttribute('aria-label', 'Quick Guide / How to use');
-            guideBtn.onclick = () => this.showWelcomeTour(true);
+            guideBtn.title = 'Interactive Walkthrough';
+            guideBtn.setAttribute('aria-label', 'Interactive Walkthrough');
+            guideBtn.onclick = () => this.startGuidedTour();
             guideBtn.innerHTML = '<i class="fas fa-question-circle text-lg text-blue-500"></i>';
             themeBtn.parentNode.insertBefore(guideBtn, themeBtn);
         }
@@ -919,249 +936,253 @@ async paySubscription(planTier) {
             navBtn.onclick = () => {
                 const navDropdown = document.getElementById('nav-dropdown');
                 if (navDropdown) navDropdown.classList.add('hidden');
-                this.showWelcomeTour(true);
+                this.startGuidedTour();
             };
-            navBtn.innerHTML = '<i class="fas fa-question-circle mr-2 w-4 text-center text-blue-500"></i> Quick Guide';
+            navBtn.innerHTML = '<i class="fas fa-question-circle mr-2 w-4 text-center text-blue-500"></i> Interactive Guide';
             logoutBtn.parentNode.insertBefore(navBtn, logoutBtn);
         }
     },
 
-    showWelcomeTour(force = false) {
-        if (!force && localStorage.getItem('portal_tour_completed') === 'true') {
+    getTourSteps() {
+        const isPublic = window.location.pathname.includes('public_');
+        return [
+            {
+                step: 1,
+                page: isPublic ? 'public_dashboard.html' : 'dashboard.html',
+                targetSelector: '#section-dashboard, #stat-monthly-rev, #profile-completeness-widget, main',
+                title: 'Step 1: Your Business Command Center',
+                desc: 'Welcome! This is your Dashboard. Monitor your today, weekly, and monthly revenue, track active clients, view financial health charts, and see recent activity at a glance.',
+                tip: 'Click Next below and we will automatically navigate to Settings so you can configure your business details.',
+                nextBtnText: 'Next: Business Profile →'
+            },
+            {
+                step: 2,
+                page: isPublic ? 'public_settings.html' : 'financials-config.html',
+                targetSelector: isPublic ? '#settingsForm, #settingsLogoFile, #settingsBusinessName' : '#financials-config-rules, main',
+                title: 'Step 2: Business Profile & Banking Details',
+                desc: isPublic
+                    ? 'Here in Settings, upload your company logo, set your South African CIPC registration and SARS VAT numbers, and enter your bank details for EFT payments. Every invoice you generate will automatically use this info.'
+                    : 'Here you configure your company rules, VAT settings, and automated transaction mapping rules.',
+                tip: 'Click Next below to jump straight to Invoices & Quotations.',
+                nextBtnText: 'Next: Invoices & Billing →'
+            },
+            {
+                step: 3,
+                page: isPublic ? 'public_invoices.html' : 'invoices.html',
+                targetSelector: '#invoicesSearchInput, #section-invoices, #invoices-container',
+                title: 'Step 3: Invoicing, Quotes & Instant PDFs',
+                desc: 'Create professional tax invoices and quotations with 1-click South African VAT calculation. Download crisp PDFs, track Paid/Overdue statuses, send reminders, and configure monthly recurring retainers.',
+                tip: 'Click Next to see how bank statement CSVs are reconciled automatically.',
+                nextBtnText: 'Next: Bank Statement Import →'
+            },
+            {
+                step: 4,
+                page: isPublic ? 'public_csv-upload.html' : 'csv-upload.html',
+                targetSelector: '#reconcile-empty-state, #section-csv-upload',
+                title: 'Step 4: Instant Bank Reconciliation',
+                desc: 'Drop your FNB, Capitec, Nedbank, Standard Bank, or Absa CSV statement here. Unpaid invoices are auto-matched, and categorized expenses disappear from the review list so you never have to scroll!',
+                tip: 'Congratulations! You now know the core flow of your business portal.',
+                nextBtnText: 'Finish Walkthrough 🚀'
+            }
+        ];
+    },
+
+    checkActiveTour() {
+        const rawStep = localStorage.getItem('dtech_tour_step');
+        if (!rawStep) return;
+
+        const stepNum = parseInt(rawStep, 10);
+        const steps = this.getTourSteps();
+        const currentStepConfig = steps.find(s => s.step === stepNum);
+        if (!currentStepConfig) {
+            localStorage.removeItem('dtech_tour_step');
             return;
         }
 
-        let modal = document.getElementById('welcomeTourModal');
-        if (!modal) {
-            modal = document.createElement('div');
-            modal.id = 'welcomeTourModal';
-            modal.className = 'fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm transition-opacity duration-300 opacity-0';
-            modal.innerHTML = `
-                <div class="relative w-full max-w-lg bg-white dark:bg-dark-card rounded-2xl shadow-2xl border border-gray-100 dark:border-dark-border overflow-hidden transform transition-all duration-300 scale-95 flex flex-col" id="tourModalCard">
-                    <!-- Top Bar -->
-                    <div class="flex items-center justify-between px-6 pt-5 pb-2">
-                        <span class="text-xs font-bold uppercase tracking-wider text-dtech-600 dark:text-dtech-400 bg-blue-50 dark:bg-blue-950/40 px-2.5 py-1 rounded-full" id="tourStepBadge">
-                            Step 1 of 3
-                        </span>
-                        <div class="flex items-center gap-3">
-                            <button type="button" onclick="app.closeWelcomeTour(true)" class="text-xs font-medium text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition">
-                                Skip Tour
-                            </button>
-                            <button type="button" onclick="app.closeWelcomeTour(true)" class="w-7 h-7 inline-flex items-center justify-center rounded-full text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition">
-                                <i class="fas fa-times text-sm"></i>
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Slide Content Area -->
-                    <div class="px-6 py-4 flex-1">
-                        <!-- Slide 1 -->
-                        <div id="tourSlide1" class="tour-slide space-y-4">
-                            <div class="w-14 h-14 rounded-2xl bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 flex items-center justify-center text-2xl">
-                                <i class="fas fa-store"></i>
-                            </div>
-                            <div>
-                                <h3 class="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">1. Set Up Your Business Profile</h3>
-                                <p class="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1">
-                                    Head over to <strong class="text-gray-800 dark:text-gray-200">Settings</strong> to configure your South African business details:
-                                </p>
-                            </div>
-                            <div class="space-y-2.5 text-xs text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-dark-bg/60 p-4 rounded-xl border border-gray-100 dark:border-dark-border">
-                                <div class="flex items-start gap-2.5">
-                                    <i class="fas fa-check-circle text-green-500 mt-0.5 text-xs flex-shrink-0"></i>
-                                    <span><strong>Upload Company Logo:</strong> Automatically placed on all generated invoices, statements, and quotes.</span>
-                                </div>
-                                <div class="flex items-start gap-2.5">
-                                    <i class="fas fa-check-circle text-green-500 mt-0.5 text-xs flex-shrink-0"></i>
-                                    <span><strong>Add Banking Details:</strong> Bank name, account number &amp; branch code for EFT payments.</span>
-                                </div>
-                                <div class="flex items-start gap-2.5">
-                                    <i class="fas fa-check-circle text-green-500 mt-0.5 text-xs flex-shrink-0"></i>
-                                    <span><strong>Tax &amp; VAT Compliant:</strong> Add your CIPC registration number and SARS VAT number.</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Slide 2 -->
-                        <div id="tourSlide2" class="tour-slide space-y-4 hidden">
-                            <div class="w-14 h-14 rounded-2xl bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-2xl">
-                                <i class="fas fa-file-invoice-dollar"></i>
-                            </div>
-                            <div>
-                                <h3 class="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">2. Invoices &amp; Quotes in 60s</h3>
-                                <p class="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1">
-                                    Quickly bill your clients and download high-resolution PDF documents:
-                                </p>
-                            </div>
-                            <div class="space-y-2.5 text-xs text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-dark-bg/60 p-4 rounded-xl border border-gray-100 dark:border-dark-border">
-                                <div class="flex items-start gap-2.5">
-                                    <i class="fas fa-check-circle text-green-500 mt-0.5 text-xs flex-shrink-0"></i>
-                                    <span><strong>Clients &amp; Products:</strong> Save client profiles and pricing once to generate invoices in seconds.</span>
-                                </div>
-                                <div class="flex items-start gap-2.5">
-                                    <i class="fas fa-check-circle text-green-500 mt-0.5 text-xs flex-shrink-0"></i>
-                                    <span><strong>Instant PDF Engine:</strong> 1-click download of South African VAT-compliant PDF invoices.</span>
-                                </div>
-                                <div class="flex items-start gap-2.5">
-                                    <i class="fas fa-check-circle text-green-500 mt-0.5 text-xs flex-shrink-0"></i>
-                                    <span><strong>Recurring Billing:</strong> Mark as Paid, track overdue balances, and set monthly retainers.</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Slide 3 -->
-                        <div id="tourSlide3" class="tour-slide space-y-4 hidden">
-                            <div class="w-14 h-14 rounded-2xl bg-purple-50 dark:bg-purple-950/50 text-purple-600 dark:text-purple-400 flex items-center justify-center text-2xl">
-                                <i class="fas fa-cloud-arrow-up"></i>
-                            </div>
-                            <div>
-                                <h3 class="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">3. Smart Bank Reconciliation</h3>
-                                <p class="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1">
-                                    Import bank statement CSVs without tedious manual ledger entries:
-                                </p>
-                            </div>
-                            <div class="space-y-2.5 text-xs text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-dark-bg/60 p-4 rounded-xl border border-gray-100 dark:border-dark-border">
-                                <div class="flex items-start gap-2.5">
-                                    <i class="fas fa-check-circle text-green-500 mt-0.5 text-xs flex-shrink-0"></i>
-                                    <span><strong>SA Bank Statements:</strong> Supports FNB, Capitec, Nedbank, Standard Bank, and Absa CSV files.</span>
-                                </div>
-                                <div class="flex items-start gap-2.5">
-                                    <i class="fas fa-check-circle text-green-500 mt-0.5 text-xs flex-shrink-0"></i>
-                                    <span><strong>Auto-Disappearing Rows:</strong> Selecting a category auto-removes items so you never have to scroll.</span>
-                                </div>
-                                <div class="flex items-start gap-2.5">
-                                    <i class="fas fa-check-circle text-green-500 mt-0.5 text-xs flex-shrink-0"></i>
-                                    <span><strong>CIPC &amp; SARS Financials:</strong> Export automated Income Statements and Balance Sheets anytime.</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Footer Controls -->
-                    <div class="px-6 py-4 bg-gray-50 dark:bg-dark-bg/80 border-t border-gray-100 dark:border-dark-border flex items-center justify-between gap-3">
-                        <!-- Step Indicator Dots -->
-                        <div class="flex items-center gap-1.5" id="tourDotsContainer">
-                            <button type="button" onclick="app.setTourStep(1)" class="w-6 h-2 rounded-full bg-dtech-600 dark:bg-dtech-500 transition-all" id="tourDot1"></button>
-                            <button type="button" onclick="app.setTourStep(2)" class="w-2 h-2 rounded-full bg-gray-300 dark:bg-gray-600 transition-all hover:bg-gray-400" id="tourDot2"></button>
-                            <button type="button" onclick="app.setTourStep(3)" class="w-2 h-2 rounded-full bg-gray-300 dark:bg-gray-600 transition-all hover:bg-gray-400" id="tourDot3"></button>
-                        </div>
-
-                        <!-- Action Buttons -->
-                        <div class="flex items-center gap-2">
-                            <button type="button" id="tourPrevBtn" onclick="app.prevTourStep()" class="hidden px-3.5 py-2 text-xs font-semibold rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition">
-                                Back
-                            </button>
-                            <button type="button" id="tourNextBtn" onclick="app.nextTourStep()" class="btn-primary px-4 py-2 text-xs font-semibold flex items-center gap-1.5 shadow-sm">
-                                Next <i class="fas fa-arrow-right text-[10px]"></i>
-                            </button>
-                            <button type="button" id="tourFinishBtn" onclick="app.finishWelcomeTour()" class="hidden btn-primary px-4 py-2 text-xs font-semibold flex items-center gap-1.5 shadow-sm">
-                                Start Exploring <i class="fas fa-rocket text-[10px]"></i>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            `;
-            document.body.appendChild(modal);
+        const currentPath = window.location.pathname.split('/').pop() || 'index.html';
+        if (!currentPath.includes(currentStepConfig.page)) {
+            window.location.href = currentStepConfig.page;
+            return;
         }
 
-        modal.classList.remove('hidden');
-        requestAnimationFrame(() => {
-            modal.classList.remove('opacity-0');
-            const card = document.getElementById('tourModalCard');
-            if (card) card.classList.remove('scale-95');
-        });
-
-        this.setTourStep(1);
+        setTimeout(() => {
+            this.renderTourStepCard(currentStepConfig);
+        }, 400);
     },
 
-    setTourStep(step) {
-        this.currentTourStep = step;
-        for (let i = 1; i <= 3; i++) {
-            const slide = document.getElementById(`tourSlide${i}`);
-            const dot = document.getElementById(`tourDot${i}`);
-            if (slide) {
-                if (i === step) slide.classList.remove('hidden');
-                else slide.classList.add('hidden');
-            }
-            if (dot) {
-                if (i === step) {
-                    dot.className = 'w-6 h-2 rounded-full bg-dtech-600 dark:bg-dtech-500 transition-all';
-                } else {
-                    dot.className = 'w-2 h-2 rounded-full bg-gray-300 dark:bg-gray-600 transition-all hover:bg-gray-400';
+    renderTourStepCard(stepConfig) {
+        if (!document.getElementById('dtech-tour-styles')) {
+            const style = document.createElement('style');
+            style.id = 'dtech-tour-styles';
+            style.innerHTML = `
+                .tour-spotlight-target {
+                    position: relative !important;
+                    z-index: 9998 !important;
+                    box-shadow: 0 0 0 4px #0284c7, 0 0 0 9999px rgba(0, 0, 0, 0.65) !important;
+                    border-radius: 12px !important;
+                    transition: box-shadow 0.3s ease-in-out !important;
                 }
+                @keyframes tour-bounce-arrow {
+                    0%, 100% { transform: translateY(0); }
+                    50% { transform: translateY(-8px); }
+                }
+                .tour-bounce-arrow {
+                    animation: tour-bounce-arrow 1.4s infinite ease-in-out;
+                }
+            `;
+            document.head.appendChild(style);
+        }
+
+        document.querySelectorAll('.tour-spotlight-target').forEach(el => el.classList.remove('tour-spotlight-target'));
+        const oldCard = document.getElementById('dtechTourCard');
+        if (oldCard) oldCard.remove();
+
+        let targetEl = null;
+        const selectors = stepConfig.targetSelector.split(',').map(s => s.trim());
+        for (const sel of selectors) {
+            const el = document.querySelector(sel);
+            if (el && el.offsetParent !== null) {
+                targetEl = el;
+                break;
             }
         }
 
-        const badge = document.getElementById('tourStepBadge');
-        if (badge) badge.textContent = `Step ${step} of 3`;
-
-        const prevBtn = document.getElementById('tourPrevBtn');
-        const nextBtn = document.getElementById('tourNextBtn');
-        const finishBtn = document.getElementById('tourFinishBtn');
-
-        if (prevBtn) {
-            if (step > 1) prevBtn.classList.remove('hidden');
-            else prevBtn.classList.add('hidden');
+        if (targetEl) {
+            targetEl.classList.add('tour-spotlight-target');
+            try {
+                targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            } catch (e) {}
         }
 
-        if (nextBtn) {
-            if (step < 3) nextBtn.classList.remove('hidden');
-            else nextBtn.classList.add('hidden');
-        }
+        const card = document.createElement('div');
+        card.id = 'dtechTourCard';
+        card.className = 'fixed z-[10000] bottom-4 sm:bottom-6 inset-x-3 sm:inset-x-auto sm:right-6 sm:left-auto max-w-lg w-auto bg-white dark:bg-dark-card rounded-2xl shadow-2xl border-2 border-dtech-500 dark:border-dtech-400 p-5 transform transition-all duration-300 animate-fade-in flex flex-col gap-3.5';
 
-        if (finishBtn) {
-            if (step === 3) finishBtn.classList.remove('hidden');
-            else finishBtn.classList.add('hidden');
+        const dotsHtml = [1, 2, 3, 4].map(s => {
+            if (s === stepConfig.step) {
+                return `<span class="w-6 h-2 rounded-full bg-dtech-600 dark:bg-dtech-400 transition-all"></span>`;
+            }
+            return `<span class="w-2 h-2 rounded-full bg-gray-300 dark:bg-gray-600"></span>`;
+        }).join('');
+
+        card.innerHTML = `
+            <div class="absolute -top-3.5 left-8 sm:left-10 bg-dtech-600 dark:bg-dtech-500 text-white text-xs px-2.5 py-0.5 rounded-full font-bold shadow-md flex items-center gap-1.5 tour-bounce-arrow">
+                <i class="fas fa-arrow-up text-[10px]"></i>
+                <span>LOOK HERE</span>
+            </div>
+
+            <div class="flex items-center justify-between pt-1">
+                <span class="text-xs font-bold uppercase tracking-wider text-dtech-600 dark:text-dtech-400 bg-blue-50 dark:bg-blue-950/50 px-2.5 py-0.5 rounded-full">
+                    Step ${stepConfig.step} of 4
+                </span>
+                <button type="button" onclick="app.closeTour(true)" class="text-xs font-semibold text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition flex items-center gap-1">
+                    <span>Skip Tour</span>
+                    <i class="fas fa-times text-xs"></i>
+                </button>
+            </div>
+
+            <div>
+                <h3 class="text-base sm:text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                    ${stepConfig.title}
+                </h3>
+                <p class="text-xs sm:text-sm text-gray-600 dark:text-gray-300 mt-1.5 leading-relaxed">
+                    ${stepConfig.desc}
+                </p>
+                <div class="mt-2.5 p-2.5 rounded-lg bg-blue-50/70 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900/40 text-[11px] sm:text-xs text-blue-700 dark:text-blue-300 flex items-start gap-2">
+                    <i class="fas fa-info-circle mt-0.5 text-blue-500 flex-shrink-0"></i>
+                    <span>${stepConfig.tip}</span>
+                </div>
+            </div>
+
+            <div class="flex items-center justify-between pt-2 border-t border-gray-100 dark:border-dark-border gap-2">
+                <div class="flex items-center gap-1.5">
+                    ${dotsHtml}
+                </div>
+                <div class="flex items-center gap-2">
+                    ${stepConfig.step > 1 ? `
+                        <button type="button" onclick="app.prevTourStep()" class="px-3 py-1.5 text-xs font-semibold rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition">
+                            ← Back
+                        </button>
+                    ` : ''}
+                    <button type="button" onclick="app.nextTourStep()" class="btn-primary px-4 py-1.5 text-xs font-semibold flex items-center gap-1.5 shadow-md">
+                        ${stepConfig.nextBtnText}
+                    </button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(card);
+    },
+
+    startGuidedTour() {
+        const isPublic = window.location.pathname.includes('public_');
+        const startPage = isPublic ? 'public_dashboard.html' : 'dashboard.html';
+        localStorage.setItem('dtech_tour_step', '1');
+
+        const currentPath = window.location.pathname.split('/').pop() || 'index.html';
+        if (!currentPath.includes(startPage)) {
+            window.location.href = startPage;
+        } else {
+            const steps = this.getTourSteps();
+            this.renderTourStepCard(steps[0]);
         }
     },
 
     nextTourStep() {
-        if (!this.currentTourStep) this.currentTourStep = 1;
-        if (this.currentTourStep < 3) {
-            this.setTourStep(this.currentTourStep + 1);
+        const rawStep = localStorage.getItem('dtech_tour_step') || '1';
+        const currentStep = parseInt(rawStep, 10);
+        const steps = this.getTourSteps();
+
+        if (currentStep < 4) {
+            const nextStepNum = currentStep + 1;
+            const nextConfig = steps.find(s => s.step === nextStepNum);
+            localStorage.setItem('dtech_tour_step', String(nextStepNum));
+            window.location.href = nextConfig.page;
+        } else {
+            this.closeTour(true);
+            const isPublic = window.location.pathname.includes('public_');
+            const homePage = isPublic ? 'public_dashboard.html' : 'dashboard.html';
+            const currentPath = window.location.pathname.split('/').pop() || 'index.html';
+
+            if (currentPath.includes(homePage)) {
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        icon: 'success',
+                        title: '🎉 Walkthrough Complete!',
+                        text: 'You have seen the core flow! You can reopen this guide anytime from the menu.',
+                        timer: 3500,
+                        showConfirmButton: false,
+                        toast: true,
+                        position: 'top-end'
+                    });
+                }
+            } else {
+                window.location.href = homePage + '?tour=complete';
+            }
         }
     },
 
     prevTourStep() {
-        if (!this.currentTourStep) this.currentTourStep = 1;
-        if (this.currentTourStep > 1) {
-            this.setTourStep(this.currentTourStep - 1);
+        const rawStep = localStorage.getItem('dtech_tour_step') || '1';
+        const currentStep = parseInt(rawStep, 10);
+        const steps = this.getTourSteps();
+
+        if (currentStep > 1) {
+            const prevStepNum = currentStep - 1;
+            const prevConfig = steps.find(s => s.step === prevStepNum);
+            localStorage.setItem('dtech_tour_step', String(prevStepNum));
+            window.location.href = prevConfig.page;
         }
     },
 
-    closeWelcomeTour(saveCompleted = true) {
-        const modal = document.getElementById('welcomeTourModal');
-        if (modal) {
-            modal.classList.add('opacity-0');
-            const card = document.getElementById('tourModalCard');
-            if (card) card.classList.add('scale-95');
-            setTimeout(() => {
-                modal.classList.add('hidden');
-            }, 300);
-        }
-        if (saveCompleted) {
+    closeTour(markCompleted = true) {
+        localStorage.removeItem('dtech_tour_step');
+        if (markCompleted) {
             localStorage.setItem('portal_tour_completed', 'true');
         }
-    },
-
-    finishWelcomeTour() {
-        this.closeWelcomeTour(true);
-        if (typeof Swal !== 'undefined') {
-            Swal.fire({
-                icon: 'success',
-                title: 'You are all set!',
-                html: 'You can reopen this Quick Guide anytime from the menu or header.<br><br>Would you like to set up your business details now?',
-                showCancelButton: true,
-                confirmButtonColor: '#0284c7',
-                cancelButtonColor: '#6b7280',
-                confirmButtonText: 'Go to Settings',
-                cancelButtonText: 'Start Exploring'
-            }).then(result => {
-                if (result.isConfirmed) {
-                    this.showSection('settings');
-                }
-            });
-        }
+        document.querySelectorAll('.tour-spotlight-target').forEach(el => el.classList.remove('tour-spotlight-target'));
+        const card = document.getElementById('dtechTourCard');
+        if (card) card.remove();
     }
 };
 
