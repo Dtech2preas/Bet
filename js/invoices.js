@@ -24,10 +24,49 @@ const invoicesManager = {
         }
     },
 
-    renderTable() {
+    filterInvoices() {
+        const query = (document.getElementById('invoicesSearchInput')?.value || '').toLowerCase().trim();
+        const status = document.getElementById('invoicesStatusFilter')?.value || 'All';
+        const clearBtn = document.getElementById('invoicesSearchClear');
+        if (clearBtn) {
+            if (query.length > 0) clearBtn.classList.remove('hidden');
+            else clearBtn.classList.add('hidden');
+        }
+
+        let filtered = this.invoices || [];
+        if (status !== 'All') {
+            filtered = filtered.filter(i => i.status === status);
+        }
+        if (query) {
+            filtered = filtered.filter(i => {
+                const client = this.clients.find(c => c.id === i.clientId);
+                const clientName = client ? client.companyName.toLowerCase() : '';
+                const ref = (i.reference || '').toLowerCase();
+                const total = String(i.total || '');
+                return clientName.includes(query) || ref.includes(query) || total.includes(query);
+            });
+        }
+        this.renderTable(filtered);
+    },
+
+    clearSearch() {
+        const input = document.getElementById('invoicesSearchInput');
+        const clearBtn = document.getElementById('invoicesSearchClear');
+        if (input) input.value = '';
+        if (clearBtn) clearBtn.classList.add('hidden');
+        this.filterInvoices();
+    },
+
+    renderTable(list = null) {
         const container = document.getElementById('invoices-container');
-        if (this.invoices.length === 0) {
+        if (!this.invoices || this.invoices.length === 0) {
             container.innerHTML = `<div class="text-center text-gray-500 py-10">No invoices found.</div>`;
+            return;
+        }
+
+        const dataToRender = list !== null ? list : this.invoices;
+        if (dataToRender.length === 0) {
+            container.innerHTML = `<div class="text-center text-gray-500 py-10"><i class="fas fa-search text-2xl text-gray-400 mb-2 block"></i>No invoices match your search or filter.</div>`;
             return;
         }
 
@@ -49,10 +88,13 @@ const invoicesManager = {
                     </thead>
                     <tbody class="divide-y divide-gray-200 dark:divide-gray-700 block md:table-row-group">
         `;
-        this.invoices.forEach(inv => {
+        dataToRender.forEach(inv => {
             const client = this.clients.find(c => c.id === inv.clientId);
             const statusColor = inv.status === 'Paid' ? 'bg-green-100 text-green-800' : (inv.status === 'Overdue' ? 'bg-red-100 text-red-800' : (inv.status === 'Cancelled' ? 'bg-gray-100 text-gray-800' : 'bg-yellow-100 text-yellow-800'));
             const checkboxCell = isPremium ? `<td class="px-0 md:px-6 py-2 md:py-4 flex md:table-cell justify-start"><input type="checkbox" class="invoice-checkbox" value="${inv.id}"></td>` : '';
+            const recurringBadge = inv.recurring && inv.recurring !== 'None' ? `<span class="px-2 py-0.5 text-xs rounded-full bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300 font-medium inline-flex items-center gap-1" title="Recurring invoice: ${inv.recurring}"><i class="fas fa-sync-alt text-[9px]"></i> ${inv.recurring}</span>` : '';
+            const recurringBtn = inv.recurring && inv.recurring !== 'None' ? `<button onclick="invoicesManager.generateNextRecurring('${inv.id}')" class="text-purple-600 hover:text-purple-800 dark:hover:text-purple-400" title="Generate Next ${inv.recurring} Invoice"><i class="fas fa-calendar-plus"></i></button>` : '';
+
             html += `
                 <tr class="block md:table-row mb-4 md:mb-0 border-b md:border-0 p-4 md:p-0">
                     ${checkboxCell}
@@ -70,11 +112,15 @@ const invoicesManager = {
                     </td>
                     <td class="px-0 md:px-6 py-2 md:py-4 flex md:table-cell justify-between items-center">
                         <div class="md:hidden font-bold text-xs uppercase text-gray-500 mr-2">Status:</div>
-                        <div class="text-right md:text-left"><span class="px-2 py-1 text-xs rounded-full ${statusColor}">${inv.status}</span></div>
+                        <div class="text-right md:text-left flex flex-wrap items-center gap-1.5 justify-end md:justify-start">
+                            <span class="px-2 py-1 text-xs rounded-full ${statusColor}">${inv.status}</span>
+                            ${recurringBadge}
+                        </div>
                     </td>
                     <td class="px-0 md:px-6 py-2 md:py-4 flex md:table-cell justify-between items-center text-right text-sm">
                         <div class="md:hidden font-bold text-xs uppercase text-gray-500 mr-2">Actions:</div>
                         <div class="flex items-center space-x-2 md:justify-end">
+                            ${recurringBtn}
                             <button onclick="invoicesManager.editInvoice('${inv.id}')" class="text-blue-600 hover:text-blue-900" title="Edit"><i class="fas fa-edit"></i></button>
                             <button onclick="invoicesManager.download('${inv.id}')" class="text-gray-600 hover:text-gray-900" title="Download PDF"><i class="fas fa-file-pdf"></i></button>
                             <button onclick="invoicesManager.sendWhatsApp('${inv.id}')" class="text-green-600 hover:text-green-900" title="WhatsApp"><i class="fab fa-whatsapp"></i></button>
@@ -85,6 +131,53 @@ const invoicesManager = {
             `;
         });
         container.innerHTML = html + `</tbody></table></div>`;
+    },
+
+    generateNextRecurring(id) {
+        const inv = this.invoices.find(i => i.id === id);
+        if (!inv) return;
+
+        const recurring = inv.recurring || 'Monthly';
+        const nextDue = new Date();
+        let monthsToAdd = 1;
+        if (recurring === 'Quarterly') monthsToAdd = 3;
+        else if (recurring === 'Yearly') monthsToAdd = 12;
+
+        nextDue.setMonth(nextDue.getMonth() + monthsToAdd);
+
+        const newInvoiceData = {
+            clientId: inv.clientId,
+            quotationId: inv.quotationId,
+            items: JSON.parse(JSON.stringify(inv.items || [])),
+            subtotal: inv.subtotal,
+            discountPct: inv.discountPct || 0,
+            discountAmt: inv.discountAmt || 0,
+            vat: inv.vatPct !== undefined ? inv.vatPct : inv.vat,
+            vatPct: inv.vatPct !== undefined ? inv.vatPct : inv.vat,
+            vatAmt: inv.vatAmt || 0,
+            total: inv.total,
+            balanceDue: inv.total,
+            status: 'Unpaid',
+            dueDate: nextDue.toISOString(),
+            paymentTerms: inv.paymentTerms || 'Due on Receipt',
+            deliveryTime: inv.deliveryTime || '',
+            customerNotes: inv.customerNotes || '',
+            poNumber: inv.poNumber || '',
+            salesperson: inv.salesperson || '',
+            notes: `Recurring invoice from ${inv.reference || ''}`,
+            recurring: recurring
+        };
+
+        this.openModal(newInvoiceData);
+        Swal.fire({
+            icon: 'info',
+            title: `Next ${recurring} Invoice`,
+            text: `Prepared next ${recurring.toLowerCase()} recurring invoice. Review details and save.`,
+            toast: true,
+            position: 'top-end',
+            timer: 3500,
+            showConfirmButton: false
+        });
     },
 
     ensureDrawer() {
@@ -227,7 +320,7 @@ const invoicesManager = {
                     </div>
                 </div>
 
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mt-3">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Due Date</label>
                         <input type="date" id="drawer-i-due" value="${dueStr}" class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm border shadow-sm focus:border-dtech-500">
@@ -244,6 +337,17 @@ const invoicesManager = {
                             <option value="7 Days" ${i.paymentTerms === '7 Days' ? 'selected' : ''}>7 Days</option>
                             <option value="14 Days" ${i.paymentTerms === '14 Days' ? 'selected' : ''}>14 Days</option>
                             <option value="30 Days" ${i.paymentTerms === '30 Days' ? 'selected' : ''}>30 Days</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            <i class="fas fa-sync-alt mr-1 text-dtech-500"></i> Recurring
+                        </label>
+                        <select id="drawer-i-recurring" class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm border shadow-sm focus:border-dtech-500">
+                            <option value="None" ${!i.recurring || i.recurring === 'None' ? 'selected' : ''}>No (One-off)</option>
+                            <option value="Monthly" ${i.recurring === 'Monthly' ? 'selected' : ''}>Monthly</option>
+                            <option value="Quarterly" ${i.recurring === 'Quarterly' ? 'selected' : ''}>Quarterly</option>
+                            <option value="Yearly" ${i.recurring === 'Yearly' ? 'selected' : ''}>Yearly</option>
                         </select>
                     </div>
                 </div>
@@ -536,6 +640,7 @@ const invoicesManager = {
             poNumber: document.getElementById('drawer-i-po').value,
             salesperson: document.getElementById('drawer-i-sales').value,
             notes: document.getElementById('drawer-i-notes').value,
+            recurring: document.getElementById('drawer-i-recurring')?.value || 'None',
         };
 
         const submitBtn = document.getElementById('invoiceDrawerSubmitBtn');

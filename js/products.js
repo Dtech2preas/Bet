@@ -17,10 +17,44 @@ const productsManager = {
         }
     },
 
-    renderTable() {
+    filterProducts() {
+        const query = (document.getElementById('productsSearchInput')?.value || '').toLowerCase().trim();
+        const clearBtn = document.getElementById('productsSearchClear');
+        if (clearBtn) {
+            if (query.length > 0) clearBtn.classList.remove('hidden');
+            else clearBtn.classList.add('hidden');
+        }
+
+        let filtered = this.products || [];
+        if (query) {
+            filtered = filtered.filter(p => {
+                const name = (p.name || '').toLowerCase();
+                const desc = (p.description || '').toLowerCase();
+                const price = String(p.price || '');
+                return name.includes(query) || desc.includes(query) || price.includes(query);
+            });
+        }
+        this.renderTable(filtered);
+    },
+
+    clearSearch() {
+        const input = document.getElementById('productsSearchInput');
+        const clearBtn = document.getElementById('productsSearchClear');
+        if (input) input.value = '';
+        if (clearBtn) clearBtn.classList.add('hidden');
+        this.filterProducts();
+    },
+
+    renderTable(list = null) {
         const container = document.getElementById('products-container');
-        if (this.products.length === 0) {
+        if (!this.products || this.products.length === 0) {
             container.innerHTML = `<div class="text-center text-gray-500 py-10">No products found.</div>`;
+            return;
+        }
+
+        const dataToRender = list !== null ? list : this.products;
+        if (dataToRender.length === 0) {
+            container.innerHTML = `<div class="text-center text-gray-500 py-10"><i class="fas fa-search text-2xl text-gray-400 mb-2 block"></i>No products match your search.</div>`;
             return;
         }
 

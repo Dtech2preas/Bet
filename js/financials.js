@@ -217,14 +217,22 @@ const financialsManager = {
 
         // Live Search Filter
         const searchInput = document.getElementById('financials-search-input');
-        if (searchInput && searchInput.value.trim() !== '') {
-            const q = searchInput.value.trim().toLowerCase();
-            filteredTransactions = filteredTransactions.filter(t => {
-                return (t.description && t.description.toLowerCase().includes(q)) ||
-                       (t.category && t.category.toLowerCase().includes(q)) ||
-                       (t.reference && t.reference.toLowerCase().includes(q)) ||
-                       (t.amount && String(t.amount).includes(q));
-            });
+        const searchClear = document.getElementById('financialsSearchClear');
+        if (searchInput) {
+            const val = searchInput.value.trim();
+            if (searchClear) {
+                if (val.length > 0) searchClear.classList.remove('hidden');
+                else searchClear.classList.add('hidden');
+            }
+            if (val !== '') {
+                const q = val.toLowerCase();
+                filteredTransactions = filteredTransactions.filter(t => {
+                    return (t.description && t.description.toLowerCase().includes(q)) ||
+                           (t.category && t.category.toLowerCase().includes(q)) ||
+                           (t.reference && t.reference.toLowerCase().includes(q)) ||
+                           (t.amount && String(t.amount).includes(q));
+                });
+            }
         }
 
         // Update financial health summary cards
@@ -1423,7 +1431,38 @@ const financialsManager = {
         }
     },
 
+    handleSearchInput(el) {
+        const clearBtn = document.getElementById('financialsSearchClear');
+        if (clearBtn) {
+            if (el && el.value.trim().length > 0) clearBtn.classList.remove('hidden');
+            else clearBtn.classList.add('hidden');
+        }
+        this.renderLedgerTable();
+    },
+
+    clearSearch() {
+        const input = document.getElementById('financials-search-input');
+        const clearBtn = document.getElementById('financialsSearchClear');
+        if (input) input.value = '';
+        if (clearBtn) clearBtn.classList.add('hidden');
+        this.renderLedgerTable();
+    },
+
     filterReconcileList() {
+        const input = document.getElementById('recon-search-filter');
+        const clearBtn = document.getElementById('reconSearchClear');
+        if (clearBtn && input) {
+            if (input.value.trim().length > 0) clearBtn.classList.remove('hidden');
+            else clearBtn.classList.add('hidden');
+        }
+        this.renderDedicatedReconcileList();
+    },
+
+    clearReconSearch() {
+        const input = document.getElementById('recon-search-filter');
+        const clearBtn = document.getElementById('reconSearchClear');
+        if (input) input.value = '';
+        if (clearBtn) clearBtn.classList.add('hidden');
         this.renderDedicatedReconcileList();
     },
 

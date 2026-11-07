@@ -23,10 +23,50 @@ const quotationsManager = {
         }
     },
 
-    renderTable() {
+    filterQuotations() {
+        const query = (document.getElementById('quotationsSearchInput')?.value || '').toLowerCase().trim();
+        const status = document.getElementById('quotationsStatusFilter')?.value || 'All';
+        const clearBtn = document.getElementById('quotationsSearchClear');
+        if (clearBtn) {
+            if (query.length > 0) clearBtn.classList.remove('hidden');
+            else clearBtn.classList.add('hidden');
+        }
+
+        let filtered = this.quotations || [];
+        if (status !== 'All') {
+            filtered = filtered.filter(q => q.status === status);
+        }
+        if (query) {
+            filtered = filtered.filter(q => {
+                const client = this.clients.find(c => c.id === q.clientId);
+                const clientName = client ? client.companyName.toLowerCase() : '';
+                const ref = (q.reference || '').toLowerCase();
+                const title = (q.title || '').toLowerCase();
+                const total = String(q.total || '');
+                return clientName.includes(query) || ref.includes(query) || title.includes(query) || total.includes(query);
+            });
+        }
+        this.renderTable(filtered);
+    },
+
+    clearSearch() {
+        const input = document.getElementById('quotationsSearchInput');
+        const clearBtn = document.getElementById('quotationsSearchClear');
+        if (input) input.value = '';
+        if (clearBtn) clearBtn.classList.add('hidden');
+        this.filterQuotations();
+    },
+
+    renderTable(list = null) {
         const container = document.getElementById('quotations-container');
-        if (this.quotations.length === 0) {
+        if (!this.quotations || this.quotations.length === 0) {
             container.innerHTML = `<div class="text-center text-gray-500 py-10">No quotations found.</div>`;
+            return;
+        }
+
+        const dataToRender = list !== null ? list : this.quotations;
+        if (dataToRender.length === 0) {
+            container.innerHTML = `<div class="text-center text-gray-500 py-10"><i class="fas fa-search text-2xl text-gray-400 mb-2 block"></i>No quotations match your search or filter.</div>`;
             return;
         }
 
@@ -48,7 +88,7 @@ const quotationsManager = {
                     </thead>
                     <tbody class="divide-y divide-gray-200 dark:divide-gray-700 block md:table-row-group">
         `;
-        this.quotations.forEach(q => {
+        dataToRender.forEach(q => {
             const client = this.clients.find(c => c.id === q.clientId);
             const checkboxCell = isPremium ? `<td class="px-0 md:px-6 py-2 md:py-4 flex md:table-cell justify-start"><input type="checkbox" class="quotation-checkbox" value="${q.id}"></td>` : '';
             const statusClass = q.status === 'Accepted' ? 'bg-green-100 text-green-800' : (q.status === 'Declined' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800');

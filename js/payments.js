@@ -23,10 +23,46 @@ const paymentsManager = {
         }
     },
 
-    renderTable() {
+    filterPayments() {
+        const query = (document.getElementById('paymentsSearchInput')?.value || '').toLowerCase().trim();
+        const clearBtn = document.getElementById('paymentsSearchClear');
+        if (clearBtn) {
+            if (query.length > 0) clearBtn.classList.remove('hidden');
+            else clearBtn.classList.add('hidden');
+        }
+
+        let filtered = this.payments || [];
+        if (query) {
+            filtered = filtered.filter(p => {
+                const ref = (p.reference || '').toLowerCase();
+                const method = (p.method || '').toLowerCase();
+                const amount = String(p.amount || '');
+                const inv = this.invoices.find(i => i.id === p.invoiceId) || {};
+                const invRef = (inv.reference || '').toLowerCase();
+                return ref.includes(query) || method.includes(query) || amount.includes(query) || invRef.includes(query);
+            });
+        }
+        this.renderTable(filtered);
+    },
+
+    clearSearch() {
+        const input = document.getElementById('paymentsSearchInput');
+        const clearBtn = document.getElementById('paymentsSearchClear');
+        if (input) input.value = '';
+        if (clearBtn) clearBtn.classList.add('hidden');
+        this.filterPayments();
+    },
+
+    renderTable(list = null) {
         const container = document.getElementById('payments-container');
-        if (this.payments.length === 0) {
+        if (!this.payments || this.payments.length === 0) {
             container.innerHTML = `<div class="text-center text-gray-500 py-10">No payments found.</div>`;
+            return;
+        }
+
+        const dataToRender = list !== null ? list : this.payments;
+        if (dataToRender.length === 0) {
+            container.innerHTML = `<div class="text-center text-gray-500 py-10"><i class="fas fa-search text-2xl text-gray-400 mb-2 block"></i>No payments match your search.</div>`;
             return;
         }
 

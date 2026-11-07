@@ -241,7 +241,10 @@
             <!-- Search Filter inside active statement -->
             <div class="relative w-full md:w-64">
                 <i class="fas fa-search absolute left-3 top-2.5 text-xs text-gray-400"></i>
-                <input type="text" id="recon-search-filter" oninput="financialsManager.filterReconcileList()" placeholder="Filter statement..." class="w-full pl-8 pr-3 py-1.5 text-xs rounded-md border border-gray-300 dark:border-gray-600 dark:bg-dark-bg dark:text-white shadow-sm focus:border-dtech-500">
+                <input type="text" id="recon-search-filter" oninput="financialsManager.filterReconcileList()" placeholder="Filter statement..." class="w-full pl-8 pr-8 py-1.5 text-xs rounded-md border border-gray-300 dark:border-gray-600 dark:bg-dark-bg dark:text-white shadow-sm focus:border-dtech-500">
+                <button id="reconSearchClear" onclick="financialsManager.clearReconSearch()" class="hidden absolute inset-y-0 right-0 pr-2.5 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                    <i class="fas fa-times text-xs"></i>
+                </button>
             </div>
 
             <!-- Action Buttons -->

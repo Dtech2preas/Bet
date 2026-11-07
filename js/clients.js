@@ -18,10 +18,39 @@ const clientsManager = {
         }
     },
 
-    renderClientsTable() {
+    filterClients() {
+        const query = (document.getElementById('clientSearchInput')?.value || '').toLowerCase().trim();
+        const clearBtn = document.getElementById('clientSearchClear');
+        if (clearBtn) {
+            if (query.length > 0) clearBtn.classList.remove('hidden');
+            else clearBtn.classList.add('hidden');
+        }
+
+        let filtered = this.clients || [];
+        if (query) {
+            filtered = filtered.filter(c => {
+                const name = (c.companyName || '').toLowerCase();
+                const contact = (c.contactPerson || '').toLowerCase();
+                const email = (c.email || '').toLowerCase();
+                const phone = (c.phone || '').toLowerCase();
+                return name.includes(query) || contact.includes(query) || email.includes(query) || phone.includes(query);
+            });
+        }
+        this.renderClientsTable(filtered);
+    },
+
+    clearSearch() {
+        const input = document.getElementById('clientSearchInput');
+        const clearBtn = document.getElementById('clientSearchClear');
+        if (input) input.value = '';
+        if (clearBtn) clearBtn.classList.add('hidden');
+        this.filterClients();
+    },
+
+    renderClientsTable(list = null) {
         const container = document.getElementById('clients-container');
 
-        if (this.clients.length === 0) {
+        if (!this.clients || this.clients.length === 0) {
             container.innerHTML = `
                 <div class="bg-white dark:bg-dark-card p-10 rounded-lg shadow-sm border border-gray-100 dark:border-dark-border text-center">
                     <i class="fas fa-users text-4xl text-gray-300 mb-4"></i>
@@ -30,6 +59,12 @@ const clientsManager = {
                     <button onclick="clientsManager.openModal()" class="text-dtech-600 hover:text-dtech-700 font-medium">Add Client</button>
                 </div>
             `;
+            return;
+        }
+
+        const dataToRender = list !== null ? list : this.clients;
+        if (dataToRender.length === 0) {
+            container.innerHTML = `<div class="bg-white dark:bg-dark-card p-10 rounded-lg shadow-sm border border-gray-100 dark:border-dark-border text-center text-gray-500"><i class="fas fa-search text-2xl text-gray-400 mb-2 block"></i>No clients match your search query.</div>`;
             return;
         }
 

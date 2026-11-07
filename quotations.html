@@ -106,6 +106,27 @@
 <i class="fas fa-plus mr-2"></i> Create Quotation
                     </button>
 </div>
+<!-- Quotations Search & Filter Bar -->
+<div class="mb-4 flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
+    <div class="relative flex-1 max-w-md">
+        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+            <i class="fas fa-search text-sm"></i>
+        </div>
+        <input type="text" id="quotationsSearchInput" oninput="quotationsManager.filterQuotations()" placeholder="Search by client, quote #, title..." class="w-full pl-9 pr-8 py-2 text-sm rounded-md border border-gray-300 dark:border-gray-600 dark:bg-dark-card dark:text-white shadow-sm focus:border-dtech-500 focus:ring-dtech-500">
+        <button id="quotationsSearchClear" onclick="quotationsManager.clearSearch()" class="hidden absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+            <i class="fas fa-times text-xs"></i>
+        </button>
+    </div>
+    <div class="w-full sm:w-44">
+        <select id="quotationsStatusFilter" onchange="quotationsManager.filterQuotations()" class="w-full py-2 px-3 text-sm rounded-md border border-gray-300 dark:border-gray-600 dark:bg-dark-card dark:text-white shadow-sm focus:border-dtech-500 focus:ring-dtech-500">
+            <option value="All">All Statuses</option>
+            <option value="Pending">Pending</option>
+            <option value="Accepted">Accepted</option>
+            <option value="Declined">Declined</option>
+            <option value="Draft">Draft</option>
+        </select>
+    </div>
+</div>
 <div id="quotations-container"><div class="text-center py-10"><i class="fas fa-spinner fa-spin text-3xl text-dtech-500"></i></div></div>
 </section>
 <!-- Invoices Section -->
