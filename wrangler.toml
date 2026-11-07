@@ -1,0 +1,8 @@
+name = "lively-limit-786e"
+main = "worker.js"
+compatibility_date = "2024-01-01"
+
+# KV Namespace binding for primary database storage
+[[kv_namespaces]]
+binding = "DTECH_KV"
+id = "PLACEHOLDER_KV_ID"

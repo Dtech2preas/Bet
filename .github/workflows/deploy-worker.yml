@@ -1,0 +1,35 @@
+name: Deploy Cloudflare Worker
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'worker.js'
+      - 'wrangler.toml'
+      - '.github/workflows/deploy-worker.yml'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Deploy to Cloudflare Workers
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Inject KV Namespace ID
+        run: |
+          if [ -n "${{ secrets.CLOUDFLARE_KV_ID }}" ]; then
+            sed -i "s/PLACEHOLDER_KV_ID/${{ secrets.CLOUDFLARE_KV_ID }}/g" wrangler.toml
+          fi
+          if grep -q "PLACEHOLDER_KV_ID" wrangler.toml; then
+            echo "::error::Missing KV ID! Please add CLOUDFLARE_KV_ID in your GitHub repository secrets (or replace PLACEHOLDER_KV_ID in wrangler.toml)."
+            exit 1
+          fi
+
+      - name: Deploy to Cloudflare Workers
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
