@@ -519,7 +519,9 @@ const clientsManager = {
             `);
 
             html += renderList('Quotations', cQuotations, q => {
-                const depStr = q.paymentTerms === '50% Deposit' ? ` (Due before start: ${q.currency || 'R'} ${(Number(q.total) * 0.5).toFixed(2)})` : '';
+                const depStr = q.paymentTerms === 'D-TECH NPO Program' 
+                    ? ` (NPO Rate: R 1,000.00 | Deposit: R 500.00)` 
+                    : (q.paymentTerms === '50% Deposit' ? ` (Due before start: ${q.currency || 'R'} ${(Number(q.total) * 0.5).toFixed(2)})` : '');
                 return `
                 <div>
                     <div class="font-medium">${q.reference || 'No Number'}</div>
@@ -529,13 +531,18 @@ const clientsManager = {
             `;
             });
 
-            html += renderList('Invoices', cInvoices, i => `
+            html += renderList('Invoices', cInvoices, i => {
+                const depStr = i.paymentTerms === 'D-TECH NPO Program' 
+                    ? ` (NPO Rate: R 1,000.00 | Deposit: R 500.00)` 
+                    : (i.paymentTerms === '50% Deposit' ? ` (Deposit: R ${(Number(i.total) * 0.5).toFixed(2)})` : '');
+                return `
                 <div>
                     <div class="font-medium">${i.reference || 'No Number'}</div>
-                    <div class="text-xs text-gray-500">${new Date(i.date).toLocaleDateString()} - R ${i.total}</div>
+                    <div class="text-xs text-gray-500">${new Date(i.date).toLocaleDateString()} - R ${i.total}${depStr}</div>
                 </div>
                 <span class="px-2 py-1 text-xs rounded-full ${i.status === 'Paid' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">${i.status || 'Unpaid'}</span>
-            `);
+            `;
+            });
 
             html += renderList('Payments', cPayments, p => `
                 <div>

@@ -108,7 +108,18 @@ const invoicesManager = {
                     </td>
                     <td class="px-0 md:px-6 py-2 md:py-4 flex md:table-cell justify-between items-center text-sm font-semibold">
                         <div class="md:hidden font-bold text-xs uppercase text-gray-500 mr-2">Total:</div>
-                        <div class="text-right md:text-left">R ${inv.total}</div>
+                        <div class="text-right md:text-left">
+                            <div>R ${inv.total}</div>
+                            ${inv.paymentTerms === 'D-TECH NPO Program' ? `
+                                <div class="text-[11px] text-emerald-600 dark:text-emerald-400 font-normal flex items-center gap-1 md:justify-start justify-end">
+                                    <i class="fas fa-hand-holding-heart text-[10px]"></i> NPO (500 / 500)
+                                </div>
+                            ` : (inv.paymentTerms === '50% Deposit' ? `
+                                <div class="text-[11px] text-blue-600 dark:text-blue-400 font-normal">
+                                    Deposit: R ${(Number(inv.total) * 0.5).toFixed(2)}
+                                </div>
+                            ` : '')}
+                        </div>
                     </td>
                     <td class="px-0 md:px-6 py-2 md:py-4 flex md:table-cell justify-between items-center">
                         <div class="md:hidden font-bold text-xs uppercase text-gray-500 mr-2">Status:</div>
@@ -334,6 +345,7 @@ const invoicesManager = {
                         <select id="drawer-i-terms" class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm border shadow-sm focus:border-dtech-500">
                             <option value="Due on Receipt" ${i.paymentTerms === 'Due on Receipt' ? 'selected' : ''}>Due on Receipt</option>
                             <option value="50% Deposit" ${i.paymentTerms === '50% Deposit' ? 'selected' : ''}>50% Deposit</option>
+                            <option value="D-TECH NPO Program" ${i.paymentTerms === 'D-TECH NPO Program' ? 'selected' : ''}>D-TECH NPO Program (Flat R1,000)</option>
                             <option value="7 Days" ${i.paymentTerms === '7 Days' ? 'selected' : ''}>7 Days</option>
                             <option value="14 Days" ${i.paymentTerms === '14 Days' ? 'selected' : ''}>14 Days</option>
                             <option value="30 Days" ${i.paymentTerms === '30 Days' ? 'selected' : ''}>30 Days</option>
@@ -367,12 +379,45 @@ const invoicesManager = {
                         <span id="drawer-i-vat-disp" class="font-medium">R 0.00</span>
                     </div>
                     <div class="flex justify-between text-base font-bold text-gray-900 dark:text-white border-t border-gray-200 dark:border-gray-700 pt-2">
-                        <span>Total Invoice Amount:</span>
+                        <span id="drawer-i-total-label">Total Invoice Amount:</span>
                         <span id="drawer-i-total-disp">R 0.00</span>
                     </div>
                     <div class="flex justify-between items-center text-sm font-semibold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/30 p-2.5 rounded-md border border-blue-200 dark:border-blue-800 mt-2" id="drawer-i-deposit-row" style="display: none;">
                         <span>Due Before Project Start (50% Deposit):</span>
                         <span id="drawer-i-deposit-disp" class="font-bold">R 0.00</span>
+                    </div>
+                    <!-- NPO Program Card -->
+                    <div id="drawer-i-npo-card" class="bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950/40 dark:to-teal-950/40 border border-emerald-300 dark:border-emerald-700 rounded-lg p-3.5 mt-2 space-y-2" style="display: none;">
+                        <div class="flex items-center justify-between border-b border-emerald-200 dark:border-emerald-800 pb-2">
+                            <span class="inline-flex items-center text-xs font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-300">
+                                <i class="fas fa-hand-holding-heart mr-1.5 text-emerald-600 dark:text-emerald-400"></i> D-TECH NPO Program
+                            </span>
+                            <span class="text-xs px-2 py-0.5 rounded-full bg-emerald-200 dark:bg-emerald-800 text-emerald-900 dark:text-emerald-100 font-semibold">Level 2 Web Dev</span>
+                        </div>
+                        <div class="flex justify-between text-xs text-gray-600 dark:text-gray-300 pt-1">
+                            <span>Standard Items Value:</span>
+                            <span id="drawer-i-npo-standard-disp" class="font-medium">R 0.00</span>
+                        </div>
+                        <div class="flex justify-between text-xs text-emerald-700 dark:text-emerald-400" id="drawer-i-npo-subsidy-row" style="display: none;">
+                            <span>D-TECH Program Subsidy:</span>
+                            <span id="drawer-i-npo-subsidy-disp" class="font-bold">- R 0.00</span>
+                        </div>
+                        <div class="flex justify-between items-baseline text-sm font-bold text-gray-900 dark:text-white border-t border-emerald-200 dark:border-emerald-800 pt-2">
+                            <span class="text-emerald-900 dark:text-emerald-200 font-bold">Special NPO Payable Total:</span>
+                            <span id="drawer-i-npo-total-disp" class="text-lg text-emerald-700 dark:text-emerald-300 font-extrabold">R 1,000.00</span>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2 pt-1 text-xs">
+                            <div class="bg-white/80 dark:bg-gray-800/80 p-2 rounded border border-emerald-200 dark:border-emerald-800">
+                                <div class="text-gray-500 dark:text-gray-400">Upfront Deposit (50%)</div>
+                                <div id="drawer-i-npo-dep-disp" class="font-bold text-emerald-700 dark:text-emerald-400 text-sm">R 500.00</div>
+                                <div class="text-[10px] text-gray-400">Due before project start</div>
+                            </div>
+                            <div class="bg-white/80 dark:bg-gray-800/80 p-2 rounded border border-emerald-200 dark:border-emerald-800">
+                                <div class="text-gray-500 dark:text-gray-400">Final Balance (50%)</div>
+                                <div id="drawer-i-npo-bal-disp" class="font-bold text-emerald-700 dark:text-emerald-400 text-sm">R 500.00</div>
+                                <div class="text-[10px] text-gray-400">Due on website approval</div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -572,18 +617,56 @@ const invoicesManager = {
         }
 
         const totalEl = document.getElementById('drawer-i-total-disp');
-        if (totalEl) totalEl.textContent = `R ${total.toFixed(2)}`;
-
+        const totalLabel = document.getElementById('drawer-i-total-label');
         const terms = document.getElementById('drawer-i-terms')?.value;
         const depRow = document.getElementById('drawer-i-deposit-row');
         const depEl = document.getElementById('drawer-i-deposit-disp');
-        if (depRow && depEl) {
-            if (terms === '50% Deposit') {
-                depRow.style.display = 'flex';
-                const depAmt = total * 0.5;
-                depEl.textContent = `R ${depAmt.toFixed(2)}`;
-            } else {
-                depRow.style.display = 'none';
+        const npoCard = document.getElementById('drawer-i-npo-card');
+        const npoStdEl = document.getElementById('drawer-i-npo-standard-disp');
+        const npoSubRow = document.getElementById('drawer-i-npo-subsidy-row');
+        const npoSubEl = document.getElementById('drawer-i-npo-subsidy-disp');
+        const npoTotalEl = document.getElementById('drawer-i-npo-total-disp');
+        const npoDepEl = document.getElementById('drawer-i-npo-dep-disp');
+        const npoBalEl = document.getElementById('drawer-i-npo-bal-disp');
+
+        if (terms === 'D-TECH NPO Program') {
+            if (depRow) depRow.style.display = 'none';
+            const npoPayable = subtotal >= 1000 ? 1000 : total;
+            const subsidy = subtotal > 1000 ? (subtotal - 1000) : 0;
+            const depAmt = (npoPayable * 0.5).toFixed(2);
+            const balAmt = (npoPayable * 0.5).toFixed(2);
+
+            if (npoCard) {
+                npoCard.style.display = 'block';
+                if (npoStdEl) npoStdEl.textContent = `R ${subtotal.toFixed(2)}`;
+                if (npoSubRow && npoSubEl) {
+                    if (subsidy > 0) {
+                        npoSubRow.style.display = 'flex';
+                        npoSubEl.textContent = `- R ${subsidy.toFixed(2)}`;
+                    } else {
+                        npoSubRow.style.display = 'none';
+                    }
+                }
+                if (npoTotalEl) npoTotalEl.textContent = `R ${npoPayable.toFixed(2)}`;
+                if (npoDepEl) npoDepEl.textContent = `R ${depAmt}`;
+                if (npoBalEl) npoBalEl.textContent = `R ${balAmt}`;
+            }
+
+            if (totalEl) totalEl.textContent = `R ${npoPayable.toFixed(2)}`;
+            if (totalLabel) totalLabel.textContent = 'Special NPO Total Due:';
+        } else {
+            if (npoCard) npoCard.style.display = 'none';
+            if (totalLabel) totalLabel.textContent = 'Total Invoice Amount:';
+            if (totalEl) totalEl.textContent = `R ${total.toFixed(2)}`;
+
+            if (depRow && depEl) {
+                if (terms === '50% Deposit') {
+                    depRow.style.display = 'flex';
+                    const depAmt = total * 0.5;
+                    depEl.textContent = `R ${depAmt.toFixed(2)}`;
+                } else {
+                    depRow.style.display = 'none';
+                }
             }
         }
     },
@@ -619,17 +702,25 @@ const invoicesManager = {
         const startDate = document.getElementById('drawer-i-start').value;
         const paymentTerms = document.getElementById('drawer-i-terms').value;
 
+        const isNPO = paymentTerms === 'D-TECH NPO Program';
+        const finalTotal = isNPO ? (subtotal >= 1000 ? 1000 : total) : total;
+        const npoSubsidy = isNPO && subtotal > 1000 ? (subtotal - 1000) : 0;
+        const depositAmt = isNPO ? (finalTotal * 0.5).toFixed(2) : (paymentTerms === '50% Deposit' ? (total * 0.5).toFixed(2) : null);
+
         const formValues = {
             clientId: cid,
             quotationId: document.getElementById('drawer-i-quote').value || null,
             items: items,
             subtotal: subtotal.toFixed(2),
+            standardTotal: subtotal.toFixed(2),
+            npoSubsidy: npoSubsidy.toFixed(2),
+            depositAmt: depositAmt,
             discountPct: discountPct,
             discountAmt: discountAmt.toFixed(2),
             vatPct: vatPct,
             vatAmt: vatAmt.toFixed(2),
-            total: total.toFixed(2),
-            balanceDue: total.toFixed(2),
+            total: finalTotal.toFixed(2),
+            balanceDue: this.currentInvoice ? (this.currentInvoice.status === 'Paid' ? '0.00' : (this.currentInvoice.balanceDue || finalTotal.toFixed(2))) : finalTotal.toFixed(2),
             status: document.getElementById('drawer-i-status').value,
             dueDate: dueDate ? new Date(dueDate).toISOString() : null,
             validUntil: validDate ? new Date(validDate).toISOString() : null,
@@ -690,9 +781,19 @@ const invoicesManager = {
 
         const userStr = localStorage.getItem('dtech_user');
         const user = userStr ? JSON.parse(userStr) : {};
-        const bName = user.businessName || "D-TECH";
+        const bName = user.businessName || "THE D-TECH ECOSYSTEM";
         const dueDateStr = inv.dueDate ? new Date(inv.dueDate).toLocaleDateString() : 'Upon Receipt';
-        const msg = encodeURIComponent(`Hi ${client.contactPerson || client.companyName},\n\nHere is your invoice summary from ${bName}:\nInvoice #: ${inv.reference}\nTotal: R ${inv.total}\nDue Date: ${dueDateStr}\nStatus: ${inv.status}\n\nPlease let us know if you need any assistance.\n\nRegards,\n${bName}`);
+
+        let termsNote = '';
+        if (inv.paymentTerms === 'D-TECH NPO Program') {
+            const dep = (Number(inv.total) * 0.5).toFixed(2);
+            termsNote = `\nProgram: D-TECH NPO Level 2 Web Dev\n• Due Before Project Start (50%): R ${dep}\n• Balance Upon Website Approval (50%): R ${dep}`;
+        } else if (inv.paymentTerms === '50% Deposit') {
+            const dep = (Number(inv.total) * 0.5).toFixed(2);
+            termsNote = `\n• Due Before Project Start (50% Deposit): R ${dep}\n• Balance on Completion: R ${dep}`;
+        }
+
+        const msg = encodeURIComponent(`Hi ${client.contactPerson || client.companyName},\n\nHere is your invoice summary from ${bName}:\nInvoice #: ${inv.reference}\nTotal: R ${inv.total}${termsNote}\nDue Date: ${dueDateStr}\nStatus: ${inv.status}\n\nPlease let us know if you need any assistance.\n\nRegards,\n${bName}`);
         const phone = client.phone.replace(/[^0-9]/g, '');
         window.open(`https://wa.me/${phone}?text=${msg}`, '_blank');
     },

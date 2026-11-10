@@ -177,7 +177,63 @@ const pdfEngine = {
             const vatAmt = Number(data.vatAmt) || 0;
             const exclVat = total - vatAmt;
 
-            if (vatAmt === 0) {
+            const isNPO = data.paymentTerms === 'D-TECH NPO Program';
+            const itemsSum = (data.items || []).reduce((acc, it) => acc + (Number(it.price) * Number(it.quantity || 1)), 0);
+            const standardSubtotal = Number(data.standardTotal) || Number(data.subtotal) || itemsSum;
+            const npoTotal = Number(data.total) || (standardSubtotal >= 1000 ? 1000 : standardSubtotal);
+            const npoSubsidy = Number(data.npoSubsidy) || (standardSubtotal > npoTotal ? (standardSubtotal - npoTotal) : 0);
+
+            if (isNPO) {
+                // When D-TECH NPO Program is selected:
+                if (npoSubsidy > 0) {
+                    doc.setFontSize(10);
+                    doc.setFont('helvetica', 'normal');
+                    doc.setTextColor(...grayColor);
+                    doc.text("Standard Market Value:", totalWidth - 65, finalY, { align: 'right' });
+                    doc.text(`R ${standardSubtotal.toFixed(2)}`, totalWidth - 14, finalY, { align: 'right' });
+                    finalY += 6;
+
+                    doc.setTextColor(5, 150, 105); // emerald-600
+                    doc.setFont('helvetica', 'bold');
+                    doc.text("D-TECH NPO Subsidy Contribution:", totalWidth - 65, finalY, { align: 'right' });
+                    doc.text(`- R ${npoSubsidy.toFixed(2)}`, totalWidth - 14, finalY, { align: 'right' });
+                    finalY += 7;
+                }
+
+                finalY += 2;
+                doc.setFontSize(13);
+                doc.setFont('helvetica', 'bold');
+                doc.setTextColor(...primaryColor);
+                doc.text("Total Due (NPO Flat Rate):", totalWidth - 65, finalY, { align: 'right' });
+                doc.text(`R ${npoTotal.toFixed(2)}`, totalWidth - 14, finalY, { align: 'right' });
+
+                finalY += 7;
+                doc.setFontSize(10);
+                doc.setFont('helvetica', 'bold');
+                doc.setTextColor(...primaryColor);
+                doc.text("Due Before Project Start (50% Deposit):", totalWidth - 65, finalY, { align: 'right' });
+                doc.text(`R ${(npoTotal * 0.5).toFixed(2)}`, totalWidth - 14, finalY, { align: 'right' });
+
+                finalY += 5;
+                doc.setFontSize(9);
+                doc.setFont('helvetica', 'normal');
+                doc.setTextColor(...grayColor);
+                doc.text("Balance Due on Website Approval (50%):", totalWidth - 65, finalY, { align: 'right' });
+                doc.text(`R ${(npoTotal * 0.5).toFixed(2)}`, totalWidth - 14, finalY, { align: 'right' });
+
+                finalY += 6;
+                doc.setFontSize(8.5);
+                doc.setFont('helvetica', 'italic');
+                doc.setTextColor(5, 150, 105);
+                doc.text("Level 2 Web Development NPO Program flat rate applied.", totalWidth - 14, finalY, { align: 'right' });
+
+                finalY += 5;
+                doc.setFontSize(9);
+                doc.setFont('helvetica', 'italic');
+                doc.setTextColor(...grayColor);
+                doc.text("Prices are not subject to VAT (Non-VAT vendor).", totalWidth - 14, finalY, { align: 'right' });
+                doc.setTextColor(0, 0, 0);
+            } else if (vatAmt === 0) {
                 // When VAT is 0, just show discount if any, and Total
                 if (data.discountAmt && Number(data.discountAmt) > 0) {
                     doc.text("Discount:", totalWidth - 50, finalY, { align: 'right' });
@@ -191,7 +247,7 @@ const pdfEngine = {
                 doc.text("Total:", totalWidth - 50, finalY, { align: 'right' });
                 doc.text(`R ${total.toFixed(2)}`, totalWidth - 14, finalY, { align: 'right' });
 
-                if (type === 'Quotation' && data.paymentTerms === '50% Deposit') {
+                if ((type === 'Quotation' || type === 'Invoice') && data.paymentTerms === '50% Deposit') {
                     finalY += 7;
                     doc.setFontSize(11);
                     doc.setFont('helvetica', 'bold');
@@ -231,7 +287,7 @@ const pdfEngine = {
                 doc.text("Total Due (Incl. VAT):", totalWidth - 50, finalY, { align: 'right' });
                 doc.text(`R ${total.toFixed(2)}`, totalWidth - 14, finalY, { align: 'right' });
 
-                if (type === 'Quotation' && data.paymentTerms === '50% Deposit') {
+                if ((type === 'Quotation' || type === 'Invoice') && data.paymentTerms === '50% Deposit') {
                     finalY += 7;
                     doc.setFontSize(11);
                     doc.setFont('helvetica', 'bold');
