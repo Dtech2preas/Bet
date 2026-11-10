@@ -41,6 +41,30 @@ jobs:
 
           echo "Cloudflare credentials detected."
 
+      - name: Probe Cloudflare API Permissions
+        env:
+          CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CF_ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          echo "=== 1. Token Verification ==="
+          curl -s -X GET "https://api.cloudflare.com/client/v4/user/tokens/verify" \
+            -H "Authorization: Bearer ${CF_TOKEN}" | jq .
+
+          echo "=== 2. Check Account ID Match ==="
+          if [ "$CF_ACCOUNT" = "ef91fc2d8b973636ecdb2b116b099b59" ]; then
+            echo "Account ID matches ef91fc2d8b973636ecdb2b116b099b59: YES"
+          else
+            echo "Account ID matches ef91fc2d8b973636ecdb2b116b099b59: NO"
+          fi
+
+          echo "=== 3. Query Workers Scripts API with secret account ==="
+          curl -s -X GET "https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT}/workers/scripts" \
+            -H "Authorization: Bearer ${CF_TOKEN}" | jq .
+
+          echo "=== 4. Query Workers Services API for lively-limit-786e ==="
+          curl -s -X GET "https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT}/workers/services/lively-limit-786e" \
+            -H "Authorization: Bearer ${CF_TOKEN}" | jq .
+
       - name: Resolve KV Namespace ID
         env:
           CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
