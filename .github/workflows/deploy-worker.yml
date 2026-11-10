@@ -18,17 +18,36 @@ jobs:
       - name: Checkout source
         uses: actions/checkout@v4
 
+      - name: Validate Cloudflare Credentials
+        run: |
+          CF_TOKEN="${{ secrets.CLOUDFLARE_API_TOKEN || vars.CLOUDFLARE_API_TOKEN || secrets.CF_API_TOKEN || vars.CF_API_TOKEN || secrets.CLOUDFLARE_TOKEN || vars.CLOUDFLARE_TOKEN }}"
+          CF_ACCOUNT="${{ secrets.CLOUDFLARE_ACCOUNT_ID || vars.CLOUDFLARE_ACCOUNT_ID || secrets.CF_ACCOUNT_ID || vars.CF_ACCOUNT_ID || secrets.CLOUDFLARE_ACCOUNT || vars.CLOUDFLARE_ACCOUNT }}"
+
+          if [ -z "$CF_TOKEN" ]; then
+            echo "::error::CLOUDFLARE_API_TOKEN is missing or empty! Please ensure it is added under GitHub Settings -> Secrets and variables -> Actions -> Secrets tab (Repository secrets)."
+            exit 1
+          fi
+
+          if [ -z "$CF_ACCOUNT" ]; then
+            echo "::error::CLOUDFLARE_ACCOUNT_ID is missing or empty! Please ensure it is added under GitHub Settings -> Secrets and variables -> Actions -> Secrets tab (Repository secrets)."
+            exit 1
+          fi
+
+          echo "Cloudflare credentials detected."
+
       - name: Resolve KV Namespace ID
         run: |
-          KV_ID="${{ secrets.CLOUDFLARE_KV_ID }}"
+          CF_TOKEN="${{ secrets.CLOUDFLARE_API_TOKEN || vars.CLOUDFLARE_API_TOKEN || secrets.CF_API_TOKEN || vars.CF_API_TOKEN || secrets.CLOUDFLARE_TOKEN || vars.CLOUDFLARE_TOKEN }}"
+          CF_ACCOUNT="${{ secrets.CLOUDFLARE_ACCOUNT_ID || vars.CLOUDFLARE_ACCOUNT_ID || secrets.CF_ACCOUNT_ID || vars.CF_ACCOUNT_ID || secrets.CLOUDFLARE_ACCOUNT || vars.CLOUDFLARE_ACCOUNT }}"
+          KV_ID="${{ secrets.CLOUDFLARE_KV_ID || vars.CLOUDFLARE_KV_ID || secrets.CF_KV_ID || vars.CF_KV_ID || secrets.DTECH_KV_ID || vars.DTECH_KV_ID }}"
 
           # If secret is not manually set, auto-discover via Cloudflare API
           if [ -z "$KV_ID" ]; then
-            echo "CLOUDFLARE_KV_ID secret not provided, auto-discovering from Cloudflare account..."
-            API_RESP=$(curl -s -X GET "https://api.cloudflare.com/client/v4/accounts/${{ secrets.CLOUDFLARE_ACCOUNT_ID }}/storage/kv/namespaces?per_page=100" \
-              -H "Authorization: Bearer ${{ secrets.CLOUDFLARE_API_TOKEN }}" \
+            echo "CLOUDFLARE_KV_ID not provided directly, auto-discovering from Cloudflare API..."
+            API_RESP=$(curl -s -X GET "https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT}/storage/kv/namespaces?per_page=100" \
+              -H "Authorization: Bearer ${CF_TOKEN}" \
               -H "Content-Type: application/json")
-            KV_ID=$(echo "$API_RESP" | jq -r '.result[] | select(.title=="DTECH_KV") | .id' | head -n 1)
+            KV_ID=$(echo "$API_RESP" | jq -r 'if .result then (.result[] | select(.title=="DTECH_KV") | .id) else empty end' | head -n 1)
           fi
 
           if [ -n "$KV_ID" ] && [ "$KV_ID" != "null" ]; then
@@ -36,14 +55,17 @@ jobs:
             sed -i "s/PLACEHOLDER_KV_ID/$KV_ID/g" wrangler.toml
           else
             if grep -q "PLACEHOLDER_KV_ID" wrangler.toml; then
-              echo "::error::Could not find DTECH_KV namespace. Please set CLOUDFLARE_KV_ID in your GitHub repository secrets."
+              echo "::error::Could not resolve DTECH_KV namespace. Please add CLOUDFLARE_KV_ID in your GitHub Secrets."
               exit 1
             fi
           fi
 
       - name: Deploy to Cloudflare Workers
         uses: cloudflare/wrangler-action@v3
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN || vars.CLOUDFLARE_API_TOKEN || secrets.CF_API_TOKEN || vars.CF_API_TOKEN || secrets.CLOUDFLARE_TOKEN || vars.CLOUDFLARE_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID || vars.CLOUDFLARE_ACCOUNT_ID || secrets.CF_ACCOUNT_ID || vars.CF_ACCOUNT_ID || secrets.CLOUDFLARE_ACCOUNT || vars.CLOUDFLARE_ACCOUNT }}
         with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN || vars.CLOUDFLARE_API_TOKEN || secrets.CF_API_TOKEN || vars.CF_API_TOKEN || secrets.CLOUDFLARE_TOKEN || vars.CLOUDFLARE_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID || vars.CLOUDFLARE_ACCOUNT_ID || secrets.CF_ACCOUNT_ID || vars.CF_ACCOUNT_ID || secrets.CLOUDFLARE_ACCOUNT || vars.CLOUDFLARE_ACCOUNT }}
           command: deploy --keep-vars
