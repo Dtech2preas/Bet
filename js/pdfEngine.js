@@ -568,10 +568,9 @@ pdfEngine.generateBalanceSheetPDF = function(transactions, asOfDate) {
         const categoryTotals = {};
         transactions.forEach(t => {
             const cat = t.category || 'Uncategorized';
-            // We need to know account types from financialsManager, but we can infer for basics
-            let accntType = 'Expense'; // default
+            let accntType = t.type === 'Income' ? 'Income' : 'Expense';
             if (typeof financialsManager !== 'undefined' && financialsManager.chartOfAccounts) {
-                const accDef = financialsManager.chartOfAccounts.find(a => a.name === cat);
+                const accDef = financialsManager.chartOfAccounts.find(a => a.name.toLowerCase() === cat.toLowerCase());
                 if (accDef) accntType = accDef.type;
             }
 
@@ -607,6 +606,14 @@ pdfEngine.generateBalanceSheetPDF = function(transactions, asOfDate) {
             } else if (data.type === 'Expense') {
                 netIncome -= data.total;
             }
+        }
+
+        // If no explicit Cash in Bank asset transaction was recorded, the accumulated net income/cashflow is represented as Cash & Cash Equivalents
+        const hasCashAsset = assetData.some(([name]) => name.toLowerCase().includes('cash') || name.toLowerCase().includes('bank'));
+        if (!hasCashAsset && netIncome !== 0) {
+            const bankCash = Math.max(0, netIncome);
+            assets += bankCash;
+            assetData.push(['Cash & Cash Equivalents (Bank Balance)', `R ${bankCash.toFixed(2)}`]);
         }
 
         // Retained Earnings (Net Income) goes to Equity

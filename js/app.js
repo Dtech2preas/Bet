@@ -227,28 +227,35 @@ const app = {
                         const incomeTxs = txs.filter(t => t.type === 'Income' || (Number(t.amount) > 0 && t.type !== 'Expense'));
                         const totalTxIncome = incomeTxs.reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
 
-                        if (totalTxIncome > 0 && (stats.totalRevenue || 0) < totalTxIncome) {
+                        if (totalTxIncome > 0) {
                             const now = new Date();
-                            const todayStr = now.toDateString();
-                            const currentMonth = now.getMonth();
+                            const todayStr = now.toISOString().split('T')[0];
+                            const currentMonth = now.toISOString().slice(0, 7);
                             const currentYear = now.getFullYear();
 
-                            let txToday = 0, txMonth = 0, txYear = 0, txTotal = 0;
+                            const lastMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+                            const lastMonthStr = lastMonthDate.toISOString().slice(0, 7);
+
+                            let txToday = 0, txMonth = 0, txLastMonth = 0, txYear = 0, txTotal = 0;
                             incomeTxs.forEach(t => {
                                 const amt = Number(t.amount) || 0;
-                                const d = new Date(t.date || t.dateAdded);
+                                const dStr = t.date || (t.dateAdded ? t.dateAdded.split('T')[0] : '');
                                 txTotal += amt;
-                                if (!isNaN(d.getTime())) {
-                                    if (d.toDateString() === todayStr) txToday += amt;
-                                    if (d.getMonth() === currentMonth && d.getFullYear() === currentYear) txMonth += amt;
-                                    if (d.getFullYear() === currentYear) txYear += amt;
+                                if (dStr) {
+                                    if (dStr === todayStr) txToday += amt;
+                                    if (dStr.startsWith(currentMonth)) txMonth += amt;
+                                    if (dStr.startsWith(lastMonthStr)) txLastMonth += amt;
+                                    if (dStr.startsWith(String(currentYear))) txYear += amt;
                                 }
                             });
 
-                            stats.todayRevenue = (stats.todayRevenue || 0) + txToday;
-                            stats.monthlyRevenue = (stats.monthlyRevenue || 0) + txMonth;
-                            stats.yearRevenue = (stats.yearRevenue || 0) + txYear;
-                            stats.totalRevenue = (stats.totalRevenue || 0) + txTotal;
+                            if ((stats.totalRevenue || 0) < txTotal) {
+                                stats.todayRevenue = Math.max(stats.todayRevenue || 0, txToday);
+                                stats.monthlyRevenue = Math.max(stats.monthlyRevenue || 0, txMonth);
+                                stats.lastMonthRevenue = Math.max(stats.lastMonthRevenue || 0, txLastMonth);
+                                stats.yearRevenue = Math.max(stats.yearRevenue || 0, txYear);
+                                stats.totalRevenue = Math.max(stats.totalRevenue || 0, txTotal);
+                            }
                         }
                     }
                 } catch (txErr) {

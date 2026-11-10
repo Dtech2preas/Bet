@@ -709,6 +709,61 @@ const financialsManager = {
         return (words[0] || clean).toLowerCase();
     },
 
+    mapBankCategoryToAccount(csvCategory, desc, type) {
+        const cat = (csvCategory || '').toLowerCase().trim();
+        const d = (desc || '').toLowerCase().trim();
+
+        // 1. Bank Fees
+        if (cat === 'fees' || cat === 'bank charges' || cat.includes('fee') || d.includes('fee') || d.includes('charges')) {
+            return 'Bank Fees';
+        }
+        // 2. Subscriptions / Software
+        if (cat.includes('subscription') || cat.includes('software') || d.includes('google') || d.includes('microsoft') || d.includes('adobe') || d.includes('canva') || d.includes('domain') || d.includes('hosting') || d.includes('truehost')) {
+            return 'Software Subscriptions';
+        }
+        // 3. Utilities / Phone / Airtime / Data
+        if (cat === 'cellphone' || cat.includes('communication') || cat.includes('airtime') || cat.includes('prepaid') || d.includes('capitec connect') || d.includes('mtn') || d.includes('vodacom') || d.includes('telkom') || d.includes('cell c') || d.includes('electricity') || d.includes('eskom')) {
+            return 'Utilities';
+        }
+        // 4. Travel / Transport / Fuel
+        if (cat.includes('transport') || cat.includes('travel') || cat.includes('fuel') || d.includes('busbud') || d.includes('uber') || d.includes('bolt')) {
+            return 'Travel';
+        }
+        // 5. Income / Deposits
+        if (type === 'Income') {
+            if (cat === 'allowance' || d.includes('allowance')) return 'Sales Revenue';
+            if (cat === 'payment received' || cat === 'account payment received' || cat === 'cash deposit' || cat.includes('deposit')) return 'Sales Revenue';
+            if (cat === 'interest' || d.includes('interest')) return 'Service Revenue';
+            if (cat === 'transfer' || d.includes('transfer')) return 'Sales Revenue';
+            return 'Sales Revenue';
+        }
+        // 6. Expense Transfers / Sweeps / Withdrawals
+        if (cat === 'transfer' || d.includes('transfer') || d.includes('sweep')) {
+            return 'Director Loan';
+        }
+        if (cat === 'cash withdrawal' || d.includes('cash withdrawal')) {
+            return 'Office Supplies';
+        }
+        if (cat.includes('office') || cat.includes('supplies')) {
+            return 'Office Supplies';
+        }
+        if (cat.includes('marketing') || cat.includes('advertising')) {
+            return 'Marketing';
+        }
+        if (cat.includes('rent')) {
+            return 'Rent';
+        }
+        if (cat.includes('salary') || cat.includes('wage')) {
+            return 'Salaries & Wages';
+        }
+
+        // Exact match check in chart of accounts
+        const exactMatch = this.chartOfAccounts.find(a => a.name.toLowerCase() === cat);
+        if (exactMatch) return exactMatch.name;
+
+        return type === 'Income' ? 'Sales Revenue' : 'Office Supplies';
+    },
+
     showReconcileToast(message) {
         const container = document.getElementById('reconcile-toast-container');
         if (!container) return;
@@ -1011,25 +1066,24 @@ const financialsManager = {
 
             const lowerDesc = desc.toLowerCase();
             if (!autoCategory) {
-                if (csvCategory) {
-                    autoCategory = csvCategory;
-                } else if (lowerDesc.includes('fee')) {
-                    autoCategory = 'Bank Fees';
-                } else {
-                    // Get saved mappings
-                    const savedMappings = this.settings.mappings || {};
-                    for (const [key, cat] of Object.entries(savedMappings)) {
-                        if (lowerDesc.includes(key.toLowerCase())) {
-                            autoCategory = cat;
-                            break;
-                        }
+                // Get saved mappings first
+                const savedMappings = this.settings.mappings || {};
+                for (const [key, cat] of Object.entries(savedMappings)) {
+                    if (lowerDesc.includes(key.toLowerCase())) {
+                        autoCategory = cat;
+                        break;
                     }
+                }
+
+                // If not in custom saved mappings, auto-map using bank rules
+                if (!autoCategory) {
+                    autoCategory = this.mapBankCategoryToAccount(csvCategory, desc, type);
                 }
             }
 
             // Fallback for income deposits without category
             if (!autoCategory && type === 'Income') {
-                autoCategory = 'Sales / Services Revenue';
+                autoCategory = 'Sales Revenue';
             }
 
             if (!isNaN(amount) && amount !== 0) {
@@ -1584,19 +1638,19 @@ const financialsManager = {
                 successCount = txPayload.length;
                 updateProgress(65, 'Transactions stored in ledger!', `Committed all ${successCount} transactions cleanly in 1 KV write`, 'fas fa-check-circle text-green-500');
             } else {
-                // Fallback to sequential if batch array is not unwrapped by current backend
-                for (let i = 0; i < txPayload.length; i++) {
-                    const t = txPayload[i];
-                    try {
-                        const r = await API.request('/api/transactions', { method: 'POST', body: JSON.stringify(t) });
-                        if (r && r.success) successCount++;
-                        const p = 35 + Math.round(((i + 1) / txPayload.length) * 35);
-                        updateProgress(p, `Posting ${i + 1}/${txPayload.length}...`, `Recorded: "${t.description.slice(0, 24)}..."`);
-                    } catch (err) {}
-                }
+                throw new Error('Batch POST response did not indicate success');
             }
         } catch (e) {
-            console.error('Batch save failed, falling back', e);
+            console.warn('Batch save failed, falling back to sequential', e);
+            for (let i = 0; i < txPayload.length; i++) {
+                const t = txPayload[i];
+                try {
+                    const r = await API.request('/api/transactions', { method: 'POST', body: JSON.stringify(t) });
+                    if (r && r.success) successCount++;
+                    const p = 35 + Math.round(((i + 1) / txPayload.length) * 35);
+                    updateProgress(p, `Posting ${i + 1}/${txPayload.length}...`, `Recorded: "${t.description.slice(0, 24)}..."`);
+                } catch (err) {}
+            }
         }
         await new Promise(r => setTimeout(r, 150));
 
@@ -1653,8 +1707,8 @@ const financialsManager = {
         }
 
         const filtered = this.transactions.filter(t => {
-            const d = new Date(t.date);
-            return d >= new Date(startDate) && d <= new Date(endDate);
+            const d = t.date;
+            return d && d >= startDate && d <= endDate;
         });
 
         if (typeof pdfEngine !== 'undefined' && pdfEngine.generateIncomeStatementPDF) {
@@ -1673,8 +1727,8 @@ const financialsManager = {
         }
 
         const filtered = this.transactions.filter(t => {
-            const d = new Date(t.date);
-            return d <= new Date(asOfDate);
+            const d = t.date;
+            return d && d <= asOfDate;
         });
 
         if (typeof pdfEngine !== 'undefined' && pdfEngine.generateBalanceSheetPDF) {
@@ -1743,16 +1797,16 @@ const financialsManager = {
 
         if (report.type === 'IncomeStatement') {
             const filtered = this.transactions.filter(t => {
-                const d = new Date(t.date);
-                return d >= new Date(report.startDate) && d <= new Date(report.endDate);
+                const d = t.date;
+                return d && d >= report.startDate && d <= report.endDate;
             });
             if (typeof pdfEngine !== 'undefined' && pdfEngine.generateIncomeStatementPDF) {
                 pdfEngine.generateIncomeStatementPDF(filtered, report.startDate, report.endDate);
             }
         } else if (report.type === 'BalanceSheet') {
             const filtered = this.transactions.filter(t => {
-                const d = new Date(t.date);
-                return d <= new Date(report.asOfDate);
+                const d = t.date;
+                return d && d <= report.asOfDate;
             });
             if (typeof pdfEngine !== 'undefined' && pdfEngine.generateBalanceSheetPDF) {
                 pdfEngine.generateBalanceSheetPDF(filtered, report.asOfDate);
