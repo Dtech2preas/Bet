@@ -3,5 +3,9 @@ main = "worker.js"
 compatibility_date = "2024-09-23"
 
 # Strictly preserve all environment variables and secrets set in Cloudflare Dashboard
-# Preserves: DTECH_KV, YOCO_SECRET_KEY, PIC_API, ALLOW_TEST_TOKENS
+# Preserves: YOCO_SECRET_KEY, IMGBB_API_KEY, ALLOW_TEST_TOKENS
 keep_vars = true
+
+[[kv_namespaces]]
+binding = "DTECH_KV"
+id = "9d3415dca29e4fe8944052b3e87cf3d6"
