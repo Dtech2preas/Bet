@@ -12,17 +12,12 @@ on:
 
 jobs:
   deploy:
-    name: Deploy to Cloudflare Workers
+    name: Deploy Worker (lively-limit-786e)
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout source
+      - name: Checkout Repository
         uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
 
       - name: Validate Cloudflare Credentials
         env:
@@ -30,112 +25,30 @@ jobs:
           CF_ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           if [ -z "$CF_TOKEN" ]; then
-            echo "::error::CLOUDFLARE_API_TOKEN is missing."
+            echo "::error::CLOUDFLARE_API_TOKEN is missing in repository secrets."
             exit 1
           fi
 
           if [ -z "$CF_ACCOUNT" ]; then
-            echo "::error::CLOUDFLARE_ACCOUNT_ID is missing."
+            echo "::error::CLOUDFLARE_ACCOUNT_ID is missing in repository secrets."
             exit 1
           fi
 
           echo "Cloudflare credentials detected."
 
-      - name: Probe Cloudflare API Permissions
+      - name: Inspect Existing Worker Bindings
         env:
           CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CF_ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
-          echo "=== 1. Token Verification ==="
-          curl -s -X GET "https://api.cloudflare.com/client/v4/user/tokens/verify" \
-            -H "Authorization: Bearer ${CF_TOKEN}" | jq .
+          echo "Checking existing bindings on Cloudflare for lively-limit-786e..."
+          curl -s -X GET "https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT}/workers/services/lively-limit-786e/environments/production/bindings" \
+            -H "Authorization: Bearer ${CF_TOKEN}" \
+            -H "Content-Type: application/json" | jq .
 
-          echo "=== 2. Check Account ID Match ==="
-          ACTUAL_ACCOUNT_ID="ef91fc2d8b973636ecdb2b116b099b59"
-          if [ "$CF_ACCOUNT" = "$ACTUAL_ACCOUNT_ID" ]; then
-            echo "Account ID matches $ACTUAL_ACCOUNT_ID: YES"
-          else
-            echo "Account ID matches $ACTUAL_ACCOUNT_ID: NO"
-            echo "Secret length is ${#CF_ACCOUNT}"
-            echo "Secret starts with: $(echo $CF_ACCOUNT | cut -c 1-4)..."
-          fi
-
-          echo "=== 3. Query Workers Scripts API with ef91fc2d8b973636ecdb2b116b099b59 ==="
-          curl -s -X GET "https://api.cloudflare.com/client/v4/accounts/${ACTUAL_ACCOUNT_ID}/workers/scripts" \
-            -H "Authorization: Bearer ${CF_TOKEN}" | jq .
-
-          echo "=== 4. Query Workers Services API for lively-limit-786e with ef91fc2d8b973636ecdb2b116b099b59 ==="
-          curl -s -X GET "https://api.cloudflare.com/client/v4/accounts/${ACTUAL_ACCOUNT_ID}/workers/services/lively-limit-786e" \
-            -H "Authorization: Bearer ${CF_TOKEN}" | jq .
-
-      - name: Resolve KV Namespace ID
-        env:
-          CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CF_ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          KV_ID: ${{ secrets.CLOUDFLARE_KV_ID || vars.CLOUDFLARE_KV_ID || secrets.CF_KV_ID || vars.CF_KV_ID || secrets.DTECH_KV_ID || vars.DTECH_KV_ID }}
-        run: |
-          if [ -z "$KV_ID" ]; then
-            echo "Discovering DTECH_KV namespace..."
-
-            API_RESP=$(curl -sS -w '\n%{http_code}' \
-              "https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT}/storage/kv/namespaces?per_page=100" \
-              -H "Authorization: Bearer ${CF_TOKEN}" \
-              -H "Content-Type: application/json")
-
-            HTTP_CODE=$(echo "$API_RESP" | tail -n 1)
-            API_BODY=$(echo "$API_RESP" | sed '$d')
-
-            if [ "$HTTP_CODE" != "200" ]; then
-              echo "::error::Cloudflare KV API returned HTTP $HTTP_CODE"
-              echo "$API_BODY" | jq -r '.errors[]?.message // "Unknown API error"'
-              exit 1
-            fi
-
-            if ! echo "$API_BODY" | jq -e '.success == true' >/dev/null; then
-              echo "::error::Cloudflare rejected the KV request."
-              echo "$API_BODY" | jq -r '.errors[]?.message'
-              exit 1
-            fi
-
-            KV_ID=$(echo "$API_BODY" | jq -r \
-              '.result[]? | select(.title=="DTECH_KV") | .id' | head -n 1)
-          fi
-
-          if [ -n "$KV_ID" ] && [ "$KV_ID" != "null" ]; then
-            echo "DTECH_KV namespace resolved."
-            sed -i "s/PLACEHOLDER_KV_ID/$KV_ID/g" wrangler.toml
-          elif grep -q "PLACEHOLDER_KV_ID" wrangler.toml; then
-            echo "::error::DTECH_KV namespace not found."
-            exit 1
-          else
-            echo "Using existing KV configuration."
-          fi
-
-      - name: Verify Project Files
-        run: |
-          test -f worker.js || {
-            echo "::error::worker.js not found."
-            exit 1
-          }
-
-          test -f wrangler.toml || {
-            echo "::error::wrangler.toml not found."
-            exit 1
-          }
-
-          echo "Project files verified."
-
-      - name: Check Wrangler Version
-        run: |
-          npx --yes wrangler@3.90.0 --version
-
-      - name: Deploy Worker
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: |
-          echo "Starting Cloudflare Worker deployment..."
-
-          npx --yes wrangler@3.90.0 deploy --keep-vars
-
-          echo "Cloudflare Worker deployment completed."
+      - name: Deploy Worker via Wrangler
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: deploy --keep-vars
