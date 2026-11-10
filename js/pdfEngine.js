@@ -302,15 +302,15 @@ const pdfEngine = {
             let bankY = bottomSectionY + 6;
             doc.setFontSize(10);
             doc.setFont('helvetica', 'normal');
-            doc.text("Account Holder: MR SJ MOCHEBANE", 14, bankY);
+            doc.text("Account Holder: THE D-TECH ECOSYSTEM (PTY) LTD", 14, bankY);
             bankY += 5;
-            doc.text("Bank: Capitec Bank", 14, bankY);
+            doc.text("Bank: Capitec Business", 14, bankY);
             bankY += 5;
-            doc.text("Account Type: Savings", 14, bankY);
+            doc.text("Account Type: Current", 14, bankY);
             bankY += 5;
-            doc.text("Account Number: 1988749210", 14, bankY);
+            doc.text("Account Number: 1056046651", 14, bankY);
             bankY += 5;
-            doc.text("Branch Code: 470010", 14, bankY);
+            doc.text("Branch Code: 450105", 14, bankY);
             bankY += 5;
             doc.text(`Payment Reference: ${data.reference || ''}`, 14, bankY);
 
