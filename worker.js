@@ -142,6 +142,21 @@ async function handleKVCollection(request, env, collectionName, business_id) {
       body.business_id = business_id;
       body.dateAdded = new Date().toISOString();
 
+      if (collectionName === 'clients') {
+        const company = (body.companyName || body.name || '').trim();
+        if (!company) {
+          return jsonResponse({ success: false, message: 'Company name is required' }, 400);
+        }
+        body.companyName = company;
+      }
+
+      if (collectionName === 'products') {
+        const prodName = (body.name || '').trim();
+        if (!prodName) {
+          return jsonResponse({ success: false, message: 'Product name is required' }, 400);
+        }
+      }
+
       const filteredItems = items.filter(item => item.business_id === business_id);
       const limitCheck = await checkLimits(business_id, env, collectionName, filteredItems);
       if (!limitCheck.allowed) {

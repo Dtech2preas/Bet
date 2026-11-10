@@ -84,11 +84,13 @@ const clientsManager = {
                         <tbody class="bg-white dark:bg-dark-card divide-y divide-gray-200 dark:divide-gray-700 block md:table-row-group">
         `;
 
-        this.clients.forEach(client => {
+        dataToRender.forEach(client => {
             const statusColor = client.status === 'Active' ? 'bg-green-100 text-green-800' :
                                 client.status === 'Inactive' ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-800';
 
-            const dateStr = new Date(client.dateAdded).toLocaleDateString();
+            const dateStr = client.dateAdded ? new Date(client.dateAdded).toLocaleDateString() : '-';
+            const companyName = client.companyName || '(Unnamed Client)';
+            const initial = companyName.trim().charAt(0).toUpperCase() || 'C';
 
             tableHtml += `
                 <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors block md:table-row mb-4 md:mb-0 border-b md:border-0 p-4 md:p-0">
@@ -96,11 +98,11 @@ const clientsManager = {
                         <div class="md:hidden font-bold text-xs uppercase text-gray-500 mr-2">Company:</div>
                         <div class="flex items-center text-right md:text-left">
                             <div class="hidden md:flex h-10 w-10 flex-shrink-0 rounded-full bg-dtech-100 text-dtech-600 items-center justify-center font-bold">
-                                ${client.companyName.charAt(0).toUpperCase()}
+                                ${initial}
                             </div>
                             <div class="md:ml-4">
-                                <div class="text-sm font-medium text-gray-900 dark:text-white">${client.companyName}</div>
-                                <div class="text-sm text-gray-500">${client.email}</div>
+                                <div class="text-sm font-medium text-gray-900 dark:text-white">${companyName}</div>
+                                <div class="text-sm text-gray-500">${client.email || '-'}</div>
                             </div>
                         </div>
                     </td>
@@ -167,7 +169,7 @@ const clientsManager = {
                         </div>
                         <form id="clientDrawerForm" class="flex flex-col flex-grow overflow-hidden" onsubmit="clientsManager.saveClient(event)">
                             <div class="p-4 sm:p-6 overflow-y-auto flex-grow space-y-6" id="clientDrawerContent">
-                                <input id="clientId" type="hidden">
+                                <input id="drawer-cl-id" type="hidden">
                                 
                                 <!-- Basic Info -->
                                 <div>
@@ -177,27 +179,27 @@ const clientsManager = {
                                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                         <div>
                                             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Company Name *</label>
-                                            <input type="text" id="clientCompany" required placeholder="Official Registered Name" class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm border shadow-sm focus:border-dtech-500">
+                                            <input type="text" id="drawer-cl-company" required placeholder="Official Registered Name" class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm border shadow-sm focus:border-dtech-500">
                                         </div>
                                         <div>
                                             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Company Reg Number</label>
-                                            <input type="text" id="clientRegNum" placeholder="e.g. 2023/123456/07" class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm border shadow-sm focus:border-dtech-500">
+                                            <input type="text" id="drawer-cl-regnum" placeholder="e.g. 2023/123456/07" class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm border shadow-sm focus:border-dtech-500">
                                         </div>
                                         <div>
                                             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">VAT Number</label>
-                                            <input type="text" id="clientVatNum" placeholder="Tax / VAT Number" class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm border shadow-sm focus:border-dtech-500">
+                                            <input type="text" id="drawer-cl-vatnum" placeholder="Tax / VAT Number" class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm border shadow-sm focus:border-dtech-500">
                                         </div>
                                         <div>
                                             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Industry</label>
-                                            <input type="text" id="clientIndustry" placeholder="e.g. Technology, Retail" class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm border shadow-sm focus:border-dtech-500">
+                                            <input type="text" id="drawer-cl-industry" placeholder="e.g. Technology, Retail" class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm border shadow-sm focus:border-dtech-500">
                                         </div>
                                         <div>
                                             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Website</label>
-                                            <input type="url" id="clientWebsite" placeholder="https://..." class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm border shadow-sm focus:border-dtech-500">
+                                            <input type="url" id="drawer-cl-website" placeholder="https://..." class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm border shadow-sm focus:border-dtech-500">
                                         </div>
                                         <div>
                                             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Status</label>
-                                            <select id="clientStatus" class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm border shadow-sm focus:border-dtech-500">
+                                            <select id="drawer-cl-status" class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm border shadow-sm focus:border-dtech-500">
                                                 <option value="Active">Active</option>
                                                 <option value="Inactive">Inactive</option>
                                                 <option value="Archived">Archived</option>
@@ -205,7 +207,7 @@ const clientsManager = {
                                         </div>
                                         <div class="sm:col-span-2">
                                             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">LinkedIn Profile</label>
-                                            <input type="url" id="clientLinkedin" placeholder="https://linkedin.com/company/..." class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm border shadow-sm focus:border-dtech-500">
+                                            <input type="url" id="drawer-cl-linkedin" placeholder="https://linkedin.com/company/..." class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm border shadow-sm focus:border-dtech-500">
                                         </div>
                                     </div>
                                 </div>
@@ -218,11 +220,11 @@ const clientsManager = {
                                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                         <div>
                                             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Physical Address</label>
-                                            <textarea id="clientPhysicalAddress" rows="2" placeholder="Street Address, City, Postal Code" class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm border shadow-sm focus:border-dtech-500"></textarea>
+                                            <textarea id="drawer-cl-physical" rows="2" placeholder="Street Address, City, Postal Code" class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm border shadow-sm focus:border-dtech-500"></textarea>
                                         </div>
                                         <div>
                                             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Postal Address</label>
-                                            <textarea id="clientPostalAddress" rows="2" placeholder="P.O. Box or Postal Address" class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm border shadow-sm focus:border-dtech-500"></textarea>
+                                            <textarea id="drawer-cl-postal" rows="2" placeholder="P.O. Box or Postal Address" class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm border shadow-sm focus:border-dtech-500"></textarea>
                                         </div>
                                     </div>
                                 </div>
@@ -235,19 +237,19 @@ const clientsManager = {
                                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                         <div>
                                             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Primary Contact Person</label>
-                                            <input type="text" id="clientContact" placeholder="e.g. John Doe" class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm border shadow-sm focus:border-dtech-500">
+                                            <input type="text" id="drawer-cl-contact" placeholder="e.g. John Doe" class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm border shadow-sm focus:border-dtech-500">
                                         </div>
                                         <div>
                                             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Primary Email *</label>
-                                            <input type="email" id="clientEmail" required placeholder="invoices@client.co.za" class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm border shadow-sm focus:border-dtech-500">
+                                            <input type="email" id="drawer-cl-email" required placeholder="invoices@client.co.za" class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm border shadow-sm focus:border-dtech-500">
                                         </div>
                                         <div>
                                             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Phone Number</label>
-                                            <input type="tel" id="clientPhone" placeholder="+27 82 123 4567" class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm border shadow-sm focus:border-dtech-500">
+                                            <input type="tel" id="drawer-cl-phone" placeholder="+27 82 123 4567" class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm border shadow-sm focus:border-dtech-500">
                                         </div>
                                         <div>
                                             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Preferred Contact Method</label>
-                                            <select id="clientPreferredContact" class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm border shadow-sm focus:border-dtech-500">
+                                            <select id="drawer-cl-preferred" class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm border shadow-sm focus:border-dtech-500">
                                                 <option value="Email">Email</option>
                                                 <option value="Phone">Phone</option>
                                                 <option value="WhatsApp">WhatsApp</option>
@@ -255,11 +257,11 @@ const clientsManager = {
                                         </div>
                                         <div>
                                             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Billing Contact</label>
-                                            <input type="text" id="clientBillingContact" placeholder="accounts@client.co.za" class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm border shadow-sm focus:border-dtech-500">
+                                            <input type="text" id="drawer-cl-billing" placeholder="accounts@client.co.za" class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm border shadow-sm focus:border-dtech-500">
                                         </div>
                                         <div>
                                             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Technical Contact</label>
-                                            <input type="text" id="clientTechContact" placeholder="tech@client.co.za" class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm border shadow-sm focus:border-dtech-500">
+                                            <input type="text" id="drawer-cl-tech" placeholder="tech@client.co.za" class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm border shadow-sm focus:border-dtech-500">
                                         </div>
                                     </div>
                                 </div>
@@ -267,7 +269,7 @@ const clientsManager = {
                                 <!-- Notes -->
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Internal Notes</label>
-                                    <textarea id="clientNotes" rows="2" placeholder="Private internal client notes..." class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm border shadow-sm focus:border-dtech-500"></textarea>
+                                    <textarea id="drawer-cl-notes" rows="2" placeholder="Private internal client notes..." class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm border shadow-sm focus:border-dtech-500"></textarea>
                                 </div>
                             </div>
                             <div class="p-4 sm:p-6 border-t dark:border-dark-border flex justify-end space-x-3 bg-gray-50 dark:bg-dark-card flex-shrink-0">
@@ -292,28 +294,51 @@ const clientsManager = {
         const form = document.getElementById('clientDrawerForm');
         if (form) form.reset();
 
-        document.getElementById('clientId').value = '';
+        const setVal = (id, val) => {
+            const el = document.getElementById(id);
+            if (el) el.value = (val !== undefined && val !== null) ? val : '';
+        };
+
+        setVal('drawer-cl-id', '');
+        setVal('clientId', '');
         document.getElementById('clientDrawerTitle').innerText = 'Add New Client';
 
         if (client) {
             document.getElementById('clientDrawerTitle').innerText = 'Edit Client';
-            document.getElementById('clientId').value = client.id;
-            document.getElementById('clientCompany').value = client.companyName || '';
-            document.getElementById('clientContact').value = client.contactPerson || '';
-            document.getElementById('clientEmail').value = client.email || '';
-            document.getElementById('clientPhone').value = client.phone || '';
-            document.getElementById('clientStatus').value = client.status || 'Active';
-            document.getElementById('clientRegNum').value = client.regNum || '';
-            document.getElementById('clientVatNum').value = client.vatNum || '';
-            document.getElementById('clientIndustry').value = client.industry || '';
-            document.getElementById('clientWebsite').value = client.website || '';
-            document.getElementById('clientLinkedin').value = client.linkedin || '';
-            document.getElementById('clientPhysicalAddress').value = client.physicalAddress || '';
-            document.getElementById('clientPostalAddress').value = client.postalAddress || '';
-            document.getElementById('clientPreferredContact').value = client.preferredContact || 'Email';
-            document.getElementById('clientBillingContact').value = client.billingContact || '';
-            document.getElementById('clientTechContact').value = client.techContact || '';
-            document.getElementById('clientNotes').value = client.notes || '';
+            setVal('drawer-cl-id', client.id);
+            setVal('clientId', client.id);
+            setVal('drawer-cl-company', client.companyName);
+            setVal('clientCompany', client.companyName);
+            setVal('drawer-cl-contact', client.contactPerson);
+            setVal('clientContact', client.contactPerson);
+            setVal('drawer-cl-email', client.email);
+            setVal('clientEmail', client.email);
+            setVal('drawer-cl-phone', client.phone);
+            setVal('clientPhone', client.phone);
+            setVal('drawer-cl-status', client.status || 'Active');
+            setVal('clientStatus', client.status || 'Active');
+            setVal('drawer-cl-regnum', client.regNum);
+            setVal('clientRegNum', client.regNum);
+            setVal('drawer-cl-vatnum', client.vatNum);
+            setVal('clientVatNum', client.vatNum);
+            setVal('drawer-cl-industry', client.industry);
+            setVal('clientIndustry', client.industry);
+            setVal('drawer-cl-website', client.website);
+            setVal('clientWebsite', client.website);
+            setVal('drawer-cl-linkedin', client.linkedin);
+            setVal('clientLinkedin', client.linkedin);
+            setVal('drawer-cl-physical', client.physicalAddress);
+            setVal('clientPhysicalAddress', client.physicalAddress);
+            setVal('drawer-cl-postal', client.postalAddress);
+            setVal('clientPostalAddress', client.postalAddress);
+            setVal('drawer-cl-preferred', client.preferredContact || 'Email');
+            setVal('clientPreferredContact', client.preferredContact || 'Email');
+            setVal('drawer-cl-billing', client.billingContact);
+            setVal('clientBillingContact', client.billingContact);
+            setVal('drawer-cl-tech', client.techContact);
+            setVal('clientTechContact', client.techContact);
+            setVal('drawer-cl-notes', client.notes);
+            setVal('clientNotes', client.notes);
         }
 
         // Hide legacy static modal if present
@@ -355,30 +380,56 @@ const clientsManager = {
     },
 
     async saveClient(e) {
-        e.preventDefault();
+        if (e) e.preventDefault();
 
         const saveBtn = document.getElementById('saveClientBtn');
-        saveBtn.disabled = true;
-        saveBtn.innerHTML = 'Saving...';
+        if (saveBtn) {
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Saving...';
+        }
 
-        const id = document.getElementById('clientId').value;
+        const getVal = (drawerId, legacyId) => {
+            const drawerEl = document.getElementById(drawerId);
+            if (drawerEl && drawerEl.value !== undefined && drawerEl.value.trim() !== '') {
+                return drawerEl.value.trim();
+            }
+            const legacyEl = legacyId ? document.getElementById(legacyId) : null;
+            if (legacyEl && legacyEl.value !== undefined) {
+                return legacyEl.value.trim();
+            }
+            return drawerEl ? drawerEl.value.trim() : '';
+        };
+
+        const id = getVal('drawer-cl-id', 'clientId');
+        const companyName = getVal('drawer-cl-company', 'clientCompany');
+        const email = getVal('drawer-cl-email', 'clientEmail');
+
+        if (!companyName) {
+            Swal.fire({ icon: 'warning', title: 'Required Field', text: 'Company Name is required.' });
+            if (saveBtn) {
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = 'Save Client';
+            }
+            return;
+        }
+
         const clientData = {
-            companyName: document.getElementById('clientCompany').value,
-            contactPerson: document.getElementById('clientContact').value,
-            email: document.getElementById('clientEmail').value,
-            phone: document.getElementById('clientPhone').value,
-            status: document.getElementById('clientStatus').value,
-            regNum: document.getElementById('clientRegNum').value,
-            vatNum: document.getElementById('clientVatNum').value,
-            industry: document.getElementById('clientIndustry').value,
-            website: document.getElementById('clientWebsite').value,
-            linkedin: document.getElementById('clientLinkedin').value,
-            physicalAddress: document.getElementById('clientPhysicalAddress').value,
-            postalAddress: document.getElementById('clientPostalAddress').value,
-            preferredContact: document.getElementById('clientPreferredContact').value,
-            billingContact: document.getElementById('clientBillingContact').value,
-            techContact: document.getElementById('clientTechContact').value,
-            notes: document.getElementById('clientNotes').value
+            companyName: companyName,
+            contactPerson: getVal('drawer-cl-contact', 'clientContact'),
+            email: email,
+            phone: getVal('drawer-cl-phone', 'clientPhone'),
+            status: document.getElementById('drawer-cl-status')?.value || document.getElementById('clientStatus')?.value || 'Active',
+            regNum: getVal('drawer-cl-regnum', 'clientRegNum'),
+            vatNum: getVal('drawer-cl-vatnum', 'clientVatNum'),
+            industry: getVal('drawer-cl-industry', 'clientIndustry'),
+            website: getVal('drawer-cl-website', 'clientWebsite'),
+            linkedin: getVal('drawer-cl-linkedin', 'clientLinkedin'),
+            physicalAddress: getVal('drawer-cl-physical', 'clientPhysicalAddress'),
+            postalAddress: getVal('drawer-cl-postal', 'clientPostalAddress'),
+            preferredContact: document.getElementById('drawer-cl-preferred')?.value || document.getElementById('clientPreferredContact')?.value || 'Email',
+            billingContact: getVal('drawer-cl-billing', 'clientBillingContact'),
+            techContact: getVal('drawer-cl-tech', 'clientTechContact'),
+            notes: getVal('drawer-cl-notes', 'clientNotes')
         };
 
         try {
@@ -388,7 +439,7 @@ const clientsManager = {
                     method: 'PUT',
                     body: JSON.stringify(clientData)
                 });
-                if (typeof app !== 'undefined' && app.logActivity) app.logActivity(`Updated Client: ${clientData.name}`);
+                if (typeof app !== 'undefined' && app.logActivity) app.logActivity(`Updated Client: ${clientData.companyName}`);
                 Swal.fire({ icon: 'success', title: 'Updated!', text: 'Client updated successfully', timer: 1500, showConfirmButton: false });
             } else {
                 // Create
@@ -396,19 +447,23 @@ const clientsManager = {
                     method: 'POST',
                     body: JSON.stringify(clientData)
                 });
-                if (typeof app !== 'undefined' && app.logActivity) app.logActivity(`Added Client: ${clientData.name}`);
+                if (typeof app !== 'undefined' && app.logActivity) app.logActivity(`Added Client: ${clientData.companyName}`);
                 Swal.fire({ icon: 'success', title: 'Created!', text: 'Client added successfully', timer: 1500, showConfirmButton: false });
             }
 
             this.closeModal();
             this.loadClients();
-            app.loadDashboardData(); // Refresh stats
+            if (typeof app !== 'undefined' && app.loadDashboardData) {
+                app.loadDashboardData(); // Refresh stats
+            }
 
         } catch (error) {
             Swal.fire({ icon: 'error', title: 'Error', text: error.message });
         } finally {
-            saveBtn.disabled = false;
-            saveBtn.innerHTML = 'Save Client';
+            if (saveBtn) {
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = 'Save Client';
+            }
         }
     },
 
