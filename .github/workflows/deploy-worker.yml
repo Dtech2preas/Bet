@@ -1,4 +1,4 @@
-name: Diagnose Cloudflare Worker
+name: Deploy Cloudflare Worker
 
 on:
   push:
@@ -11,8 +11,8 @@ on:
   workflow_dispatch:
 
 jobs:
-  diagnose:
-    name: Diagnose Cloudflare Worker
+  deploy:
+    name: Deploy to Cloudflare Workers
     runs-on: ubuntu-latest
 
     steps:
@@ -65,7 +65,7 @@ jobs:
             fi
 
             if ! echo "$API_BODY" | jq -e '.success == true' >/dev/null; then
-              echo "::error::Cloudflare rejected the KV namespace request."
+              echo "::error::Cloudflare rejected the KV request."
               echo "$API_BODY" | jq -r '.errors[]?.message'
               exit 1
             fi
@@ -84,12 +84,8 @@ jobs:
             echo "Using existing KV configuration."
           fi
 
-      - name: Inspect Project Files
+      - name: Verify Project Files
         run: |
-          echo "Checking project files..."
-
-          ls -la
-
           test -f worker.js || {
             echo "::error::worker.js not found."
             exit 1
@@ -100,20 +96,12 @@ jobs:
             exit 1
           }
 
-          echo "Project files found."
+          echo "Project files verified."
 
-      - name: Diagnose Wrangler Configuration
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: |
-          echo "Wrangler version:"
-          npx --yes wrangler@3.90.0 --version
-
-          echo "Validating Wrangler configuration..."
-
-          npx --yes wrangler@3.90.0 deploy \
-            --dry-run \
-            --outdir=./dist
-
-          echo "Wrangler diagnostic completed successfully."
+      - name: Deploy to Cloudflare Workers
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: '.'
+          command: deploy --keep-vars
