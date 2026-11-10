@@ -1,11 +1,7 @@
 name = "lively-limit-786e"
 main = "worker.js"
-compatibility_date = "2024-01-01"
+compatibility_date = "2024-09-23"
 
-# IMPORTANT: Instruct Wrangler to preserve all dashboard-managed secrets and environment variables
+# Strictly preserve all environment variables and secrets set in Cloudflare Dashboard
+# Preserves: DTECH_KV, YOCO_SECRET_KEY, PIC_API, ALLOW_TEST_TOKENS
 keep_vars = true
-
-# KV Namespace binding for primary database storage
-[[kv_namespaces]]
-binding = "DTECH_KV"
-id = "PLACEHOLDER_KV_ID"
