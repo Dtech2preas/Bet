@@ -1,4 +1,4 @@
-name: Deploy Cloudflare Worker
+name: Diagnose Cloudflare Worker
 
 on:
   push:
@@ -11,13 +11,18 @@ on:
   workflow_dispatch:
 
 jobs:
-  deploy:
-    name: Deploy to Cloudflare Workers
+  diagnose:
+    name: Diagnose Cloudflare Worker
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout source
         uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
 
       - name: Validate Cloudflare Credentials
         env:
@@ -34,7 +39,7 @@ jobs:
             exit 1
           fi
 
-          echo "Cloudflare credentials successfully detected."
+          echo "Cloudflare credentials detected."
 
       - name: Resolve KV Namespace ID
         env:
@@ -43,7 +48,7 @@ jobs:
           KV_ID: ${{ secrets.CLOUDFLARE_KV_ID || vars.CLOUDFLARE_KV_ID || secrets.CF_KV_ID || vars.CF_KV_ID || secrets.DTECH_KV_ID || vars.DTECH_KV_ID }}
         run: |
           if [ -z "$KV_ID" ]; then
-            echo "CLOUDFLARE_KV_ID not provided. Auto-discovering..."
+            echo "Discovering DTECH_KV namespace..."
 
             API_RESP=$(curl -sS -w '\n%{http_code}' \
               "https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT}/storage/kv/namespaces?per_page=100" \
@@ -60,7 +65,7 @@ jobs:
             fi
 
             if ! echo "$API_BODY" | jq -e '.success == true' >/dev/null; then
-              echo "::error::Cloudflare rejected the KV namespace request."
+              echo "::error::Cloudflare API rejected the request."
               echo "$API_BODY" | jq -r '.errors[]?.message'
               exit 1
             fi
@@ -70,19 +75,48 @@ jobs:
           fi
 
           if [ -n "$KV_ID" ] && [ "$KV_ID" != "null" ]; then
-            echo "Successfully resolved DTECH_KV Namespace ID."
+            echo "DTECH_KV namespace resolved."
             sed -i "s/PLACEHOLDER_KV_ID/$KV_ID/g" wrangler.toml
           elif grep -q "PLACEHOLDER_KV_ID" wrangler.toml; then
-            echo "::error::DTECH_KV namespace not found. Add CLOUDFLARE_KV_ID to GitHub Secrets."
+            echo "::error::DTECH_KV namespace not found."
             exit 1
           else
-            echo "No KV placeholder found. Keeping existing configuration."
+            echo "Using existing KV configuration."
           fi
 
-      - name: Deploy to Cloudflare Workers
-        uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          workingDirectory: '.'
-          command: deploy --keep-vars
+      - name: Inspect Wrangler Configuration
+        run: |
+          echo "Checking project files..."
+
+          ls -la
+
+          echo "Checking worker.js..."
+          test -f worker.js || {
+            echo "::error::worker.js not found."
+            exit 1
+          }
+
+          echo "Checking wrangler.toml..."
+          test -f wrangler.toml || {
+            echo "::error::wrangler.toml not found."
+            exit 1
+          }
+
+          echo "Project files found."
+
+      - name: Diagnose Wrangler Configuration
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          echo "Wrangler version:"
+          npx --yes wrangler@3.90.0 --version
+
+          echo "Validating Wrangler configuration..."
+
+          npx --yes wrangler@3.90.0 deploy \
+            --dry-run \
+            --outdir=./dist \
+            --log-level debug
+
+          echo "Wrangler diagnostic completed successfully."
