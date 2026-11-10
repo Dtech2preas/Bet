@@ -2,6 +2,9 @@ name = "lively-limit-786e"
 main = "worker.js"
 compatibility_date = "2024-01-01"
 
+# IMPORTANT: Instruct Wrangler to preserve all dashboard-managed secrets and environment variables
+keep_vars = true
+
 # KV Namespace binding for primary database storage
 [[kv_namespaces]]
 binding = "DTECH_KV"

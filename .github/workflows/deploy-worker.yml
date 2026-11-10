@@ -18,14 +18,27 @@ jobs:
       - name: Checkout source
         uses: actions/checkout@v4
 
-      - name: Inject KV Namespace ID
+      - name: Resolve KV Namespace ID
         run: |
-          if [ -n "${{ secrets.CLOUDFLARE_KV_ID }}" ]; then
-            sed -i "s/PLACEHOLDER_KV_ID/${{ secrets.CLOUDFLARE_KV_ID }}/g" wrangler.toml
+          KV_ID="${{ secrets.CLOUDFLARE_KV_ID }}"
+
+          # If secret is not manually set, auto-discover via Cloudflare API
+          if [ -z "$KV_ID" ]; then
+            echo "CLOUDFLARE_KV_ID secret not provided, auto-discovering from Cloudflare account..."
+            API_RESP=$(curl -s -X GET "https://api.cloudflare.com/client/v4/accounts/${{ secrets.CLOUDFLARE_ACCOUNT_ID }}/storage/kv/namespaces?per_page=100" \
+              -H "Authorization: Bearer ${{ secrets.CLOUDFLARE_API_TOKEN }}" \
+              -H "Content-Type: application/json")
+            KV_ID=$(echo "$API_RESP" | jq -r '.result[] | select(.title=="DTECH_KV") | .id' | head -n 1)
           fi
-          if grep -q "PLACEHOLDER_KV_ID" wrangler.toml; then
-            echo "::error::Missing KV ID! Please add CLOUDFLARE_KV_ID in your GitHub repository secrets (or replace PLACEHOLDER_KV_ID in wrangler.toml)."
-            exit 1
+
+          if [ -n "$KV_ID" ] && [ "$KV_ID" != "null" ]; then
+            echo "Successfully resolved DTECH_KV Namespace ID: $KV_ID"
+            sed -i "s/PLACEHOLDER_KV_ID/$KV_ID/g" wrangler.toml
+          else
+            if grep -q "PLACEHOLDER_KV_ID" wrangler.toml; then
+              echo "::error::Could not find DTECH_KV namespace. Please set CLOUDFLARE_KV_ID in your GitHub repository secrets."
+              exit 1
+            fi
           fi
 
       - name: Deploy to Cloudflare Workers
@@ -33,3 +46,4 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: deploy --keep-vars
