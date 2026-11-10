@@ -39,7 +39,7 @@ jobs:
             exit 1
           fi
 
-          echo "Cloudflare credentials detected."
+          echo "Cloudflare credentials successfully detected."
 
       - name: Resolve KV Namespace ID
         env:
@@ -65,7 +65,7 @@ jobs:
             fi
 
             if ! echo "$API_BODY" | jq -e '.success == true' >/dev/null; then
-              echo "::error::Cloudflare API rejected the request."
+              echo "::error::Cloudflare rejected the KV namespace request."
               echo "$API_BODY" | jq -r '.errors[]?.message'
               exit 1
             fi
@@ -84,19 +84,17 @@ jobs:
             echo "Using existing KV configuration."
           fi
 
-      - name: Inspect Wrangler Configuration
+      - name: Inspect Project Files
         run: |
           echo "Checking project files..."
 
           ls -la
 
-          echo "Checking worker.js..."
           test -f worker.js || {
             echo "::error::worker.js not found."
             exit 1
           }
 
-          echo "Checking wrangler.toml..."
           test -f wrangler.toml || {
             echo "::error::wrangler.toml not found."
             exit 1
@@ -116,7 +114,6 @@ jobs:
 
           npx --yes wrangler@3.90.0 deploy \
             --dry-run \
-            --outdir=./dist \
-            --log-level debug
+            --outdir=./dist
 
           echo "Wrangler diagnostic completed successfully."
