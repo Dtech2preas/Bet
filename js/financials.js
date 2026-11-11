@@ -458,6 +458,297 @@ const financialsManager = {
         }, 300);
     },
 
+    ensureAdvancedDrawer() {
+        let modal = document.getElementById('advancedTaxDrawerModal');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'advancedTaxDrawerModal';
+            modal.className = 'fixed inset-0 bg-black bg-opacity-50 hidden z-50 overflow-hidden';
+            modal.innerHTML = `
+                <div class="absolute inset-y-0 right-0 max-w-full flex">
+                    <div class="w-screen max-w-xl bg-white dark:bg-dark-card shadow-2xl h-full flex flex-col transform transition-transform duration-300 ease-in-out translate-x-full" id="advancedTaxDrawerPanel">
+                        <div class="px-6 py-4 border-b dark:border-dark-border flex justify-between items-center bg-gray-50 dark:bg-gray-800 sticky top-0 z-10">
+                            <div>
+                                <h3 class="text-lg md:text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                                    <i class="fas fa-calculator text-indigo-600"></i> Advanced Tax &amp; Filing
+                                </h3>
+                                <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">SARS VAT201, CIPC Annual Return &amp; Accountant Export</p>
+                            </div>
+                            <button type="button" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition" onclick="financialsManager.closeAdvancedDrawer()">
+                                <i class="fas fa-times text-xl"></i>
+                            </button>
+                        </div>
+                        <div class="p-4 sm:p-6 overflow-y-auto flex-grow space-y-5" id="advancedTaxDrawerContent">
+                            <!-- Period Filter -->
+                            <div class="flex items-center justify-between bg-gray-50 dark:bg-gray-800 p-3 rounded-lg border dark:border-dark-border">
+                                <label for="adv-period-filter" class="text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Period:</label>
+                                <select id="adv-period-filter" class="rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 text-sm py-1.5 px-3 font-medium shadow-sm focus:border-indigo-500" onchange="financialsManager.updateAdvancedDrawer()">
+                                    <option value="fy">This Financial Year</option>
+                                    <option value="vat201">Last 2 Months (VAT201)</option>
+                                    <option value="ytd">Calendar Year (YTD)</option>
+                                    <option value="all">All-Time Transactions</option>
+                                </select>
+                            </div>
+
+                            <!-- Card 1: SARS VAT201 Return (15%) -->
+                            <div class="bg-white dark:bg-dark-card border dark:border-dark-border rounded-xl p-4 sm:p-5 shadow-sm space-y-3">
+                                <div class="flex items-center justify-between border-b dark:border-dark-border pb-2.5">
+                                    <h4 class="font-bold text-gray-900 dark:text-white text-sm flex items-center gap-2">
+                                        <i class="fas fa-percentage text-green-600"></i> SARS VAT201 Return (15%)
+                                    </h4>
+                                    <span class="text-xs text-gray-400">Standard SA VAT</span>
+                                </div>
+                                <div class="space-y-2 text-sm">
+                                    <div class="flex justify-between items-center text-gray-600 dark:text-gray-400">
+                                        <span>Output VAT (Collected on Sales):</span>
+                                        <span class="font-semibold text-gray-900 dark:text-white font-mono" id="adv-vat-output">R 0.00</span>
+                                    </div>
+                                    <div class="flex justify-between items-center text-gray-600 dark:text-gray-400">
+                                        <span>Input VAT (Paid on Expenses):</span>
+                                        <span class="font-semibold text-gray-900 dark:text-white font-mono" id="adv-vat-input">R 0.00</span>
+                                    </div>
+                                    <div class="pt-2 border-t dark:border-dark-border flex justify-between items-center font-bold">
+                                        <span id="adv-vat-net-label">Net VAT Position:</span>
+                                        <span class="text-base font-mono" id="adv-vat-net">R 0.00</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Card 2: CIPC & SARS Annual Return Helper -->
+                            <div class="bg-white dark:bg-dark-card border dark:border-dark-border rounded-xl p-4 sm:p-5 shadow-sm space-y-3">
+                                <div class="flex items-center justify-between border-b dark:border-dark-border pb-2.5">
+                                    <h4 class="font-bold text-gray-900 dark:text-white text-sm flex items-center gap-2">
+                                        <i class="fas fa-landmark text-blue-600"></i> CIPC &amp; SARS Annual Helper
+                                    </h4>
+                                    <span class="text-xs text-gray-400">Company Year-End</span>
+                                </div>
+                                <div class="space-y-2.5 text-sm">
+                                    <div>
+                                        <div class="flex justify-between items-center text-gray-600 dark:text-gray-400">
+                                            <span>Annual Turnover (for CIPC):</span>
+                                            <span class="font-semibold text-gray-900 dark:text-white font-mono text-base" id="adv-turnover">R 0.00</span>
+                                        </div>
+                                        <p class="text-xs text-indigo-600 dark:text-indigo-400 mt-0.5" id="adv-cipc-fee">CIPC Fee Bracket: Turnover ≤ R1M → R100 fee</p>
+                                    </div>
+                                    <div class="flex justify-between items-center text-gray-600 dark:text-gray-400">
+                                        <span>Total Allowable Deductions:</span>
+                                        <span class="font-semibold text-gray-900 dark:text-white font-mono" id="adv-expenses">R 0.00</span>
+                                    </div>
+                                    <div class="flex justify-between items-center text-gray-600 dark:text-gray-400">
+                                        <span>Net Taxable Profit:</span>
+                                        <span class="font-semibold text-gray-900 dark:text-white font-mono" id="adv-net-profit">R 0.00</span>
+                                    </div>
+                                    <div class="pt-2 border-t dark:border-dark-border flex justify-between items-center font-bold text-gray-900 dark:text-white">
+                                        <span>Estimated Corporate Tax (27%):</span>
+                                        <span class="text-base font-mono text-purple-600 dark:text-purple-400" id="adv-est-tax">R 0.00</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Card 3: Accountant Export -->
+                            <div class="bg-white dark:bg-dark-card border dark:border-dark-border rounded-xl p-4 sm:p-5 shadow-sm space-y-3">
+                                <div class="flex items-center justify-between border-b dark:border-dark-border pb-2.5">
+                                    <h4 class="font-bold text-gray-900 dark:text-white text-sm flex items-center gap-2">
+                                        <i class="fas fa-file-excel text-emerald-600"></i> Accountant CSV Export
+                                    </h4>
+                                    <span class="text-xs text-gray-400">Spreadsheet</span>
+                                </div>
+                                <p class="text-xs text-gray-500 dark:text-gray-400">Download your categorized ledger in CSV format to email to your accountant or bookkeeper.</p>
+                                <button type="button" class="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg shadow-sm text-sm transition flex items-center justify-center gap-2" onclick="financialsManager.exportAccountantCSV()">
+                                    <i class="fas fa-file-csv"></i> Download Ledger (.CSV)
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        }
+        return modal;
+    },
+
+    openAdvancedDrawer() {
+        const modal = this.ensureAdvancedDrawer();
+        const panel = document.getElementById('advancedTaxDrawerPanel');
+        this.updateAdvancedDrawer();
+
+        modal.classList.remove('hidden');
+        requestAnimationFrame(() => {
+            panel.classList.remove('translate-x-full');
+        });
+    },
+
+    closeAdvancedDrawer() {
+        const modal = document.getElementById('advancedTaxDrawerModal');
+        const panel = document.getElementById('advancedTaxDrawerPanel');
+        if (!modal || !panel) return;
+        panel.classList.add('translate-x-full');
+        setTimeout(() => {
+            modal.classList.add('hidden');
+        }, 300);
+    },
+
+    calculateAdvancedStats(periodFilter = 'fy') {
+        let txs = [...(this.transactions || [])];
+
+        if (periodFilter === 'fy') {
+            const fyStartMonth = parseInt(this.settings?.fyStartMonth || '3', 10);
+            const today = new Date();
+            const curYear = today.getFullYear();
+            const curMonth = today.getMonth() + 1;
+            const startYear = curMonth >= fyStartMonth ? curYear : curYear - 1;
+            const endYear = startYear + 1;
+            const startStr = `${startYear}-${String(fyStartMonth).padStart(2, '0')}-01`;
+            const nextStart = new Date(`${endYear}-${String(fyStartMonth).padStart(2, '0')}-01`);
+            const endStr = new Date(nextStart.getTime() - 86400000).toISOString().split('T')[0];
+            txs = txs.filter(t => t.date >= startStr && t.date <= endStr);
+        } else if (periodFilter === 'ytd') {
+            const curYear = new Date().getFullYear();
+            txs = txs.filter(t => t.date && t.date.startsWith(String(curYear)));
+        } else if (periodFilter === 'vat201') {
+            const d = new Date();
+            d.setMonth(d.getMonth() - 2);
+            const twoMonthsAgoStr = d.toISOString().split('T')[0];
+            txs = txs.filter(t => t.date >= twoMonthsAgoStr);
+        }
+
+        let totalInflow = 0;
+        let totalOutflow = 0;
+
+        txs.forEach(t => {
+            const amt = Math.abs(parseFloat(t.amount || 0));
+            const isExp = t.type === 'Expense' || parseFloat(t.amount || 0) < 0;
+            if (isExp) totalOutflow += amt;
+            else totalInflow += amt;
+        });
+
+        // 15% South African VAT calculation (VAT component = Amount * 15 / 115)
+        const outputVat = totalInflow * (15 / 115);
+        const inputVat = totalOutflow * (15 / 115);
+        const netVat = outputVat - inputVat;
+
+        const turnover = totalInflow;
+        const expenses = totalOutflow;
+        const netProfit = turnover - expenses;
+        const estTax = netProfit > 0 ? (netProfit * 0.27) : 0;
+
+        let cipcTier = 'Turnover ≤ R1M → R100 fee';
+        if (turnover > 10000000) cipcTier = 'Turnover > R10M → R450 fee';
+        else if (turnover > 1000000) cipcTier = 'Turnover R1M–R10M → R250 fee';
+
+        return {
+            txCount: txs.length,
+            totalInflow,
+            totalOutflow,
+            outputVat,
+            inputVat,
+            netVat,
+            turnover,
+            expenses,
+            netProfit,
+            estTax,
+            cipcTier
+        };
+    },
+
+    updateAdvancedDrawer() {
+        const filter = document.getElementById('adv-period-filter')?.value || 'fy';
+        const stats = this.calculateAdvancedStats(filter);
+
+        const fmt = (num) => `R ${Number(num || 0).toLocaleString('en-ZA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+        const outEl = document.getElementById('adv-vat-output');
+        const inEl = document.getElementById('adv-vat-input');
+        const netEl = document.getElementById('adv-vat-net');
+        const netLabelEl = document.getElementById('adv-vat-net-label');
+
+        if (outEl) outEl.textContent = fmt(stats.outputVat);
+        if (inEl) inEl.textContent = fmt(stats.inputVat);
+
+        if (netEl && netLabelEl) {
+            if (stats.netVat > 0.01) {
+                netLabelEl.textContent = 'Net VAT Payable to SARS:';
+                netEl.textContent = fmt(stats.netVat);
+                netEl.className = 'text-base font-mono text-amber-600 dark:text-amber-400 font-bold';
+            } else if (stats.netVat < -0.01) {
+                netLabelEl.textContent = 'Net VAT Refund Due from SARS:';
+                netEl.textContent = fmt(Math.abs(stats.netVat));
+                netEl.className = 'text-base font-mono text-green-600 dark:text-green-400 font-bold';
+            } else {
+                netLabelEl.textContent = 'Net VAT Position:';
+                netEl.textContent = fmt(0);
+                netEl.className = 'text-base font-mono text-gray-700 dark:text-gray-300 font-bold';
+            }
+        }
+
+        const turnEl = document.getElementById('adv-turnover');
+        const feeEl = document.getElementById('adv-cipc-fee');
+        const expEl = document.getElementById('adv-expenses');
+        const profEl = document.getElementById('adv-net-profit');
+        const taxEl = document.getElementById('adv-est-tax');
+
+        if (turnEl) turnEl.textContent = fmt(stats.turnover);
+        if (feeEl) feeEl.textContent = `CIPC Fee Bracket: ${stats.cipcTier}`;
+        if (expEl) expEl.textContent = fmt(stats.expenses);
+        if (profEl) profEl.textContent = fmt(stats.netProfit);
+        if (taxEl) taxEl.textContent = fmt(stats.estTax);
+    },
+
+    exportAccountantCSV() {
+        if (!this.transactions || this.transactions.length === 0) {
+            Swal.fire('No Transactions', 'There are no transactions in the ledger to export.', 'info');
+            return;
+        }
+
+        const periodFilter = document.getElementById('adv-period-filter')?.value || 'fy';
+        let txs = [...this.transactions];
+
+        if (periodFilter === 'fy') {
+            const fyStartMonth = parseInt(this.settings?.fyStartMonth || '3', 10);
+            const today = new Date();
+            const curYear = today.getFullYear();
+            const curMonth = today.getMonth() + 1;
+            const startYear = curMonth >= fyStartMonth ? curYear : curYear - 1;
+            const endYear = startYear + 1;
+            const startStr = `${startYear}-${String(fyStartMonth).padStart(2, '0')}-01`;
+            const nextStart = new Date(`${endYear}-${String(fyStartMonth).padStart(2, '0')}-01`);
+            const endStr = new Date(nextStart.getTime() - 86400000).toISOString().split('T')[0];
+            txs = txs.filter(t => t.date >= startStr && t.date <= endStr);
+        } else if (periodFilter === 'ytd') {
+            const curYear = new Date().getFullYear();
+            txs = txs.filter(t => t.date && t.date.startsWith(String(curYear)));
+        } else if (periodFilter === 'vat201') {
+            const d = new Date();
+            d.setMonth(d.getMonth() - 2);
+            const twoMonthsAgoStr = d.toISOString().split('T')[0];
+            txs = txs.filter(t => t.date >= twoMonthsAgoStr);
+        }
+
+        // Sort by date ascending
+        txs.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+        let csv = 'Date,Reference,Description,Type,Account Category,Money In (ZAR),Money Out (ZAR),Net Amount (ZAR)\n';
+
+        txs.forEach(t => {
+            const amt = Math.abs(parseFloat(t.amount || 0));
+            const isExp = t.type === 'Expense' || parseFloat(t.amount || 0) < 0;
+            const moneyIn = !isExp ? amt.toFixed(2) : '0.00';
+            const moneyOut = isExp ? amt.toFixed(2) : '0.00';
+            const netAmt = (!isExp ? amt : -amt).toFixed(2);
+            const cleanDesc = (t.description || '').replace(/"/g, '""');
+            const cleanRef = (t.reference || '').replace(/"/g, '""');
+            const cleanCat = (t.category || 'Uncategorized').replace(/"/g, '""');
+
+            csv += `"${t.date || ''}","${cleanRef}","${cleanDesc}","${t.type || ''}","${cleanCat}",${moneyIn},${moneyOut},${netAmt}\n`;
+        });
+
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `ledger_accountant_export_${new Date().toISOString().split('T')[0]}.csv`;
+        link.click();
+    },
+
     async saveTransactionDrawer(e) {
         e.preventDefault();
 
