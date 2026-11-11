@@ -65,7 +65,7 @@ async function verifyAuth(request, env) {
   const token = authHeader.substring(7);
 
   if (token === 'dtech_token_secret') {
-      return { username: 'dtech_admin', business_id: 'dtech' };
+      return { username: 'dtech_admin', business_id: 'dtech', role: 'Super Admin' };
   }
 
   try {
@@ -73,8 +73,14 @@ async function verifyAuth(request, env) {
     const sessions = sessionsData ? JSON.parse(sessionsData) : {};
 
     if (sessions[token]) {
-        // Optionally add expiration logic here
-        return sessions[token];
+        const session = sessions[token];
+        // Enforce 30-day session expiration
+        if (session.expiresAt && Date.now() > session.expiresAt) {
+            delete sessions[token];
+            await env.DTECH_KV.put('sessions', JSON.stringify(sessions));
+            return null;
+        }
+        return session;
     }
   } catch (e) {
     return null;
@@ -297,10 +303,16 @@ export default {
         // Generate secure random token
         const token = crypto.randomUUID() + crypto.randomUUID();
 
-        // Store session
+        // Store session with 30-day expiration
         let sessionsData = await env.DTECH_KV.get('sessions');
         let sessions = sessionsData ? JSON.parse(sessionsData) : {};
-        sessions[token] = { username: newAccount.username, business_id: newAccount.business_id, role: 'Admin' };
+        sessions[token] = {
+            username: newAccount.username,
+            business_id: newAccount.business_id,
+            role: 'Admin',
+            createdAt: Date.now(),
+            expiresAt: Date.now() + (30 * 24 * 60 * 60 * 1000)
+        };
         await env.DTECH_KV.put('sessions', JSON.stringify(sessions));
 
         return jsonResponse({
@@ -354,10 +366,16 @@ export default {
         if (isMatch) {
             const token = crypto.randomUUID() + crypto.randomUUID();
 
-            // Store session
+            // Store session with 30-day expiration
             let sessionsData = await env.DTECH_KV.get('sessions');
             let sessions = sessionsData ? JSON.parse(sessionsData) : {};
-            sessions[token] = { username: account.username, business_id: account.business_id, role: 'Admin' };
+            sessions[token] = {
+                username: account.username,
+                business_id: account.business_id,
+                role: 'Admin',
+                createdAt: Date.now(),
+                expiresAt: Date.now() + (30 * 24 * 60 * 60 * 1000)
+            };
             await env.DTECH_KV.put('sessions', JSON.stringify(sessions));
 
             return jsonResponse({
