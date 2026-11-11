@@ -32,7 +32,7 @@ const API = {
             }
 
             if (!response.ok) {
-                if (response.status === 401 && endpoint !== '/api/login') {
+                if (response.status === 401 && endpoint !== '/api/login' && !endpoint.includes('password')) {
                     // Unauthorized, clear token and redirect to login
                     localStorage.removeItem('dtech_token');
                     localStorage.removeItem('dtech_user');

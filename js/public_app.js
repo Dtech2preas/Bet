@@ -1377,6 +1377,60 @@ document.addEventListener('DOMContentLoaded', () => {
         if (settingsForm) {
             settingsForm.addEventListener('submit', (e) => app.saveSettings(e));
         }
+
+        const changePasswordForm = document.getElementById('changePasswordForm');
+        if (changePasswordForm) {
+            changePasswordForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const currentPassword = document.getElementById('currentPassword').value;
+                const newPassword = document.getElementById('newPassword').value;
+                const confirmNewPassword = document.getElementById('confirmNewPassword').value;
+
+                if (!currentPassword || !newPassword) {
+                    Swal.fire('Error', 'Please fill in all password fields.', 'warning');
+                    return;
+                }
+
+                if (newPassword.length < 6) {
+                    Swal.fire('Error', 'New password must be at least 6 characters.', 'warning');
+                    return;
+                }
+
+                if (newPassword !== confirmNewPassword) {
+                    Swal.fire('Error', 'New passwords do not match.', 'warning');
+                    return;
+                }
+
+                const changeBtn = document.getElementById('changePasswordBtn');
+                changeBtn.disabled = true;
+                changeBtn.innerHTML = '<span class="animate-spin inline-block mr-2">&#9696;</span> Updating...';
+
+                try {
+                    const res = await API.request('/api/change-password', {
+                        method: 'POST',
+                        body: JSON.stringify({ currentPassword, newPassword })
+                    });
+
+                    if (res.success) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Success!',
+                            text: 'Your password has been changed successfully.'
+                        });
+                        changePasswordForm.reset();
+                    }
+                } catch (err) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Update Failed',
+                        text: err.message || 'Current password was incorrect. Please try again.'
+                    });
+                } finally {
+                    changeBtn.disabled = false;
+                    changeBtn.innerHTML = 'Update Password';
+                }
+            });
+        }
     }
 });
 

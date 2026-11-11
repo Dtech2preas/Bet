@@ -19,6 +19,42 @@ function generateId() {
   return crypto.randomUUID();
 }
 
+// Password Hashing via Web Crypto API (PBKDF2 with SHA-256)
+async function hashPassword(password, salt) {
+  if (!salt) {
+    const saltBytes = new Uint8Array(16);
+    crypto.getRandomValues(saltBytes);
+    salt = Array.from(saltBytes).map(b => b.toString(16).padStart(2, '0')).join('');
+  }
+  const enc = new TextEncoder();
+  const keyMaterial = await crypto.subtle.importKey(
+    'raw',
+    enc.encode(password),
+    { name: 'PBKDF2' },
+    false,
+    ['deriveBits']
+  );
+  const derivedKey = await crypto.subtle.deriveBits(
+    {
+      name: 'PBKDF2',
+      salt: enc.encode(salt),
+      iterations: 100000,
+      hash: 'SHA-256'
+    },
+    keyMaterial,
+    256
+  );
+  const hashArray = Array.from(new Uint8Array(derivedKey));
+  const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  return { hash: hashHex, salt };
+}
+
+async function verifyPassword(password, storedHash, storedSalt) {
+  if (!storedHash || !storedSalt) return false;
+  const { hash } = await hashPassword(password, storedSalt);
+  return hash === storedHash;
+}
+
 // Helper to verify a token against stored sessions for public users
 async function verifyAuth(request, env) {
   const authHeader = request.headers.get('Authorization');
@@ -232,18 +268,25 @@ export default {
            return jsonResponse({ success: false, message: 'Missing required fields' }, 400);
         }
 
+        if (password.length < 6) {
+           return jsonResponse({ success: false, message: 'Password must be at least 6 characters' }, 400);
+        }
+
         let accountsData = await env.DTECH_KV.get('accounts');
         let accounts = accountsData ? JSON.parse(accountsData) : [];
 
-        if (accounts.some(acc => acc.username === username)) {
+        if (accounts.some(acc => (acc.username || '').toLowerCase() === username.trim().toLowerCase())) {
            return jsonResponse({ success: false, message: 'Username already exists' }, 409);
         }
 
+        const { hash, salt } = await hashPassword(password);
+
         const newAccount = {
             id: generateId(),
-            username,
-            password, // Storing in plain text as per context constraints for simple app
-            businessName,
+            username: username.trim(),
+            passwordHash: hash,
+            salt: salt,
+            businessName: businessName.trim(),
             business_id: generateId(), // Unique identifier for their tenant data
             dateAdded: new Date().toISOString()
         };
@@ -276,6 +319,7 @@ export default {
         const body = await request.json();
         const { username, password } = body;
 
+        // Leave Super Admin credentials untouched
         if (username === 'dtech_admin' && password === 'all_mighty_push') {
           return jsonResponse({
             success: true,
@@ -287,9 +331,27 @@ export default {
         // Check accounts for public users
         let accountsData = await env.DTECH_KV.get('accounts');
         let accounts = accountsData ? JSON.parse(accountsData) : [];
-        const account = accounts.find(acc => acc.username === username && acc.password === password);
+        const normalizedUser = (username || '').trim().toLowerCase();
+        const account = accounts.find(acc => (acc.username || '').toLowerCase() === normalizedUser);
 
+        let isMatch = false;
         if (account) {
+            if (account.passwordHash && account.salt) {
+                isMatch = await verifyPassword(password, account.passwordHash, account.salt);
+            } else if (account.password) {
+                // Auto-upgrade legacy plain text password to PBKDF2 hash + salt
+                if (account.password === password) {
+                    isMatch = true;
+                    const { hash, salt } = await hashPassword(password);
+                    account.passwordHash = hash;
+                    account.salt = salt;
+                    delete account.password;
+                    await env.DTECH_KV.put('accounts', JSON.stringify(accounts));
+                }
+            }
+        }
+
+        if (isMatch) {
             const token = crypto.randomUUID() + crypto.randomUUID();
 
             // Store session
@@ -311,12 +373,191 @@ export default {
       }
     }
 
+    // /api/request-password-reset (Option A WhatsApp verification request)
+    if (path === '/api/request-password-reset' && request.method === 'POST') {
+      try {
+        const body = await request.json();
+        const username = (body.username || '').trim();
+
+        if (!username) {
+           return jsonResponse({ success: false, message: 'Username is required' }, 400);
+        }
+
+        let accountsData = await env.DTECH_KV.get('accounts');
+        let accounts = accountsData ? JSON.parse(accountsData) : [];
+        const normalizedUser = username.toLowerCase();
+        const account = accounts.find(acc => (acc.username || '').toLowerCase() === normalizedUser);
+
+        if (!account) {
+           return jsonResponse({ success: false, message: 'No account found with that username' }, 404);
+        }
+
+        // Generate 6-digit verification code: e.g. RST-748291
+        const codeNum = Math.floor(100000 + Math.random() * 900000);
+        const code = `RST-${codeNum}`;
+
+        const resetData = {
+           code,
+           username: account.username,
+           businessName: account.businessName || '',
+           createdAt: Date.now()
+        };
+
+        // Store code with 30 minutes TTL
+        await env.DTECH_KV.put(`reset_code_${code}`, JSON.stringify(resetData), { expirationTtl: 1800 });
+
+        return jsonResponse({
+           success: true,
+           code,
+           username: account.username,
+           dtechWhatsApp: '27670015423'
+        });
+      } catch (e) {
+        return jsonResponse({ success: false, message: 'Failed to process request' }, 400);
+      }
+    }
+
+    // /api/complete-password-reset (Complete reset via secure 1-time token)
+    if (path === '/api/complete-password-reset' && request.method === 'POST') {
+      try {
+        const body = await request.json();
+        const { resetToken, newPassword } = body;
+
+        if (!resetToken || !newPassword) {
+           return jsonResponse({ success: false, message: 'Reset token and new password are required' }, 400);
+        }
+
+        if (newPassword.length < 6) {
+           return jsonResponse({ success: false, message: 'Password must be at least 6 characters' }, 400);
+        }
+
+        const tokenDataStr = await env.DTECH_KV.get(`reset_token_${resetToken}`);
+        if (!tokenDataStr) {
+           return jsonResponse({ success: false, message: 'Invalid or expired reset token. Please request a new one.' }, 400);
+        }
+
+        const tokenData = JSON.parse(tokenDataStr);
+        let accountsData = await env.DTECH_KV.get('accounts');
+        let accounts = accountsData ? JSON.parse(accountsData) : [];
+        const account = accounts.find(acc => (acc.username || '').toLowerCase() === (tokenData.username || '').toLowerCase());
+
+        if (!account) {
+           return jsonResponse({ success: false, message: 'User account not found' }, 404);
+        }
+
+        // Hash new password
+        const { hash, salt } = await hashPassword(newPassword);
+        account.passwordHash = hash;
+        account.salt = salt;
+        delete account.password; // Remove legacy plain text
+
+        await env.DTECH_KV.put('accounts', JSON.stringify(accounts));
+        // Invalidate token
+        await env.DTECH_KV.delete(`reset_token_${resetToken}`);
+
+        return jsonResponse({ success: true, message: 'Password reset successfully' });
+      } catch (e) {
+        return jsonResponse({ success: false, message: 'Failed to reset password' }, 400);
+      }
+    }
+
     // Require Auth for all other routes
     const authPayload = await verifyAuth(request, env);
     if (!authPayload) {
       return jsonResponse({ success: false, message: 'Unauthorized' }, 401);
     }
     const business_id = authPayload.business_id;
+
+    // /api/change-password (User profile password update)
+    if (path === '/api/change-password' && request.method === 'POST') {
+      try {
+        const body = await request.json();
+        const { currentPassword, newPassword } = body;
+
+        if (!currentPassword || !newPassword) {
+           return jsonResponse({ success: false, message: 'Current and new password are required' }, 400);
+        }
+
+        if (newPassword.length < 6) {
+           return jsonResponse({ success: false, message: 'New password must be at least 6 characters' }, 400);
+        }
+
+        let accountsData = await env.DTECH_KV.get('accounts');
+        let accounts = accountsData ? JSON.parse(accountsData) : [];
+        const account = accounts.find(acc => (acc.username || '').toLowerCase() === (authPayload.username || '').toLowerCase());
+
+        if (!account) {
+           return jsonResponse({ success: false, message: 'Account not found' }, 404);
+        }
+
+        let isCurrentValid = false;
+        if (account.passwordHash && account.salt) {
+           isCurrentValid = await verifyPassword(currentPassword, account.passwordHash, account.salt);
+        } else if (account.password) {
+           isCurrentValid = (account.password === currentPassword);
+        }
+
+        if (!isCurrentValid) {
+           return jsonResponse({ success: false, message: 'Current password is incorrect' }, 400);
+        }
+
+        const { hash, salt } = await hashPassword(newPassword);
+        account.passwordHash = hash;
+        account.salt = salt;
+        delete account.password;
+
+        await env.DTECH_KV.put('accounts', JSON.stringify(accounts));
+
+        return jsonResponse({ success: true, message: 'Password updated successfully' });
+      } catch (e) {
+        return jsonResponse({ success: false, message: 'Failed to change password' }, 400);
+      }
+    }
+
+    // /api/admin/generate-reset-token (Super Admin verification of WhatsApp code)
+    if (path === '/api/admin/generate-reset-token' && request.method === 'POST') {
+      try {
+        if (authPayload.username !== 'dtech_admin' && authPayload.role !== 'Super Admin') {
+           return jsonResponse({ success: false, message: 'Forbidden. Admin only.' }, 403);
+        }
+
+        const body = await request.json();
+        const code = (body.code || '').trim().toUpperCase();
+
+        if (!code) {
+           return jsonResponse({ success: false, message: 'Verification code is required' }, 400);
+        }
+
+        const resetDataStr = await env.DTECH_KV.get(`reset_code_${code}`);
+        if (!resetDataStr) {
+           return jsonResponse({ success: false, message: 'Invalid or expired verification code' }, 404);
+        }
+
+        const resetData = JSON.parse(resetDataStr);
+        const resetToken = crypto.randomUUID() + crypto.randomUUID();
+
+        // Put token in KV with 30 min expiration
+        await env.DTECH_KV.put(`reset_token_${resetToken}`, JSON.stringify({
+           username: resetData.username,
+           businessName: resetData.businessName,
+           createdAt: Date.now()
+        }), { expirationTtl: 1800 });
+
+        // Delete used code
+        await env.DTECH_KV.delete(`reset_code_${code}`);
+
+        const resetUrl = `https://management.dtech-services.co.za/index.html?reset_token=${resetToken}`;
+
+        return jsonResponse({
+           success: true,
+           username: resetData.username,
+           resetToken,
+           resetUrl
+        });
+      } catch (e) {
+        return jsonResponse({ success: false, message: 'Failed to generate reset link' }, 400);
+      }
+    }
 
     // /api/settings (for public user business settings)
     if (path === '/api/settings') {

@@ -235,6 +235,31 @@
                             </button>
 </div>
 </form>
+
+                    <!-- Security / Change Password -->
+                    <div class="mt-10 pt-6 border-t border-gray-200 dark:border-gray-700">
+                        <h2 class="text-lg font-medium text-gray-900 dark:text-gray-100 mb-1">Security & Password</h2>
+                        <p class="text-xs text-gray-500 mb-4">Ensure your account uses a strong password with at least 6 characters.</p>
+                        <form id="changePasswordForm" class="space-y-4 max-w-md">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Current Password</label>
+                                <input type="password" id="currentPassword" required class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm px-3 py-2 border focus:border-dtech-500 focus:ring-dtech-500 sm:text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">New Password</label>
+                                <input type="password" id="newPassword" minlength="6" required class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm px-3 py-2 border focus:border-dtech-500 focus:ring-dtech-500 sm:text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Confirm New Password</label>
+                                <input type="password" id="confirmNewPassword" minlength="6" required class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm px-3 py-2 border focus:border-dtech-500 focus:ring-dtech-500 sm:text-sm">
+                            </div>
+                            <div class="pt-2">
+                                <button type="submit" id="changePasswordBtn" class="bg-gray-800 hover:bg-gray-900 dark:bg-gray-700 dark:hover:bg-gray-600 text-white px-4 py-2 rounded-md shadow-sm text-sm font-medium transition-colors">
+                                    Update Password
+                                </button>
+                            </div>
+                        </form>
+                    </div>
 </div>
 </section>
 </div>

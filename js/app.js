@@ -701,6 +701,74 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
+// WhatsApp Password Reset Approval Helper for Super Admin
+window.adminResetPasswordHelper = async function() {
+    const { value: code } = await Swal.fire({
+        title: 'Approve WhatsApp Reset',
+        text: 'Enter the verification code received on WhatsApp (e.g. RST-123456):',
+        input: 'text',
+        inputPlaceholder: 'RST-XXXXXX',
+        showCancelButton: true,
+        confirmButtonText: 'Generate Reset Link',
+        confirmButtonColor: '#2563eb',
+        inputValidator: (val) => {
+            if (!val || !val.trim()) return 'Please enter the verification code';
+        }
+    });
+
+    if (!code) return;
+
+    try {
+        Swal.fire({
+            title: 'Verifying code...',
+            allowOutsideClick: false,
+            didOpen: () => Swal.showLoading()
+        });
+
+        const res = await API.request('/api/admin/generate-reset-token', {
+            method: 'POST',
+            body: JSON.stringify({ code: code.trim().toUpperCase() })
+        });
+
+        if (res.success) {
+            Swal.fire({
+                icon: 'success',
+                title: 'Reset Link Generated!',
+                html: `
+                    <div class="text-left space-y-3">
+                        <p class="text-sm text-gray-700">Account: <strong>${res.username}</strong></p>
+                        <p class="text-xs text-gray-500">Copy this secure 1-time link and reply to the user on WhatsApp. The link expires in 30 minutes.</p>
+                        <div class="p-2 bg-gray-100 rounded text-xs font-mono break-all select-all border text-gray-800">
+                            ${res.resetUrl}
+                        </div>
+                        <div class="pt-2 flex flex-col sm:flex-row gap-2">
+                            <button id="copyResetUrlBtn" class="w-full py-2 px-3 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm font-medium transition">
+                                <i class="fas fa-copy mr-1"></i> Copy Link
+                            </button>
+                        </div>
+                    </div>
+                `,
+                showConfirmButton: true,
+                confirmButtonText: 'Close',
+                confirmButtonColor: '#4b5563',
+                didOpen: () => {
+                    document.getElementById('copyResetUrlBtn')?.addEventListener('click', () => {
+                        navigator.clipboard.writeText(res.resetUrl);
+                        Swal.showValidationMessage('Link copied to clipboard!');
+                        setTimeout(() => Swal.resetValidationMessage(), 2500);
+                    });
+                }
+            });
+        }
+    } catch (err) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Invalid Code',
+            text: err.message || 'The verification code is invalid, already used, or expired.'
+        });
+    }
+};
+
 // Close navigation dropdown on outside click
 document.addEventListener('click', (e) => {
     const dropdown = document.getElementById('nav-dropdown');
