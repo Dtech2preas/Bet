@@ -164,6 +164,28 @@ const app = {
         } else {
             premiumStats.forEach(el => el.classList.add('hidden'));
         }
+
+        // Free Plan Watermark link
+        let watermarkEl = document.getElementById('freePlanWatermark');
+        if (!this.userPlan || this.userPlan === 'Free') {
+            if (!watermarkEl) {
+                watermarkEl = document.createElement('div');
+                watermarkEl.id = 'freePlanWatermark';
+                watermarkEl.className = 'w-full py-3 px-4 text-center text-xs text-gray-500 dark:text-gray-400 border-t border-gray-200 dark:border-dark-border bg-gray-50 dark:bg-dark-card mt-auto';
+                watermarkEl.innerHTML = `
+                    <span>Free Plan powered by </span>
+                    <a href="https://management.dtech-services.co.za" target="_blank" class="text-dtech-600 dark:text-dtech-400 font-medium hover:underline">
+                        https://management.dtech-services.co.za
+                    </a>
+                `;
+                const mainEl = document.querySelector('main') || document.body;
+                mainEl.appendChild(watermarkEl);
+            } else {
+                watermarkEl.classList.remove('hidden');
+            }
+        } else if (watermarkEl) {
+            watermarkEl.classList.add('hidden');
+        }
     },
 
     handleLockedSection(sectionId, event) {

@@ -254,4 +254,63 @@ document.addEventListener('DOMContentLoaded', () => {
             window.location.href = 'index.html';
         });
     }
+
+    // Terms & Services Acceptance Banner
+    initTermsBanner();
 });
+
+function initTermsBanner() {
+    if (localStorage.getItem('dtech_terms_consent') === 'accepted') return;
+
+    // Check if banner already in DOM
+    if (document.getElementById('termsConsentBanner')) return;
+
+    const banner = document.createElement('div');
+    banner.id = 'termsConsentBanner';
+    banner.className = 'fixed bottom-0 inset-x-0 z-50 p-4 sm:p-5 bg-white dark:bg-dark-card border-t border-gray-200 dark:border-dark-border shadow-2xl transition-transform duration-300 transform translate-y-0';
+    banner.innerHTML = `
+        <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div class="flex items-start gap-3">
+                <div class="p-2 bg-blue-50 dark:bg-blue-950/40 text-dtech-600 dark:text-dtech-400 rounded-lg flex-shrink-0 mt-0.5">
+                    <i class="fas fa-shield-alt text-lg"></i>
+                </div>
+                <div class="text-xs sm:text-sm text-gray-600 dark:text-gray-300">
+                    <p class="font-medium text-gray-900 dark:text-white">Terms of Service &amp; Privacy Policy</p>
+                    <p class="mt-0.5">By using this site, you accept its Terms of Service, POPIA privacy guidelines, and essential session cookies for portal operations.</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-2.5 w-full sm:w-auto justify-end flex-shrink-0">
+                <button type="button" id="declineTermsBtn" class="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-xs sm:text-sm font-medium rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition">
+                    Decline
+                </button>
+                <button type="button" id="acceptTermsBtn" class="px-5 py-2 bg-dtech-600 hover:bg-dtech-700 text-white text-xs sm:text-sm font-medium rounded-lg shadow-sm transition">
+                    Accept
+                </button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(banner);
+
+    document.getElementById('acceptTermsBtn')?.addEventListener('click', () => {
+        localStorage.setItem('dtech_terms_consent', 'accepted');
+        banner.classList.add('translate-y-full');
+        setTimeout(() => banner.remove(), 300);
+    });
+
+    document.getElementById('declineTermsBtn')?.addEventListener('click', () => {
+        localStorage.setItem('dtech_terms_consent', 'declined');
+        banner.classList.add('translate-y-full');
+        setTimeout(() => banner.remove(), 300);
+
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                icon: 'info',
+                title: 'Terms Declined',
+                text: 'You have declined the Terms of Service. Note that account features and business data storage require agreeing to the terms.',
+                confirmButtonText: 'Understood',
+                confirmButtonColor: '#2563eb'
+            });
+        }
+    });
+}
