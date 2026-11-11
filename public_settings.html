@@ -177,14 +177,20 @@
 <div>
 <label class="flex items-center text-sm font-medium text-gray-700 dark:text-gray-300">
                                 PDF Template Style
-                                <span class="premium-lock-icon hidden ml-2" title="Requires Premium Plan"><i class="fas fa-lock text-gray-400 text-xs"></i></span>
+                                <span class="premium-lock-icon hidden ml-2" title="Requires Pro or Premium Plan"><i class="fas fa-lock text-gray-400 text-xs"></i></span>
 </label>
-<select class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm px-3 py-2 border focus:border-dtech-500 focus:ring-dtech-500 sm:text-sm" id="settingsPdfTemplate">
-<option value="Standard">Standard</option>
-<option value="Corporate">Corporate (Premium)</option>
-<option value="Creative">Creative (Premium)</option>
+<div class="mt-1 flex gap-2 items-center">
+<select class="block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm px-3 py-2 border focus:border-dtech-500 focus:ring-dtech-500 sm:text-sm" id="settingsPdfTemplate">
+<option value="Standard">Standard (Clean &amp; Classic)</option>
+<option value="Corporate">Corporate (Enterprise Banner)</option>
+<option value="Executive">Executive (Elite High-Contrast)</option>
+<option value="Creative">Creative (Modern Minimalist)</option>
 </select>
-<p class="text-xs text-gray-500 mt-1">Choose the layout style for your generated PDFs.</p>
+<button type="button" onclick="if(typeof pdfEngine !== 'undefined') pdfEngine.previewSample(document.getElementById('settingsPdfTemplate').value)" class="flex-shrink-0 inline-flex items-center px-3 py-2 border border-gray-300 dark:border-gray-600 shadow-sm text-sm font-medium rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors" title="Preview selected style">
+<i class="fas fa-eye mr-1.5 text-dtech-600"></i> Preview
+</button>
+</div>
+<p class="text-xs text-gray-500 mt-1">Choose the layout style for your generated PDFs. Click Preview to view a live sample.</p>
 </div>
 <h2 class="text-lg font-medium text-gray-900 dark:text-gray-100 border-b dark:border-gray-700 pb-2 mt-8">Banking Details</h2>
 <div>

@@ -596,9 +596,6 @@ export default {
              if (plan === 'Free') {
                  delete body.logoUrl;
                  delete body.brandColor;
-             }
-
-             if (plan !== 'Premium') {
                  delete body.pdfTemplate;
              }
 

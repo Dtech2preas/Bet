@@ -122,7 +122,7 @@ const app = {
         const premiumLockIcons = document.querySelectorAll('.premium-lock-icon');
 
         if (templateSelect) {
-            if (this.userPlan === 'Premium') {
+            if (this.userPlan === 'Premium' || this.userPlan === 'Pro') {
                 templateSelect.disabled = false;
                 premiumLockIcons.forEach(icon => icon.classList.add('hidden'));
             } else {

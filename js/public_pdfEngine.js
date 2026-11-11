@@ -73,8 +73,11 @@ const pdfEngine = {
         let logoHeight = 15;
         let logoBottomY = 30;
 
-        const isCorporate = settings.userPlan === 'Premium' && settings.pdfTemplate === 'Corporate';
-        const isCreative = settings.userPlan === 'Premium' && settings.pdfTemplate === 'Creative';
+        const hasCustomTemplates = (settings.userPlan === 'Premium' || settings.userPlan === 'Pro');
+        const activeTemplate = (data && data.pdfTemplate) || (hasCustomTemplates ? settings.pdfTemplate : 'Standard') || 'Standard';
+        const isCorporate = activeTemplate === 'Corporate';
+        const isExecutive = activeTemplate === 'Executive';
+        const isCreative = activeTemplate === 'Creative';
 
         if (logoData) {
             await new Promise((resolve) => {
@@ -171,6 +174,110 @@ const pdfEngine = {
             }
 
             finalY = 100;
+
+        } else if (isExecutive) {
+            // Executive (Elite Modern) Header: Sleek top brand strip + dark slate doc badge + 2-tone card
+            doc.setFillColor(...primaryColor);
+            doc.rect(0, 0, doc.internal.pageSize.getWidth(), 3.5, 'F');
+
+            if (logoData) {
+                doc.addImage(logoData, 'PNG', 14, 12, logoWidth, logoHeight);
+                let compY = 12 + logoHeight + 5;
+                doc.setFontSize(13);
+                doc.setTextColor(30, 41, 59);
+                doc.setFont('helvetica', 'bold');
+                doc.text(businessName, 14, compY);
+                doc.setFontSize(8.5);
+                doc.setTextColor(...grayColor);
+                doc.setFont('helvetica', 'normal');
+                if (email) { doc.text(email, 14, compY + 4.5); }
+            } else {
+                doc.setFontSize(20);
+                doc.setTextColor(30, 41, 59);
+                doc.setFont('helvetica', 'bold');
+                doc.text(businessName, 14, 20);
+                doc.setFontSize(8.5);
+                doc.setTextColor(...grayColor);
+                doc.setFont('helvetica', 'normal');
+                if (email) { doc.text(email, 14, 26); }
+            }
+
+            // Dark Charcoal Type Pill Badge
+            doc.setFillColor(30, 41, 59);
+            doc.roundedRect(136, 12, 60, 11, 2, 2, 'F');
+            doc.setFontSize(11);
+            doc.setTextColor(255, 255, 255);
+            doc.setFont('helvetica', 'bold');
+            doc.text(type.toUpperCase(), 166, 19.5, { align: 'center' });
+
+            let mY = 30;
+            doc.setFontSize(8.5);
+            doc.setFont('helvetica', 'normal');
+            doc.setTextColor(100, 116, 139);
+            doc.text("Reference:", 136, mY);
+            doc.setTextColor(15, 23, 42);
+            doc.setFont('helvetica', 'bold');
+            doc.text(data.reference || 'N/A', 196, mY, { align: 'right' });
+            mY += 5;
+
+            doc.setFontSize(8.5);
+            doc.setFont('helvetica', 'normal');
+            doc.setTextColor(100, 116, 139);
+            doc.text("Issue Date:", 136, mY);
+            doc.setTextColor(15, 23, 42);
+            doc.setFont('helvetica', 'bold');
+            doc.text(data.date ? new Date(data.date).toLocaleDateString() : 'N/A', 196, mY, { align: 'right' });
+            mY += 5;
+
+            const dueVal = type === 'Invoice' ? (data.dueDate || data.validUntil) : data.validUntil;
+            if (dueVal) {
+                const deadlineLabel = type === 'Invoice' ? 'Due Date:' : 'Valid Until:';
+                doc.setFont('helvetica', 'normal');
+                doc.setTextColor(100, 116, 139);
+                doc.text(deadlineLabel, 136, mY);
+                doc.setTextColor(...primaryColor);
+                doc.setFont('helvetica', 'bold');
+                doc.text(new Date(dueVal).toLocaleDateString(), 196, mY, { align: 'right' });
+            }
+
+            // Executive 2-Column Info Card
+            clientY = 50;
+            doc.setFillColor(248, 250, 252);
+            doc.setDrawColor(226, 232, 240);
+            doc.setLineWidth(0.3);
+            doc.roundedRect(14, clientY, 182, 34, 2, 2, 'FD');
+
+            // Left: Billed To
+            doc.setFontSize(7.5);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(...primaryColor);
+            doc.text("BILLED TO", 19, clientY + 6);
+            doc.setFontSize(10.5);
+            doc.setTextColor(15, 23, 42);
+            doc.setFont('helvetica', 'bold');
+            doc.text(client.companyName || 'Unknown Client', 19, clientY + 12);
+            doc.setFontSize(8.5);
+            doc.setFont('helvetica', 'normal');
+            doc.setTextColor(100, 116, 139);
+            let cp = clientY + 17;
+            if (client.contactPerson) { doc.text(`Attn: ${client.contactPerson}`, 19, cp); cp += 4.5; }
+            if (client.email) { doc.text(client.email, 19, cp); cp += 4.5; }
+            if (client.phone) { doc.text(client.phone, 19, cp); cp += 4.5; }
+
+            // Right: Terms & Logistics
+            doc.setFontSize(7.5);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(...primaryColor);
+            doc.text("TERMS & LOGISTICS", 110, clientY + 6);
+            doc.setFontSize(8.5);
+            doc.setFont('helvetica', 'normal');
+            doc.setTextColor(71, 85, 105);
+            let tp = clientY + 12;
+            if (data.paymentTerms) { doc.text(`Terms: ${data.paymentTerms}`, 110, tp); tp += 4.5; }
+            if (data.expectedStartDate) { doc.text(`Project Start: ${new Date(data.expectedStartDate).toLocaleDateString()}`, 110, tp); tp += 4.5; }
+            if (data.deliveryTime) { doc.text(`Delivery Time: ${data.deliveryTime}`, 110, tp); tp += 4.5; }
+
+            finalY = clientY + 40;
 
         } else if (isCreative) {
             // Creative Template Header
@@ -331,14 +438,21 @@ const pdfEngine = {
             let theme = 'striped';
             let headStyles = { fillColor: primaryColor, textColor: 255 };
             let bodyStyles = {};
+            let alternateRowStyles = { fillColor: [249, 250, 251] };
 
             if (isCorporate) {
                 theme = 'grid';
                 headStyles = { fillColor: primaryColor, textColor: 255, lineWidth: 0.1, lineColor: 200 };
+            } else if (isExecutive) {
+                theme = 'grid';
+                headStyles = { fillColor: [30, 41, 59], textColor: [255, 255, 255], fontStyle: 'bold', lineWidth: 0.1, lineColor: [226, 232, 240] };
+                bodyStyles = { lineColor: [226, 232, 240], lineWidth: 0.1 };
+                alternateRowStyles = { fillColor: [248, 250, 252] };
             } else if (isCreative) {
                 theme = 'plain';
                 headStyles = { fillColor: [255, 255, 255], textColor: primaryColor, fontStyle: 'bold', lineWidth: 0 };
                 bodyStyles = { lineWidth: 0, borderBottom: [0.5, 'solid', '#eee'] };
+                alternateRowStyles = {};
             }
 
             doc.autoTable({
@@ -348,7 +462,13 @@ const pdfEngine = {
                 theme: theme,
                 headStyles: headStyles,
                 bodyStyles: bodyStyles,
-                alternateRowStyles: isCreative ? {} : { fillColor: [249, 250, 251] },
+                alternateRowStyles: alternateRowStyles,
+                columnStyles: {
+                    0: { halign: 'left' },
+                    1: { halign: 'right' },
+                    2: { halign: 'center' },
+                    3: { halign: 'right' }
+                },
                 margin: { left: 14, right: 14 }
             });
 
@@ -556,16 +676,51 @@ const pdfEngine = {
         }
     },
 
+    async previewSample(templateName) {
+        const sampleData = {
+            reference: 'INV-2026-DEMO',
+            date: new Date().toISOString(),
+            dueDate: new Date(Date.now() + 14 * 86400000).toISOString(),
+            paymentTerms: '50% Deposit',
+            pdfTemplate: templateName || 'Executive',
+            client: {
+                companyName: 'Apex Innovations (Pty) Ltd',
+                contactPerson: 'David Khumalo',
+                email: 'billing@apexinnovations.co.za',
+                phone: '083 456 7890'
+            },
+            items: [
+                { description: 'Enterprise Architecture & Cloud Strategy', price: 7500, quantity: 1 },
+                { description: 'Custom Web & Mobile Application Development', price: 16000, quantity: 1 },
+                { description: 'Dedicated SLA & Security Management (Month 1)', price: 3500, quantity: 1 }
+            ],
+            subtotal: 27000,
+            vatPct: 15,
+            vatAmt: 4050,
+            total: 31050,
+            customerNotes: 'Payment is due within 14 days. Thank you for your partnership!'
+        };
+        return this.preview('Invoice', sampleData);
+    },
+
     async preview(type, data) {
         const doc = await this.generateDocument(type, data);
-        const pdfDataUri = doc.output('datauristring');
-
-        // Open in new window
-        const win = window.open();
-        if (win) {
-            win.document.write(`<iframe src="${pdfDataUri}" frameborder="0" style="border:0; top:0px; left:0px; bottom:0px; right:0px; width:100%; height:100%;" allowfullscreen></iframe>`);
-        } else {
-            alert('Please allow popups for this website to preview PDFs.');
+        const pdfBlob = doc.output('blob');
+        const blobUrl = URL.createObjectURL(pdfBlob);
+        const win = window.open(blobUrl, '_blank');
+        if (!win) {
+            if (typeof Swal !== 'undefined') {
+                const tplName = (data && data.pdfTemplate) || 'Template';
+                Swal.fire({
+                    title: `${type} Preview (${tplName})`,
+                    html: `<iframe src="${blobUrl}" style="width:100%; height:75vh; border:none; border-radius:8px;"></iframe>`,
+                    width: '900px',
+                    showCloseButton: true,
+                    showConfirmButton: false
+                });
+            } else {
+                window.location.href = blobUrl;
+            }
         }
     }
 };

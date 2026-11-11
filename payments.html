@@ -109,14 +109,29 @@
                     </button>
 </div>
 <!-- Payments Search Bar -->
-<div class="mb-4 relative max-w-md">
-    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-        <i class="fas fa-search text-sm"></i>
+<div class="mb-4 flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
+    <div class="relative flex-1 max-w-md">
+        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+            <i class="fas fa-search text-sm"></i>
+        </div>
+        <input type="text" id="paymentsSearchInput" oninput="paymentsManager.filterPayments()" placeholder="Search receipts by ref, method, or amount..." class="w-full pl-9 pr-8 py-2 text-sm rounded-md border border-gray-300 dark:border-gray-600 dark:bg-dark-card dark:text-white shadow-sm focus:border-dtech-500 focus:ring-dtech-500">
+        <button id="paymentsSearchClear" onclick="paymentsManager.clearSearch()" class="hidden absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+            <i class="fas fa-times text-xs"></i>
+        </button>
     </div>
-    <input type="text" id="paymentsSearchInput" oninput="paymentsManager.filterPayments()" placeholder="Search receipts by ref, method, or amount..." class="w-full pl-9 pr-8 py-2 text-sm rounded-md border border-gray-300 dark:border-gray-600 dark:bg-dark-card dark:text-white shadow-sm focus:border-dtech-500 focus:ring-dtech-500">
-    <button id="paymentsSearchClear" onclick="paymentsManager.clearSearch()" class="hidden absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
-        <i class="fas fa-times text-xs"></i>
-    </button>
+    <div class="flex items-center gap-1.5 bg-white dark:bg-dark-card border border-gray-300 dark:border-gray-600 rounded-md px-2.5 py-1.5 shadow-sm text-sm">
+        <i class="fas fa-palette text-dtech-600 text-xs"></i>
+        <span class="text-xs text-gray-500 dark:text-gray-400 font-medium">PDF:</span>
+        <select class="admin-pdf-template-select bg-transparent border-0 font-medium text-gray-800 dark:text-gray-100 focus:ring-0 p-0 text-xs cursor-pointer" onchange="pdfEngine.setAdminTemplate(this.value)">
+            <option value="Corporate">Corporate</option>
+            <option value="Executive">Executive</option>
+            <option value="Creative">Creative</option>
+            <option value="Standard">Standard</option>
+        </select>
+        <button type="button" onclick="pdfEngine.previewSample()" class="ml-1 text-gray-400 hover:text-dtech-600 text-xs p-1" title="Preview selected PDF style">
+            <i class="fas fa-eye"></i>
+        </button>
+    </div>
 </div>
 <div id="payments-container"><div class="text-center py-10"><i class="fas fa-spinner fa-spin text-3xl text-dtech-500"></i></div></div>
 </section>

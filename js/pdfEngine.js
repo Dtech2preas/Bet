@@ -32,6 +32,11 @@ const pdfEngine = {
         const primaryColor = [37, 99, 235]; // D-TECH Blue
         const grayColor = [107, 114, 128];
 
+        const template = (data && data.pdfTemplate) || this.getAdminTemplate() || 'Corporate';
+        const isCorporate = template === 'Corporate';
+        const isExecutive = template === 'Executive';
+        const isCreative = template === 'Creative';
+
         // --- HEADER ---
         let logoWidth = 40;
         let logoHeight = 15;
@@ -51,108 +56,391 @@ const pdfEngine = {
                 img.onerror = resolve;
                 img.src = logoData;
             });
-            doc.addImage(logoData, 'PNG', 14, 15, logoWidth, logoHeight);
-            logoBottomY = 15 + logoHeight;
-
-            // Add business name under logo
-            doc.setFontSize(14);
-            doc.setTextColor(...primaryColor);
-            doc.setFont('helvetica', 'bold');
-            doc.text("THE D-TECH ECOSYSTEM (Pty) Ltd", 14, logoBottomY + 6);
-            logoBottomY += 8;
-        } else {
-            doc.setFontSize(22);
-            doc.setTextColor(...primaryColor);
-            doc.setFont('helvetica', 'bold');
-            doc.text("THE D-TECH ECOSYSTEM (Pty) Ltd", 14, 25);
-            logoBottomY = 28;
         }
 
-        doc.setFontSize(10);
-        doc.setTextColor(...grayColor);
-        doc.setFont('helvetica', 'normal');
-        doc.text("Reg No: 2026/697427/07", 14, logoBottomY + 5);
-        doc.text("Stand No 762 Kwena Motolo 3, Moletjie, Polokwane, Limpopo, 0709", 14, logoBottomY + 10);
-        logoBottomY += 12;
-
-        // Document Type & Meta (Moved below logo on the left)
-        let metaY = logoBottomY + 8;
-        doc.setFontSize(18);
-        doc.setTextColor(0, 0, 0);
-        doc.setFont('helvetica', 'bold');
-        doc.text(type.toUpperCase(), 14, metaY);
-
-        metaY += 6;
-        doc.setFontSize(10);
-        doc.setTextColor(...grayColor);
-        doc.setFont('helvetica', 'normal');
-
-        if (data.reference) {
-            doc.text(`Ref: ${data.reference}`, 14, metaY);
-            metaY += 5;
-        }
-        if (data.date) {
-            doc.text(`Date: ${new Date(data.date).toLocaleDateString()}`, 14, metaY);
-            metaY += 5;
-        }
-
-        // --- CLIENT DETAILS (Moved to Top Right) ---
-        let clientY = 18;
-        doc.setFontSize(12);
-        doc.setTextColor(0, 0, 0);
-        doc.setFont('helvetica', 'bold');
-        doc.text("Prepared For:", 196, clientY, { align: 'right' });
-
-        clientY += 6;
-        doc.setFontSize(10);
-        doc.setFont('helvetica', 'normal');
+        let metaY, clientY, finalY;
         const client = data.client || {};
-        doc.text(client.companyName || 'Unknown Client', 196, clientY, { align: 'right' });
-        clientY += 5;
-        if (client.contactPerson) { doc.text(client.contactPerson, 196, clientY, { align: 'right' }); clientY += 5; }
-        if (client.email) { doc.text(client.email, 196, clientY, { align: 'right' }); clientY += 5; }
-        if (client.phone) { doc.text(client.phone, 196, clientY, { align: 'right' }); clientY += 5; }
 
-        // Optional Document Details section (Quote Details / Invoice Details)
-        if (data.validUntil || data.dueDate || data.paymentTerms || data.expectedStartDate || data.deliveryTime) {
-            clientY += 4;
-            doc.setFontSize(10);
+        if (isCorporate) {
+            // Corporate Template Header: Full-width banner
+            doc.setFillColor(...primaryColor);
+            doc.rect(0, 0, doc.internal.pageSize.getWidth(), 45, 'F');
+
+            if (logoData) {
+                doc.addImage(logoData, 'PNG', 14, 10, logoWidth, logoHeight);
+                doc.setFontSize(8);
+                doc.setTextColor(255, 255, 255);
+                doc.setFont('helvetica', 'normal');
+                doc.text("THE D-TECH ECOSYSTEM (Pty) Ltd | Reg: 2026/697427/07", 14, 38);
+            } else {
+                doc.setFontSize(18);
+                doc.setTextColor(255, 255, 255);
+                doc.setFont('helvetica', 'bold');
+                doc.text("THE D-TECH ECOSYSTEM (Pty) Ltd", 14, 22);
+                doc.setFontSize(8.5);
+                doc.setFont('helvetica', 'normal');
+                doc.text("Reg: 2026/697427/07", 14, 28);
+                doc.text("Stand No 762 Kwena Motolo 3, Moletjie, Polokwane, 0709", 14, 34);
+            }
+
+            // Doc Type right-aligned inside banner
+            doc.setFontSize(22);
+            doc.setTextColor(255, 255, 255);
+            doc.setFont('helvetica', 'bold');
+            doc.text(type.toUpperCase(), 196, 22, { align: 'right' });
+
+            // Meta details right-aligned inside banner below doc type
+            doc.setFontSize(9.5);
+            doc.setFont('helvetica', 'normal');
+            if (data.reference) {
+                doc.text(`Ref: ${data.reference}`, 196, 29, { align: 'right' });
+            }
+            if (data.date) {
+                doc.text(`Date: ${new Date(data.date).toLocaleDateString()}`, 196, 35, { align: 'right' });
+            }
+
+            // Client Info Box
+            clientY = 55;
+            doc.setFillColor(245, 245, 245);
+            doc.rect(14, 50, 85, 40, 'F');
+
+            doc.setFontSize(10.5);
             doc.setTextColor(0, 0, 0);
             doc.setFont('helvetica', 'bold');
-            doc.text(`${type} Details:`, 196, clientY, { align: 'right' });
+            doc.text("Prepared For:", 18, clientY);
+
+            clientY += 6;
+            doc.setFontSize(9.5);
+            doc.setFont('helvetica', 'normal');
+            doc.text(client.companyName || 'Unknown Client', 18, clientY);
             clientY += 5;
+            if (client.contactPerson) { doc.text(client.contactPerson, 18, clientY); clientY += 5; }
+            if (client.email) { doc.text(client.email, 18, clientY); clientY += 5; }
+            if (client.phone) { doc.text(client.phone, 18, clientY); clientY += 5; }
+
+            // Details Info Box (if exists)
+            if (data.validUntil || data.dueDate || data.paymentTerms || data.expectedStartDate || data.deliveryTime) {
+                let detailY = 55;
+                doc.setFillColor(245, 245, 245);
+                doc.rect(111, 50, 85, 40, 'F');
+
+                doc.setFontSize(10.5);
+                doc.setTextColor(0, 0, 0);
+                doc.setFont('helvetica', 'bold');
+                doc.text(`${type} Details:`, 115, detailY);
+
+                detailY += 6;
+                doc.setFontSize(9.5);
+                doc.setFont('helvetica', 'normal');
+                const dueVal = type === 'Invoice' ? (data.dueDate || data.validUntil) : data.validUntil;
+                if (dueVal) {
+                    const deadlineLabel = type === 'Invoice' ? 'Due Date:' : 'Valid Until:';
+                    doc.text(`${deadlineLabel} ${new Date(dueVal).toLocaleDateString()}`, 115, detailY);
+                    detailY += 5;
+                }
+                if (data.paymentTerms) { doc.text(`Payment Terms: ${data.paymentTerms}`, 115, detailY); detailY += 5; }
+                if (data.expectedStartDate) { doc.text(`Project Start: ${new Date(data.expectedStartDate).toLocaleDateString()}`, 115, detailY); detailY += 5; }
+                if (data.deliveryTime) { doc.text(`Delivery Time: ${data.deliveryTime}`, 115, detailY); detailY += 5; }
+            }
+
+            finalY = 98;
+
+        } else if (isExecutive) {
+            // Executive (Elite Modern) Header: Sleek top brand strip + dark slate doc badge + 2-tone card
+            doc.setFillColor(...primaryColor);
+            doc.rect(0, 0, doc.internal.pageSize.getWidth(), 3.5, 'F');
+
+            if (logoData) {
+                doc.addImage(logoData, 'PNG', 14, 12, logoWidth, logoHeight);
+                let compY = 12 + logoHeight + 5;
+                doc.setFontSize(12);
+                doc.setTextColor(30, 41, 59);
+                doc.setFont('helvetica', 'bold');
+                doc.text("THE D-TECH ECOSYSTEM (Pty) Ltd", 14, compY);
+                doc.setFontSize(8.5);
+                doc.setTextColor(...grayColor);
+                doc.setFont('helvetica', 'normal');
+                doc.text("Reg No: 2026/697427/07", 14, compY + 4.5);
+                doc.text("Stand No 762 Kwena Motolo 3, Polokwane, Limpopo, 0709", 14, compY + 9);
+            } else {
+                doc.setFontSize(18);
+                doc.setTextColor(30, 41, 59);
+                doc.setFont('helvetica', 'bold');
+                doc.text("THE D-TECH ECOSYSTEM (Pty) Ltd", 14, 20);
+                doc.setFontSize(8.5);
+                doc.setTextColor(...grayColor);
+                doc.setFont('helvetica', 'normal');
+                doc.text("Reg No: 2026/697427/07", 14, 26);
+                doc.text("Stand No 762 Kwena Motolo 3, Polokwane, Limpopo, 0709", 14, 31);
+            }
+
+            // Dark Charcoal Type Pill Badge
+            doc.setFillColor(30, 41, 59); // slate-800
+            doc.roundedRect(136, 12, 60, 11, 2, 2, 'F');
+            doc.setFontSize(11);
+            doc.setTextColor(255, 255, 255);
+            doc.setFont('helvetica', 'bold');
+            doc.text(type.toUpperCase(), 166, 19.5, { align: 'center' });
+
+            let mY = 30;
+            doc.setFontSize(8.5);
+            doc.setFont('helvetica', 'normal');
+            doc.setTextColor(100, 116, 139);
+            doc.text("Reference:", 136, mY);
+            doc.setTextColor(15, 23, 42);
+            doc.setFont('helvetica', 'bold');
+            doc.text(data.reference || 'N/A', 196, mY, { align: 'right' });
+            mY += 5;
 
             doc.setFont('helvetica', 'normal');
-            if (type === 'Invoice') {
-                const dueVal = data.dueDate || data.validUntil;
+            doc.setTextColor(100, 116, 139);
+            doc.text("Issue Date:", 136, mY);
+            doc.setTextColor(15, 23, 42);
+            doc.setFont('helvetica', 'bold');
+            doc.text(data.date ? new Date(data.date).toLocaleDateString() : 'N/A', 196, mY, { align: 'right' });
+            mY += 5;
+
+            const dueVal = type === 'Invoice' ? (data.dueDate || data.validUntil) : data.validUntil;
+            if (dueVal) {
+                const deadlineLabel = type === 'Invoice' ? 'Due Date:' : 'Valid Until:';
+                doc.setFont('helvetica', 'normal');
+                doc.setTextColor(100, 116, 139);
+                doc.text(deadlineLabel, 136, mY);
+                doc.setTextColor(...primaryColor);
+                doc.setFont('helvetica', 'bold');
+                doc.text(new Date(dueVal).toLocaleDateString(), 196, mY, { align: 'right' });
+            }
+
+            // Executive 2-Column Info Card
+            clientY = 50;
+            doc.setFillColor(248, 250, 252);
+            doc.setDrawColor(226, 232, 240);
+            doc.setLineWidth(0.3);
+            doc.roundedRect(14, clientY, 182, 34, 2, 2, 'FD');
+
+            // Left: Billed To
+            doc.setFontSize(7.5);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(...primaryColor);
+            doc.text("BILLED TO", 19, clientY + 6);
+            doc.setFontSize(10.5);
+            doc.setTextColor(15, 23, 42);
+            doc.setFont('helvetica', 'bold');
+            doc.text(client.companyName || 'Unknown Client', 19, clientY + 12);
+            doc.setFontSize(8.5);
+            doc.setFont('helvetica', 'normal');
+            doc.setTextColor(100, 116, 139);
+            let cp = clientY + 17;
+            if (client.contactPerson) { doc.text(`Attn: ${client.contactPerson}`, 19, cp); cp += 4.5; }
+            if (client.email) { doc.text(client.email, 19, cp); cp += 4.5; }
+            if (client.phone) { doc.text(client.phone, 19, cp); cp += 4.5; }
+
+            // Right: Terms & Logistics
+            doc.setFontSize(7.5);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(...primaryColor);
+            doc.text("TERMS & LOGISTICS", 110, clientY + 6);
+            doc.setFontSize(8.5);
+            doc.setFont('helvetica', 'normal');
+            doc.setTextColor(71, 85, 105);
+            let tp = clientY + 12;
+            if (data.paymentTerms) { doc.text(`Terms: ${data.paymentTerms}`, 110, tp); tp += 4.5; }
+            if (data.expectedStartDate) { doc.text(`Project Start: ${new Date(data.expectedStartDate).toLocaleDateString()}`, 110, tp); tp += 4.5; }
+            if (data.deliveryTime) { doc.text(`Delivery Time: ${data.deliveryTime}`, 110, tp); tp += 4.5; }
+
+            finalY = clientY + 40;
+
+        } else if (isCreative) {
+            // Creative Template Header
+            if (logoData) {
+                doc.addImage(logoData, 'PNG', 14, 15, logoWidth, logoHeight);
+                logoBottomY = 15 + logoHeight;
+                doc.setFontSize(10);
+                doc.setTextColor(...grayColor);
+                doc.setFont('helvetica', 'normal');
+                doc.text("THE D-TECH ECOSYSTEM (Pty) Ltd | Reg: 2026/697427/07", 14, logoBottomY + 5);
+                logoBottomY += 7;
+            } else {
+                doc.setFontSize(24);
+                doc.setTextColor(0, 0, 0);
+                doc.setFont('helvetica', 'bold');
+                doc.text("THE D-TECH ECOSYSTEM (Pty) Ltd", 14, 25);
+                doc.setFontSize(9);
+                doc.setTextColor(...grayColor);
+                doc.setFont('helvetica', 'normal');
+                doc.text("Reg: 2026/697427/07", 14, 31);
+                logoBottomY = 33;
+            }
+
+            // Elegant accent line under logo
+            doc.setDrawColor(...primaryColor);
+            doc.setLineWidth(1.5);
+            doc.line(14, logoBottomY + 4, 55, logoBottomY + 4);
+
+            metaY = logoBottomY + 14;
+            doc.setFontSize(26);
+            doc.setTextColor(...primaryColor);
+            doc.setFont('helvetica', 'bold');
+            doc.text(type.toUpperCase(), 14, metaY);
+
+            metaY += 7;
+            doc.setFontSize(10);
+            doc.setTextColor(...grayColor);
+            doc.setFont('helvetica', 'normal');
+            let metaTxt = "";
+            if (data.reference) metaTxt += `Ref: ${data.reference}   |   `;
+            if (data.date) metaTxt += `Date: ${new Date(data.date).toLocaleDateString()}`;
+            doc.text(metaTxt, 14, metaY);
+
+            // Client Info Box pushed down to give whitespace
+            clientY = metaY + 12;
+            doc.setFontSize(9.5);
+            doc.setTextColor(...grayColor);
+            doc.setFont('helvetica', 'bold');
+            doc.text("PREPARED FOR", 14, clientY);
+
+            clientY += 6;
+            doc.setFontSize(13);
+            doc.setTextColor(0, 0, 0);
+            doc.setFont('helvetica', 'bold');
+            doc.text(client.companyName || 'Unknown Client', 14, clientY);
+
+            clientY += 5;
+            doc.setFontSize(9.5);
+            doc.setFont('helvetica', 'normal');
+            doc.setTextColor(...grayColor);
+            if (client.contactPerson) { doc.text(client.contactPerson, 14, clientY); clientY += 4.5; }
+            if (client.email) { doc.text(client.email, 14, clientY); clientY += 4.5; }
+            if (client.phone) { doc.text(client.phone, 14, clientY); clientY += 4.5; }
+
+            let detailY = 0;
+            if (data.validUntil || data.dueDate || data.paymentTerms || data.expectedStartDate || data.deliveryTime) {
+                detailY = metaY + 12;
+                doc.setFontSize(9.5);
+                doc.setTextColor(...grayColor);
+                doc.setFont('helvetica', 'bold');
+                doc.text("DETAILS", 115, detailY);
+
+                detailY += 6;
+                doc.setFontSize(9.5);
+                doc.setFont('helvetica', 'normal');
+                const dueVal = type === 'Invoice' ? (data.dueDate || data.validUntil) : data.validUntil;
                 if (dueVal) {
-                    doc.text(`Due Date: ${new Date(dueVal).toLocaleDateString()}`, 196, clientY, { align: 'right' });
+                    const deadlineLabel = type === 'Invoice' ? 'Due Date:' : 'Valid Until:';
+                    doc.text(`${deadlineLabel} ${new Date(dueVal).toLocaleDateString()}`, 115, detailY);
+                    detailY += 4.5;
+                }
+                if (data.paymentTerms) { doc.text(`Payment Terms: ${data.paymentTerms}`, 115, detailY); detailY += 4.5; }
+                if (data.expectedStartDate) { doc.text(`Project Start: ${new Date(data.expectedStartDate).toLocaleDateString()}`, 115, detailY); detailY += 4.5; }
+                if (data.deliveryTime) { doc.text(`Delivery Time: ${data.deliveryTime}`, 115, detailY); detailY += 4.5; }
+            }
+
+            finalY = Math.max(clientY, detailY || 0, metaY + 35) + 8;
+
+        } else {
+            // STANDARD / DEFAULT TEMPLATE
+            if (logoData) {
+                doc.addImage(logoData, 'PNG', 14, 15, logoWidth, logoHeight);
+                logoBottomY = 15 + logoHeight;
+
+                // Add business name under logo
+                doc.setFontSize(14);
+                doc.setTextColor(...primaryColor);
+                doc.setFont('helvetica', 'bold');
+                doc.text("THE D-TECH ECOSYSTEM (Pty) Ltd", 14, logoBottomY + 6);
+                logoBottomY += 8;
+            } else {
+                doc.setFontSize(22);
+                doc.setTextColor(...primaryColor);
+                doc.setFont('helvetica', 'bold');
+                doc.text("THE D-TECH ECOSYSTEM (Pty) Ltd", 14, 25);
+                logoBottomY = 28;
+            }
+
+            doc.setFontSize(10);
+            doc.setTextColor(...grayColor);
+            doc.setFont('helvetica', 'normal');
+            doc.text("Reg No: 2026/697427/07", 14, logoBottomY + 5);
+            doc.text("Stand No 762 Kwena Motolo 3, Moletjie, Polokwane, Limpopo, 0709", 14, logoBottomY + 10);
+            logoBottomY += 12;
+
+            // Document Type & Meta (Moved below logo on the left)
+            metaY = logoBottomY + 8;
+            doc.setFontSize(18);
+            doc.setTextColor(0, 0, 0);
+            doc.setFont('helvetica', 'bold');
+            doc.text(type.toUpperCase(), 14, metaY);
+
+            metaY += 6;
+            doc.setFontSize(10);
+            doc.setTextColor(...grayColor);
+            doc.setFont('helvetica', 'normal');
+
+            if (data.reference) {
+                doc.text(`Ref: ${data.reference}`, 14, metaY);
+                metaY += 5;
+            }
+            if (data.date) {
+                doc.text(`Date: ${new Date(data.date).toLocaleDateString()}`, 14, metaY);
+                metaY += 5;
+            }
+
+            // --- CLIENT DETAILS (Moved to Top Right) ---
+            clientY = 18;
+            doc.setFontSize(12);
+            doc.setTextColor(0, 0, 0);
+            doc.setFont('helvetica', 'bold');
+            doc.text("Prepared For:", 196, clientY, { align: 'right' });
+
+            clientY += 6;
+            doc.setFontSize(10);
+            doc.setFont('helvetica', 'normal');
+            doc.text(client.companyName || 'Unknown Client', 196, clientY, { align: 'right' });
+            clientY += 5;
+            if (client.contactPerson) { doc.text(client.contactPerson, 196, clientY, { align: 'right' }); clientY += 5; }
+            if (client.email) { doc.text(client.email, 196, clientY, { align: 'right' }); clientY += 5; }
+            if (client.phone) { doc.text(client.phone, 196, clientY, { align: 'right' }); clientY += 5; }
+
+            // Optional Document Details section (Quote Details / Invoice Details)
+            if (data.validUntil || data.dueDate || data.paymentTerms || data.expectedStartDate || data.deliveryTime) {
+                clientY += 4;
+                doc.setFontSize(10);
+                doc.setTextColor(0, 0, 0);
+                doc.setFont('helvetica', 'bold');
+                doc.text(`${type} Details:`, 196, clientY, { align: 'right' });
+                clientY += 5;
+
+                doc.setFont('helvetica', 'normal');
+                if (type === 'Invoice') {
+                    const dueVal = data.dueDate || data.validUntil;
+                    if (dueVal) {
+                        doc.text(`Due Date: ${new Date(dueVal).toLocaleDateString()}`, 196, clientY, { align: 'right' });
+                        clientY += 5;
+                    }
+                } else if (data.validUntil) {
+                    doc.text(`Valid Until: ${new Date(data.validUntil).toLocaleDateString()}`, 196, clientY, { align: 'right' });
                     clientY += 5;
                 }
-            } else if (data.validUntil) {
-                doc.text(`Valid Until: ${new Date(data.validUntil).toLocaleDateString()}`, 196, clientY, { align: 'right' });
-                clientY += 5;
+                if (data.paymentTerms) {
+                    doc.text(`Payment Terms: ${data.paymentTerms}`, 196, clientY, { align: 'right' });
+                    clientY += 5;
+                }
+                if (data.expectedStartDate) {
+                    doc.text(`Project Start: ${new Date(data.expectedStartDate).toLocaleDateString()}`, 196, clientY, { align: 'right' });
+                    clientY += 5;
+                }
+                if (data.deliveryTime) {
+                    doc.text(`Delivery Time: ${data.deliveryTime}`, 196, clientY, { align: 'right' });
+                    clientY += 5;
+                }
             }
-            if (data.paymentTerms) {
-                doc.text(`Payment Terms: ${data.paymentTerms}`, 196, clientY, { align: 'right' });
-                clientY += 5;
-            }
-            if (data.expectedStartDate) {
-                doc.text(`Project Start: ${new Date(data.expectedStartDate).toLocaleDateString()}`, 196, clientY, { align: 'right' });
-                clientY += 5;
-            }
-            if (data.deliveryTime) {
-                doc.text(`Delivery Time: ${data.deliveryTime}`, 196, clientY, { align: 'right' });
-                clientY += 5;
-            }
+
+            doc.setDrawColor(229, 231, 235);
+            let headerBottom = Math.max(metaY, clientY) + 5;
+            doc.line(14, headerBottom, 196, headerBottom);
+
+            finalY = headerBottom + 10;
         }
-
-        doc.setDrawColor(229, 231, 235);
-        let headerBottom = Math.max(metaY, clientY) + 5;
-        doc.line(14, headerBottom, 196, headerBottom);
-
-        // --- DOCUMENT SPECIFIC CONTENT ---
-        let finalY = headerBottom + 10;
 
         if (type === 'Quotation' || type === 'Invoice' || type === 'Receipt') {
             const tableData = data.items.map(item => [
@@ -162,13 +450,40 @@ const pdfEngine = {
                 `R ${(Number(item.price) * Number(item.quantity)).toFixed(2)}`
             ]);
 
+            let theme = 'striped';
+            let headStyles = { fillColor: primaryColor, textColor: 255 };
+            let bodyStyles = {};
+            let alternateRowStyles = { fillColor: [249, 250, 251] };
+
+            if (isCorporate) {
+                theme = 'grid';
+                headStyles = { fillColor: primaryColor, textColor: 255, lineWidth: 0.1, lineColor: 200 };
+            } else if (isExecutive) {
+                theme = 'grid';
+                headStyles = { fillColor: [30, 41, 59], textColor: [255, 255, 255], fontStyle: 'bold', lineWidth: 0.1, lineColor: [226, 232, 240] };
+                bodyStyles = { lineColor: [226, 232, 240], lineWidth: 0.1 };
+                alternateRowStyles = { fillColor: [248, 250, 252] };
+            } else if (isCreative) {
+                theme = 'plain';
+                headStyles = { fillColor: [255, 255, 255], textColor: primaryColor, fontStyle: 'bold', lineWidth: 0 };
+                bodyStyles = { lineWidth: 0, borderBottom: [0.5, 'solid', '#eee'] };
+                alternateRowStyles = {};
+            }
+
             doc.autoTable({
                 startY: finalY,
                 head: [['Description', 'Unit Price', 'Qty', 'Total']],
                 body: tableData,
-                theme: 'striped',
-                headStyles: { fillColor: primaryColor, textColor: 255 },
-                alternateRowStyles: { fillColor: [249, 250, 251] },
+                theme: theme,
+                headStyles: headStyles,
+                bodyStyles: bodyStyles,
+                alternateRowStyles: alternateRowStyles,
+                columnStyles: {
+                    0: { halign: 'left' },
+                    1: { halign: 'right' },
+                    2: { halign: 'center' },
+                    3: { halign: 'right' }
+                },
                 margin: { left: 14, right: 14 }
             });
 
@@ -430,19 +745,81 @@ const pdfEngine = {
         }
     },
 
+    getAdminTemplate() {
+        return localStorage.getItem('dtech_admin_pdf_template') || 'Corporate';
+    },
+
+    setAdminTemplate(tpl) {
+        localStorage.setItem('dtech_admin_pdf_template', tpl);
+        document.querySelectorAll('.admin-pdf-template-select').forEach(sel => {
+            if (sel.value !== tpl) sel.value = tpl;
+        });
+    },
+
+    initTemplateSelect() {
+        const current = this.getAdminTemplate();
+        document.querySelectorAll('.admin-pdf-template-select').forEach(sel => {
+            sel.value = current;
+        });
+    },
+
+    async previewSample(templateName) {
+        const currentTpl = templateName || this.getAdminTemplate();
+        const sampleData = {
+            reference: 'INV-2026-001',
+            date: new Date().toISOString(),
+            dueDate: new Date(Date.now() + 14 * 86400000).toISOString(),
+            paymentTerms: '50% Deposit',
+            pdfTemplate: currentTpl,
+            client: {
+                companyName: 'Acme Enterprises (Pty) Ltd',
+                contactPerson: 'Thabo Mokoena',
+                email: 'finance@acme-enterprises.co.za',
+                phone: '082 555 1234'
+            },
+            items: [
+                { description: 'Cloud Infrastructure & High Availability Setup', price: 6500, quantity: 1 },
+                { description: 'Custom SaaS Portal Development (Sprint 1)', price: 12500, quantity: 1 },
+                { description: 'Automated Tax & Financial Module Integration', price: 3800, quantity: 1 }
+            ],
+            subtotal: 22800,
+            vatPct: 15,
+            vatAmt: 3420,
+            total: 26220,
+            customerNotes: 'Payment is due within 14 days of invoice issue. Thank you for your business!'
+        };
+        return this.preview('Invoice', sampleData);
+    },
+
     async preview(type, data) {
         const doc = await this.generateDocument(type, data);
-        const pdfDataUri = doc.output('datauristring');
-
-        // Open in new window
-        const win = window.open();
-        if (win) {
-            win.document.write(`<iframe src="${pdfDataUri}" frameborder="0" style="border:0; top:0px; left:0px; bottom:0px; right:0px; width:100%; height:100%;" allowfullscreen></iframe>`);
-        } else {
-            alert('Please allow popups for this website to preview PDFs.');
+        const pdfBlob = doc.output('blob');
+        const blobUrl = URL.createObjectURL(pdfBlob);
+        const win = window.open(blobUrl, '_blank');
+        if (!win) {
+            if (typeof Swal !== 'undefined') {
+                const tplName = (data && data.pdfTemplate) || this.getAdminTemplate();
+                Swal.fire({
+                    title: `${type} Preview (${tplName})`,
+                    html: `<iframe src="${blobUrl}" style="width:100%; height:75vh; border:none; border-radius:8px;"></iframe>`,
+                    width: '900px',
+                    showCloseButton: true,
+                    showConfirmButton: false
+                });
+            } else {
+                window.location.href = blobUrl;
+            }
         }
     }
 };
+
+if (typeof document !== 'undefined') {
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => { if (typeof pdfEngine !== 'undefined') pdfEngine.initTemplateSelect(); });
+    } else {
+        if (typeof pdfEngine !== 'undefined') pdfEngine.initTemplateSelect();
+    }
+}
 async function saveFileNative(base64Data, filename) {
     try {
         const { Filesystem, Share } = window.Capacitor.Plugins;
