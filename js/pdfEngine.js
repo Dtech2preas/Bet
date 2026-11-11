@@ -114,7 +114,7 @@ const pdfEngine = {
         if (client.phone) { doc.text(client.phone, 196, clientY, { align: 'right' }); clientY += 5; }
 
         // Optional Document Details section (Quote Details / Invoice Details)
-        if (data.validUntil || data.paymentTerms || data.expectedStartDate || data.deliveryTime) {
+        if (data.validUntil || data.dueDate || data.paymentTerms || data.expectedStartDate || data.deliveryTime) {
             clientY += 4;
             doc.setFontSize(10);
             doc.setTextColor(0, 0, 0);
@@ -123,7 +123,13 @@ const pdfEngine = {
             clientY += 5;
 
             doc.setFont('helvetica', 'normal');
-            if (data.validUntil) {
+            if (type === 'Invoice') {
+                const dueVal = data.dueDate || data.validUntil;
+                if (dueVal) {
+                    doc.text(`Due Date: ${new Date(dueVal).toLocaleDateString()}`, 196, clientY, { align: 'right' });
+                    clientY += 5;
+                }
+            } else if (data.validUntil) {
                 doc.text(`Valid Until: ${new Date(data.validUntil).toLocaleDateString()}`, 196, clientY, { align: 'right' });
                 clientY += 5;
             }
@@ -369,6 +375,14 @@ const pdfEngine = {
             doc.text("Branch Code: 450105", 14, bankY);
             bankY += 5;
             doc.text(`Payment Reference: ${data.reference || ''}`, 14, bankY);
+            bankY += 4.5;
+            doc.setFontSize(8);
+            doc.setTextColor(...grayColor);
+            const refPrompt = type === 'Invoice'
+                ? "(Please use invoice reference as bank payment reference)"
+                : "(Please use quote reference as bank payment reference)";
+            doc.text(refPrompt, 14, bankY);
+            doc.setTextColor(0, 0, 0);
 
             // Business Details (Bottom Right)
             doc.setFontSize(12);

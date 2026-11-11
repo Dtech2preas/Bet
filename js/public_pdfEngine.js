@@ -146,7 +146,7 @@ const pdfEngine = {
             if (client.phone) { doc.text(client.phone, 18, clientY); clientY += 5; }
 
             // Details Info Box (if exists)
-            if (data.validUntil || data.paymentTerms || data.expectedStartDate || data.deliveryTime) {
+            if (data.validUntil || data.dueDate || data.paymentTerms || data.expectedStartDate || data.deliveryTime) {
                 let detailY = 55;
                 doc.setFillColor(245, 245, 245);
                 doc.rect(111, 50, 85, 40, 'F');
@@ -159,7 +159,12 @@ const pdfEngine = {
                 detailY += 6;
                 doc.setFontSize(10);
                 doc.setFont('helvetica', 'normal');
-                if (data.validUntil) { doc.text(`Valid Until: ${new Date(data.validUntil).toLocaleDateString()}`, 115, detailY); detailY += 5; }
+                const dueVal = type === 'Invoice' ? (data.dueDate || data.validUntil) : data.validUntil;
+                if (dueVal) {
+                    const deadlineLabel = type === 'Invoice' ? 'Due Date:' : 'Valid Until:';
+                    doc.text(`${deadlineLabel} ${new Date(dueVal).toLocaleDateString()}`, 115, detailY);
+                    detailY += 5;
+                }
                 if (data.paymentTerms) { doc.text(`Payment Terms: ${data.paymentTerms}`, 115, detailY); detailY += 5; }
                 if (data.expectedStartDate) { doc.text(`Project Start: ${new Date(data.expectedStartDate).toLocaleDateString()}`, 115, detailY); detailY += 5; }
                 if (data.deliveryTime) { doc.text(`Delivery Time: ${data.deliveryTime}`, 115, detailY); detailY += 5; }
@@ -221,7 +226,7 @@ const pdfEngine = {
             if (client.email) { doc.text(client.email, 14, clientY); clientY += 5; }
             if (client.phone) { doc.text(client.phone, 14, clientY); clientY += 5; }
 
-            if (data.validUntil || data.paymentTerms || data.expectedStartDate || data.deliveryTime) {
+            if (data.validUntil || data.dueDate || data.paymentTerms || data.expectedStartDate || data.deliveryTime) {
                 let detailY = metaY + 15;
                 doc.setFontSize(10);
                 doc.setTextColor(...grayColor);
@@ -231,7 +236,12 @@ const pdfEngine = {
                 detailY += 6;
                 doc.setFontSize(10);
                 doc.setFont('helvetica', 'normal');
-                if (data.validUntil) { doc.text(`Valid Until: ${new Date(data.validUntil).toLocaleDateString()}`, 115, detailY); detailY += 5; }
+                const dueVal = type === 'Invoice' ? (data.dueDate || data.validUntil) : data.validUntil;
+                if (dueVal) {
+                    const deadlineLabel = type === 'Invoice' ? 'Due Date:' : 'Valid Until:';
+                    doc.text(`${deadlineLabel} ${new Date(dueVal).toLocaleDateString()}`, 115, detailY);
+                    detailY += 5;
+                }
                 if (data.paymentTerms) { doc.text(`Payment Terms: ${data.paymentTerms}`, 115, detailY); detailY += 5; }
                 if (data.expectedStartDate) { doc.text(`Project Start: ${new Date(data.expectedStartDate).toLocaleDateString()}`, 115, detailY); detailY += 5; }
                 if (data.deliveryTime) { doc.text(`Delivery Time: ${data.deliveryTime}`, 115, detailY); detailY += 5; }
@@ -281,7 +291,7 @@ const pdfEngine = {
             if (client.email) { doc.text(client.email, 196, clientY, { align: 'right' }); clientY += 5; }
             if (client.phone) { doc.text(client.phone, 196, clientY, { align: 'right' }); clientY += 5; }
 
-            if (data.validUntil || data.paymentTerms || data.expectedStartDate || data.deliveryTime) {
+            if (data.validUntil || data.dueDate || data.paymentTerms || data.expectedStartDate || data.deliveryTime) {
                 clientY += 4;
                 doc.setFontSize(10);
                 doc.setTextColor(0, 0, 0);
@@ -290,7 +300,12 @@ const pdfEngine = {
                 clientY += 5;
 
                 doc.setFont('helvetica', 'normal');
-                if (data.validUntil) { doc.text(`Valid Until: ${new Date(data.validUntil).toLocaleDateString()}`, 196, clientY, { align: 'right' }); clientY += 5; }
+                const dueVal = type === 'Invoice' ? (data.dueDate || data.validUntil) : data.validUntil;
+                if (dueVal) {
+                    const deadlineLabel = type === 'Invoice' ? 'Due Date:' : 'Valid Until:';
+                    doc.text(`${deadlineLabel} ${new Date(dueVal).toLocaleDateString()}`, 196, clientY, { align: 'right' });
+                    clientY += 5;
+                }
                 if (data.paymentTerms) { doc.text(`Payment Terms: ${data.paymentTerms}`, 196, clientY, { align: 'right' }); clientY += 5; }
                 if (data.expectedStartDate) { doc.text(`Project Start: ${new Date(data.expectedStartDate).toLocaleDateString()}`, 196, clientY, { align: 'right' }); clientY += 5; }
                 if (data.deliveryTime) { doc.text(`Delivery Time: ${data.deliveryTime}`, 196, clientY, { align: 'right' }); clientY += 5; }
@@ -480,6 +495,14 @@ const pdfEngine = {
             doc.text(`Account Number: ${settings.accountNumber || ''}`, 14, bankY); bankY += 5;
             doc.text(`Branch Code: ${settings.branchCode || ''}`, 14, bankY); bankY += 5;
             doc.text(`Payment Reference: ${data.reference || ''}`, 14, bankY);
+            bankY += 4.5;
+            doc.setFontSize(8);
+            doc.setTextColor(...grayColor);
+            const refPrompt = type === 'Invoice'
+                ? "(Please use invoice reference as bank payment reference)"
+                : "(Please use quote reference as bank payment reference)";
+            doc.text(refPrompt, 14, bankY);
+            doc.setTextColor(0, 0, 0);
 
             // Business Details (Bottom Right)
             doc.setFontSize(12);
