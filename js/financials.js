@@ -1729,6 +1729,7 @@ const financialsManager = {
     unskipTransaction(idx) {
         if (!this._pendingReconcileData || !this._pendingReconcileData[idx]) return;
         this._pendingReconcileData[idx].skip = false;
+        this._pendingReconcileData[idx].isDuplicate = false;
         this.renderSimpleReconcileList();
     },
 
