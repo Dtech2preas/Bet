@@ -493,14 +493,13 @@ def record_session(mode="desktop"):
 
         print(f"✓ [{mode.upper()}] Walkthrough recording completed!")
         
-        # Capture video object before closing context
-        video_handle = page.video
+        # Capture video path string while Playwright event loop is active
+        video_path = page.video.path() if page.video else None
         page.close()
         context.close()
         browser.close()
 
     # Wait for Playwright to fully flush and finalize the WebM video to disk
-    video_path = video_handle.path() if video_handle else None
     dest_raw = f"output_videos/{prefix}_raw.webm"
 
     print(f"  Waiting for video flush: {video_path}...")
