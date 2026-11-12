@@ -203,6 +203,17 @@ def setup_mock_api(page):
                     "activeClients": 14
                 }
             }))
+        elif "/api/transactions" in url:
+            route.fulfill(status=200, content_type="application/json", body=json.dumps({
+                "success": True,
+                "transactions": [
+                    {"id": "tx_1", "date": "2026-11-02", "description": "Client Payment - Khumalo Logistics", "category": "Sales & Services", "type": "Income", "amount": 21275, "vatApplicable": True},
+                    {"id": "tx_2", "date": "2026-11-04", "description": "Cloud Hosting & Server Infra", "category": "Hosting & Software", "type": "Expense", "amount": 3450, "vatApplicable": True},
+                    {"id": "tx_3", "date": "2026-11-06", "description": "Client Payment - Cape Horizon", "category": "Sales & Services", "type": "Income", "amount": 16100, "vatApplicable": True},
+                    {"id": "tx_4", "date": "2026-11-08", "description": "Office Fiber Internet", "category": "Telecommunications", "type": "Expense", "amount": 999, "vatApplicable": True},
+                    {"id": "tx_5", "date": "2026-11-09", "description": "Hardware & Workstation Setup", "category": "Equipment", "type": "Expense", "amount": 4200, "vatApplicable": True}
+                ]
+            }))
         else:
             route.continue_()
 
@@ -270,54 +281,62 @@ def record_session(mode="desktop"):
             page.screenshot(path=f"screenshots/{prefix}_03_invoices_table.png")
 
             # Click Create Invoice
-            create_btn = page.locator("button:has-text('Create Invoice')")
-            if create_btn.is_visible():
-                create_btn.click()
-                time.sleep(2.5)
-                page.screenshot(path=f"screenshots/{prefix}_04_create_invoice_modal.png")
-                # Close modal
-                close_btn = page.locator("#invoiceModal button:has-text('Cancel'), #invoiceModal .fa-times")
-                if close_btn.first.is_visible():
-                    close_btn.first.click()
-                    time.sleep(1.0)
+            try:
+                create_btn = page.locator("button:has-text('Create Invoice')").first
+                if create_btn.is_visible():
+                    create_btn.click(force=True)
+                    time.sleep(2.5)
+                    page.screenshot(path=f"screenshots/{prefix}_04_create_invoice_modal.png")
+                    close_btn = page.locator("#invoiceModal button:has-text('Cancel'), #invoiceModal .fa-times").first
+                    if close_btn.is_visible():
+                        close_btn.click(force=True)
+                        time.sleep(1.0)
+            except Exception as e:
+                print(f"    (Scene 2 note: {e})")
 
             # Highlight WhatsApp button
-            wa_btn = page.locator("button[title*='WhatsApp'], button:has(.fa-whatsapp)").first
-            if wa_btn.is_visible():
-                wa_btn.hover()
-                time.sleep(2.5)
+            try:
+                wa_btn = page.locator("button[title*='WhatsApp'], button:has(.fa-whatsapp)").first
+                if wa_btn.is_visible():
+                    wa_btn.hover()
+                    time.sleep(2.5)
+            except Exception as e:
+                print(f"    (Scene 2 WA note: {e})")
 
             # SCENE 3: 4 PDF Templates & Live Preview
             print("▶ [3/6] PDF Templates & Live Executive Preview...")
             page.goto("http://127.0.0.1:8080/public_settings.html", wait_until="domcontentloaded")
             time.sleep(1.5)
 
-            # Scroll to PDF Template selector
-            smooth_scroll(page, 0, 300, step=25, delay=0.03)
-            time.sleep(1.5)
-
-            # Select Executive template and click Preview
-            tpl_select = page.locator("#settingsPdfTemplate")
-            if tpl_select.is_visible():
-                tpl_select.select_option("Executive")
+            try:
+                # Scroll to PDF Template selector
+                smooth_scroll(page, 0, 300, step=25, delay=0.03)
                 time.sleep(1.5)
 
-            preview_btn = page.locator("button:has-text('Preview')").first
-            if preview_btn.is_visible():
-                try:
-                    with page.expect_popup(timeout=2500) as popup_info:
-                        preview_btn.click()
-                    popup_page = popup_info.value
-                    time.sleep(2.5)
-                    popup_page.screenshot(path=f"screenshots/{prefix}_05_executive_pdf_preview.png")
-                    popup_page.close()
-                except Exception:
-                    time.sleep(2.5)
-                    page.screenshot(path=f"screenshots/{prefix}_05_executive_pdf_preview.png")
-                    swal_close = page.locator(".swal2-close")
-                    if swal_close.is_visible():
-                        swal_close.click()
-                        time.sleep(1.0)
+                # Select Executive template and click Preview
+                tpl_select = page.locator("#settingsPdfTemplate")
+                if tpl_select.is_visible():
+                    tpl_select.select_option("Executive")
+                    time.sleep(1.5)
+
+                preview_btn = page.locator("button:has-text('Preview')").first
+                if preview_btn.is_visible():
+                    try:
+                        with page.expect_popup(timeout=2500) as popup_info:
+                            preview_btn.click(force=True)
+                        popup_page = popup_info.value
+                        time.sleep(2.5)
+                        popup_page.screenshot(path=f"screenshots/{prefix}_05_executive_pdf_preview.png")
+                        popup_page.close()
+                    except Exception:
+                        time.sleep(2.5)
+                        page.screenshot(path=f"screenshots/{prefix}_05_executive_pdf_preview.png")
+                        swal_close = page.locator(".swal2-close")
+                        if swal_close.is_visible():
+                            swal_close.click(force=True)
+                            time.sleep(1.0)
+            except Exception as e:
+                print(f"    (Scene 3 note: {e})")
 
             # SCENE 4: Bank Statement CSV Upload & Auto-Reconcile
             print("▶ [4/6] Bank Statement CSV Import & Reconciliation...")
@@ -333,14 +352,15 @@ def record_session(mode="desktop"):
             page.goto("http://127.0.0.1:8080/public_financials.html", wait_until="domcontentloaded")
             time.sleep(2.0)
 
-            # Open Advanced Tax & Filing Drawer
-            drawer_btn = page.locator("#btn-advanced-drawer, button:has-text('Advanced Tax & Filing')").first
-            if drawer_btn.is_visible():
-                drawer_btn.click()
+            # Open Advanced Tax & Filing Drawer via JS execution for 100% stability
+            try:
+                page.evaluate("if (typeof financialsManager !== 'undefined' && financialsManager.openAdvancedDrawer) { financialsManager.openAdvancedDrawer(); } else { const b = document.querySelector('button[onclick*=\"openAdvancedDrawer\"]'); if (b) b.click(); }")
                 time.sleep(3.0) # Allow drawer slide animation
                 page.screenshot(path=f"screenshots/{prefix}_07_sars_cipc_drawer.png")
                 smooth_scroll(page, 0, 250, step=25, delay=0.03)
-                time.sleep(1.5)
+                time.sleep(2.0)
+            except Exception as e:
+                print(f"    (Scene 5 note: {e})")
 
             # SCENE 6: Dashboard Revenue & CTA
             print("▶ [6/6] Dashboard Analytics & Call to Action...")
