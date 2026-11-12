@@ -210,9 +210,18 @@ def record_session(mode="desktop"):
     print(f"   Viewport: {viewport['width']}x{viewport['height']}")
     print(f"==========================================")
 
-    # Launch local server
-    server = subprocess.Popen([sys.executable, "-m", "http.server", "8080"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    time.sleep(1.5)
+    # Launch local server bound to 127.0.0.1
+    import urllib.request
+    server = subprocess.Popen([sys.executable, "-m", "http.server", "8080", "--bind", "127.0.0.1"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    
+    # Wait until local HTTP server is definitely up
+    for _ in range(25):
+        try:
+            with urllib.request.urlopen("http://127.0.0.1:8080/index.html", timeout=1) as resp:
+                if resp.status == 200:
+                    break
+        except Exception:
+            time.sleep(0.2)
 
     try:
         with sync_playwright() as p:
@@ -229,11 +238,12 @@ def record_session(mode="desktop"):
                 record_video_size=viewport
             )
             page = context.new_page()
+            page.set_default_timeout(15000)
             setup_mock_api(page)
 
             # SCENE 1: Hook on Landing Page (index.html)
             print("▶ [1/6] Landing Page Hero & Features...")
-            page.goto("http://localhost:8080/index.html", wait_until="networkidle")
+            page.goto("http://127.0.0.1:8080/index.html", wait_until="domcontentloaded")
             time.sleep(2.0)
             page.screenshot(path=f"screenshots/{prefix}_01_landing_hero.png")
 
@@ -246,7 +256,7 @@ def record_session(mode="desktop"):
 
             # SCENE 2: Invoices & 1-Click WhatsApp
             print("▶ [2/6] Invoices Management & 1-Click WhatsApp...")
-            page.goto("http://localhost:8080/public_invoices.html", wait_until="networkidle")
+            page.goto("http://127.0.0.1:8080/public_invoices.html", wait_until="domcontentloaded")
             time.sleep(2.0)
             page.screenshot(path=f"screenshots/{prefix}_03_invoices_table.png")
 
@@ -270,7 +280,7 @@ def record_session(mode="desktop"):
 
             # SCENE 3: 4 PDF Templates & Live Preview
             print("▶ [3/6] PDF Templates & Live Executive Preview...")
-            page.goto("http://localhost:8080/public_settings.html", wait_until="networkidle")
+            page.goto("http://127.0.0.1:8080/public_settings.html", wait_until="domcontentloaded")
             time.sleep(1.5)
 
             # Scroll to PDF Template selector
@@ -297,7 +307,7 @@ def record_session(mode="desktop"):
 
             # SCENE 4: Bank Statement CSV Upload & Auto-Reconcile
             print("▶ [4/6] Bank Statement CSV Import & Reconciliation...")
-            page.goto("http://localhost:8080/public_csv-upload.html", wait_until="networkidle")
+            page.goto("http://127.0.0.1:8080/public_csv-upload.html", wait_until="domcontentloaded")
             time.sleep(2.0)
             page.screenshot(path=f"screenshots/{prefix}_06_csv_upload.png")
 
@@ -306,7 +316,7 @@ def record_session(mode="desktop"):
 
             # SCENE 5: Financials & Advanced Tax/Filing Drawer
             print("▶ [5/6] Financials & Advanced Tax/Filing (SARS VAT201 & CIPC)...")
-            page.goto("http://localhost:8080/public_financials.html", wait_until="networkidle")
+            page.goto("http://127.0.0.1:8080/public_financials.html", wait_until="domcontentloaded")
             time.sleep(2.0)
 
             # Open Advanced Tax & Filing Drawer
@@ -322,7 +332,7 @@ def record_session(mode="desktop"):
 
             # SCENE 6: Dashboard Revenue & CTA
             print("▶ [6/6] Dashboard Analytics & Call to Action...")
-            page.goto("http://localhost:8080/public_dashboard.html", wait_until="networkidle")
+            page.goto("http://127.0.0.1:8080/public_dashboard.html", wait_until="domcontentloaded")
             time.sleep(2.0)
             page.screenshot(path=f"screenshots/{prefix}_08_dashboard_analytics.png")
 
