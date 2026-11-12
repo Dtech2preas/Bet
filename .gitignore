@@ -12,6 +12,11 @@ app/android/capacitor-cordova-android-plugins/build/
 app/android/app/src/main/assets/
 .gradle/
 app/ios/App/App/public/
+output_videos/
+output_audio/
+screenshots/
+__pycache__/
+*.pyc
 app/android/app/build/
 app/android/.gradle/
 app/android/.idea/
@@ -20,3 +25,8 @@ app/ios/App/Pods/
 app/android/capacitor-cordova-android-plugins/build/
 app/android/app/src/main/assets/
 app/ios/App/App/public/
+output_videos/
+output_audio/
+screenshots/
+__pycache__/
+*.pyc
