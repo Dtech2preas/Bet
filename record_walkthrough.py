@@ -84,20 +84,22 @@ def generate_voiceovers(voice="en-ZA-LukeNeural"):
 def smooth_scroll(page, start_y, end_y, step=35, delay=0.025):
     """Simulates smooth human scrolling between two coordinates."""
     current = start_y
-    if start_y < end_y:
-        while current < end_y:
-            current = min(current + step, end_y)
-            page.evaluate(f"window.scrollTo(0, {current})")
-            time.sleep(delay)
-    else:
-        while current > end_y:
-            current = max(current - step, end_y)
-            page.evaluate(f"window.scrollTo(0, {current})")
-            time.sleep(delay)
+    try:
+        if start_y < end_y:
+            while current < end_y:
+                current = min(current + step, end_y)
+                page.evaluate(f"window.scrollTo(0, {current})")
+                time.sleep(delay)
+        else:
+            while current > end_y:
+                current = max(current - step, end_y)
+                page.evaluate(f"window.scrollTo(0, {current})")
+                time.sleep(delay)
+    except Exception as e:
+        print(f"    (Scroll note: {e})")
 
 def setup_mock_api(page):
     """Sets up deterministic mock responses for all portal API endpoints."""
-    # Pre-seed authenticated user in localStorage
     mock_user = {
         "business_id": "biz_demo_01",
         "businessName": "Apex Innovations (Pty) Ltd",
@@ -105,11 +107,18 @@ def setup_mock_api(page):
         "plan": "Premium"
     }
 
+    # Only inject auth token on portal pages, not on public index.html (to prevent auto-redirect)
     page.add_init_script(f"""
-        localStorage.setItem('dtech_token', 'mock_token_demo_2026');
-        localStorage.setItem('dtech_user', JSON.stringify({json.dumps(mock_user)}));
-        localStorage.setItem('dtech_admin_pdf_template', 'Executive');
         localStorage.setItem('dtech_cookie_consent', 'accepted');
+        const p = window.location.pathname;
+        if (!p.includes('index') && p !== '/' && p !== '') {{
+            localStorage.setItem('dtech_token', 'mock_token_demo_2026');
+            localStorage.setItem('dtech_user', JSON.stringify({json.dumps(mock_user)}));
+            localStorage.setItem('dtech_admin_pdf_template', 'Executive');
+        }} else {{
+            localStorage.removeItem('dtech_token');
+            localStorage.removeItem('dtech_user');
+        }}
     """)
 
     # Mock API routes
@@ -295,15 +304,20 @@ def record_session(mode="desktop"):
 
             preview_btn = page.locator("button:has-text('Preview')").first
             if preview_btn.is_visible():
-                preview_btn.click()
-                time.sleep(3.5) # Let preview iframe render
-                page.screenshot(path=f"screenshots/{prefix}_05_executive_pdf_preview.png")
-
-                # Close preview if Swal is open
-                swal_close = page.locator(".swal2-close")
-                if swal_close.is_visible():
-                    swal_close.click()
-                    time.sleep(1.0)
+                try:
+                    with page.expect_popup(timeout=2500) as popup_info:
+                        preview_btn.click()
+                    popup_page = popup_info.value
+                    time.sleep(2.5)
+                    popup_page.screenshot(path=f"screenshots/{prefix}_05_executive_pdf_preview.png")
+                    popup_page.close()
+                except Exception:
+                    time.sleep(2.5)
+                    page.screenshot(path=f"screenshots/{prefix}_05_executive_pdf_preview.png")
+                    swal_close = page.locator(".swal2-close")
+                    if swal_close.is_visible():
+                        swal_close.click()
+                        time.sleep(1.0)
 
             # SCENE 4: Bank Statement CSV Upload & Auto-Reconcile
             print("▶ [4/6] Bank Statement CSV Import & Reconciliation...")
@@ -320,15 +334,13 @@ def record_session(mode="desktop"):
             time.sleep(2.0)
 
             # Open Advanced Tax & Filing Drawer
-            drawer_btn = page.locator("#btn-advanced-drawer, button:has-text('Advanced Tax & Filing')")
+            drawer_btn = page.locator("#btn-advanced-drawer, button:has-text('Advanced Tax & Filing')").first
             if drawer_btn.is_visible():
                 drawer_btn.click()
-                time.sleep(3.5) # Allow drawer slide animation
+                time.sleep(3.0) # Allow drawer slide animation
                 page.screenshot(path=f"screenshots/{prefix}_07_sars_cipc_drawer.png")
-
-                # Scroll inside drawer to show CIPC tier
-                page.mouse.wheel(0, 300)
-                time.sleep(2.0)
+                smooth_scroll(page, 0, 250, step=25, delay=0.03)
+                time.sleep(1.5)
 
             # SCENE 6: Dashboard Revenue & CTA
             print("▶ [6/6] Dashboard Analytics & Call to Action...")
