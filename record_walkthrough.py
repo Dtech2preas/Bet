@@ -6,47 +6,58 @@ import json
 import asyncio
 import argparse
 import subprocess
+import urllib.request
 from playwright.sync_api import sync_playwright
 
 VOICEOVER_SEGMENTS = [
     {
-        "id": "scene1_hook",
-        "text": "Running a business in South Africa is tough enough—your admin shouldn't make it harder. If you’re still building invoices in Word or stressing over bank reconciliations, check this out.",
+        "id": "scene1_dashboard",
+        "text": "Welcome to the D-TECH Management Portal. Right from your dashboard, you get an instant bird's-eye view of your entire business—real-time revenue, incoming cash flow, and active clients.",
+        "duration_min": 10.0
+    },
+    {
+        "id": "scene2_settings",
+        "text": "Setup takes less than two minutes. Enter your business details, brand colors, and your Capitec, FNB, or Standard Bank account so you’re ready to bill.",
+        "duration_min": 10.5
+    },
+    {
+        "id": "scene3_menu",
+        "text": "All your business operations live right here in one clean menu—from client directories to automated invoicing and accounting.",
+        "duration_min": 7.5
+    },
+    {
+        "id": "scene4_clients",
+        "text": "Managing clients is effortless. Add new clients with their registration, contact numbers, and billing details in seconds.",
         "duration_min": 9.5
     },
     {
-        "id": "scene2_invoices",
-        "text": "Meet the D-TECH Management Portal. In under thirty seconds, you can create a professional invoice, add automated fifty percent deposit terms or VAT, and send it straight to your client's WhatsApp with one tap.",
-        "duration_min": 12.0
+        "id": "scene5_invoices",
+        "text": "Ready to bill? Generate an invoice in under thirty seconds. It auto-calculates deposits and VAT, and gives you four executive PDF styles—Standard, Corporate, Creative, or the new Executive theme. Then share it straight to your client's WhatsApp with one tap.",
+        "duration_min": 16.5
     },
     {
-        "id": "scene3_pdf_templates",
-        "text": "Choose between four executive design styles—Standard, Corporate, Creative, or the new Executive theme. Your clients receive a crisp, high-prestige PDF with your Capitec, FNB, or Standard Bank details front and center.",
-        "duration_min": 13.0
+        "id": "scene6_csv_upload",
+        "text": "Cash flow management is completely automated. We support multiple South African bank statement CSVs, including Capitec and FNB. Just drop in your statement—the system auto-categorizes your transactions, detects duplicates, and posts them straight to your ledger.",
+        "duration_min": 14.5
     },
     {
-        "id": "scene4_bank_csv",
-        "text": "Bookkeeping headache? Just drop in your bank statement CSV. The system auto-categorizes your transactions, spots duplicates, and reconciles your cash flow automatically in real time.",
-        "duration_min": 11.5
+        "id": "scene7_financials_tax",
+        "text": "When tax season comes, open the Advanced Tax and Filing drawer. It calculates your SARS VAT 201 return, estimates your CIPC fee tier, and gives your accountant a clean one-click CSV export.",
+        "duration_min": 13.5
     },
     {
-        "id": "scene5_tax_filing",
-        "text": "Tax season coming? Click Advanced Tax and Filing. It calculates your SARS VAT 201 return, estimates your CIPC fee tier, and gives your accountant a clean one-click CSV export.",
-        "duration_min": 12.0
-    },
-    {
-        "id": "scene6_cta",
-        "text": "Stop wasting your weekends on admin. Start for free today at management dot d-tech services dot co dot z-a.",
-        "duration_min": 7.0
+        "id": "scene8_cta",
+        "text": "Stop wasting your weekends on messy admin. Start for free today at management dot d-tech services dot co dot z-a.",
+        "duration_min": 7.5
     }
 ]
 
 def generate_voiceovers(voice="en-ZA-LukeNeural"):
-    """Generates audio voiceover clips using edge-tts."""
+    """Generates audio voiceover clips using edge-tts and merges into full_voiceover.mp3."""
     os.makedirs("output_audio", exist_ok=True)
     os.makedirs("output_videos", exist_ok=True)
 
-    print(f"\n[Voiceover] Generating audio using voice: {voice}...")
+    print(f"\n[Voiceover] Generating speech using: {voice}...")
     try:
         import edge_tts
 
@@ -59,30 +70,28 @@ def generate_voiceovers(voice="en-ZA-LukeNeural"):
                 concat_files.append(f"file '{os.path.abspath(out_path)}'")
                 print(f"  ✓ Created: {out_path}")
 
-            # Write concat list for ffmpeg
             concat_list = "output_audio/audio_concat.txt"
             with open(concat_list, "w") as f:
                 f.write("\n".join(concat_files) + "\n")
 
-            # Merge all segments into voiceover.mp3
             full_audio = "output_audio/full_voiceover.mp3"
             subprocess.run([
                 "ffmpeg", "-y", "-f", "concat", "-safe", "0",
                 "-i", concat_list, "-c", "copy", full_audio
             ], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            print(f"  ✓ Merged complete voiceover: {full_audio}")
+            print(f"  ✓ Merged complete voiceover track: {full_audio}")
             return full_audio
 
         return asyncio.run(_synthesize())
     except ImportError:
-        print("  ! edge-tts not installed. Skipping voiceover generation.")
+        print("  ! edge-tts not installed. Skipping audio generation.")
         return None
     except Exception as e:
-        print(f"  ! Voiceover error: {e}")
+        print(f"  ! Voiceover synthesis warning: {e}")
         return None
 
-def smooth_scroll(page, start_y, end_y, step=35, delay=0.025):
-    """Simulates smooth human scrolling between two coordinates."""
+def smooth_scroll(page, start_y, end_y, step=25, delay=0.03):
+    """Simulates smooth human scrolling between two vertical coordinates."""
     current = start_y
     try:
         if start_y < end_y:
@@ -96,7 +105,7 @@ def smooth_scroll(page, start_y, end_y, step=35, delay=0.025):
                 page.evaluate(f"window.scrollTo(0, {current})")
                 time.sleep(delay)
     except Exception as e:
-        print(f"    (Scroll note: {e})")
+        pass
 
 def setup_mock_api(page):
     """Sets up deterministic mock responses for all portal API endpoints."""
@@ -107,24 +116,17 @@ def setup_mock_api(page):
         "plan": "Premium"
     }
 
-    # Only inject auth token on portal pages, not on public index.html (to prevent auto-redirect)
+    # Inject mock session into localStorage for portal pages
     page.add_init_script(f"""
-        localStorage.setItem('dtech_cookie_consent', 'accepted');
-        const p = window.location.pathname;
-        if (!p.includes('index') && p !== '/' && p !== '') {{
-            localStorage.setItem('dtech_token', 'mock_token_demo_2026');
-            localStorage.setItem('dtech_user', JSON.stringify({json.dumps(mock_user)}));
-            localStorage.setItem('dtech_admin_pdf_template', 'Executive');
-        }} else {{
-            localStorage.removeItem('dtech_token');
-            localStorage.removeItem('dtech_user');
-        }}
+        localStorage.setItem('dtech_token', 'mock_token_demo_2026');
+        localStorage.setItem('dtech_user', JSON.stringify({json.dumps(mock_user)}));
+        localStorage.setItem('dtech_admin_pdf_template', 'Executive');
+        // Do NOT set dtech_terms_consent so the user sees the terms banner and closes it live
     """)
 
-    # Mock API routes
     def handle_api(route):
         url = route.request.url
-        
+
         if "/api/subscription" in url:
             route.fulfill(status=200, content_type="application/json", body=json.dumps({
                 "success": True,
@@ -220,7 +222,7 @@ def setup_mock_api(page):
     page.route("**/api/**", handle_api)
 
 def record_session(mode="desktop"):
-    """Executes the synchronized Playwright walkthrough for Desktop or Mobile."""
+    """Executes the synchronized, human-like Playwright walkthrough."""
     is_mobile = (mode == "mobile")
     viewport = {"width": 390, "height": 844} if is_mobile else {"width": 1280, "height": 720}
     prefix = "mobile" if is_mobile else "desktop"
@@ -230,167 +232,306 @@ def record_session(mode="desktop"):
     print(f"   Viewport: {viewport['width']}x{viewport['height']}")
     print(f"==========================================")
 
-    # Launch local server bound to 127.0.0.1
-    import urllib.request
-    server = subprocess.Popen([sys.executable, "-m", "http.server", "8080", "--bind", "127.0.0.1"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    
-    # Wait until local HTTP server is definitely up
-    for _ in range(25):
+    raw_dir = f"output_videos/{prefix}_raw/"
+    os.makedirs(raw_dir, exist_ok=True)
+
+    with sync_playwright() as p:
+        browser = p.chromium.launch(
+            headless=True,
+            args=["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"]
+        )
+
+        context = browser.new_context(
+            viewport=viewport,
+            is_mobile=is_mobile,
+            has_touch=is_mobile,
+            record_video_dir=raw_dir,
+            record_video_size=viewport
+        )
+        page = context.new_page()
+        page.set_default_timeout(15000)
+        setup_mock_api(page)
+
+        # ---------------------------------------------------------
+        # SCENE 1: Dashboard Overview & Close Terms / Guides
+        # ---------------------------------------------------------
+        print("▶ [1/8] Dashboard: Viewing stats & closing Terms banner...")
+        page.goto("http://127.0.0.1:8080/public_dashboard.html", wait_until="domcontentloaded")
+        time.sleep(2.5) # Let user see revenue cards and charts
+        page.screenshot(path=f"screenshots/{prefix}_01_dashboard.png")
+
+        # Smooth scroll down to view cash flow
+        smooth_scroll(page, 0, 300, step=20, delay=0.03)
+        time.sleep(1.5)
+
+        # Click Accept on the Terms & Conditions banner live on screen
         try:
-            with urllib.request.urlopen("http://127.0.0.1:8080/index.html", timeout=1) as resp:
-                if resp.status == 200:
-                    break
-        except Exception:
-            time.sleep(0.2)
+            accept_terms = page.locator("#acceptTermsBtn, button:has-text('Accept')").first
+            if accept_terms.is_visible():
+                accept_terms.click(force=True)
+                print("  ✓ Clicked 'Accept' on Terms & Conditions banner")
+                time.sleep(1.5)
+        except Exception as e:
+            print(f"  ! Terms note: {e}")
 
-    try:
-        with sync_playwright() as p:
-            browser = p.chromium.launch(
-                headless=True,
-                args=["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"]
-            )
+        # Scroll back to top smoothly
+        smooth_scroll(page, 300, 0, step=25, delay=0.03)
+        time.sleep(1.5)
 
-            context = browser.new_context(
-                viewport=viewport,
-                is_mobile=is_mobile,
-                has_touch=is_mobile,
-                record_video_dir=f"output_videos/{prefix}_raw/",
-                record_video_size=viewport
-            )
-            page = context.new_page()
-            page.set_default_timeout(15000)
-            setup_mock_api(page)
+        # ---------------------------------------------------------
+        # SCENE 2: Settings & Business Details Setup
+        # ---------------------------------------------------------
+        print("▶ [2/8] Settings: Adding business name & Capitec banking details...")
+        page.goto("http://127.0.0.1:8080/public_settings.html", wait_until="domcontentloaded")
+        time.sleep(2.0)
 
-            # SCENE 1: Hook on Landing Page (index.html)
-            print("▶ [1/6] Landing Page Hero & Features...")
-            page.goto("http://127.0.0.1:8080/index.html", wait_until="domcontentloaded")
-            time.sleep(2.0)
-            page.screenshot(path=f"screenshots/{prefix}_01_landing_hero.png")
+        try:
+            # Type Business Name
+            biz_name = page.locator("#settingsBusinessName")
+            if biz_name.is_visible():
+                biz_name.click()
+                biz_name.fill("Apex Innovations (Pty) Ltd")
+                time.sleep(0.8)
 
-            smooth_scroll(page, 0, 750, step=30, delay=0.03)
-            time.sleep(2.0)
-            page.screenshot(path=f"screenshots/{prefix}_02_features.png")
+            # Scroll down to banking
+            smooth_scroll(page, 0, 450, step=25, delay=0.03)
+            time.sleep(1.0)
 
-            smooth_scroll(page, 750, 1500, step=35, delay=0.025)
-            time.sleep(2.5)
+            # Select Bank
+            bank_sel = page.locator("#settingsBank")
+            if bank_sel.is_visible():
+                bank_sel.select_option("Capitec")
+                time.sleep(0.8)
 
-            # SCENE 2: Invoices & 1-Click WhatsApp
-            print("▶ [2/6] Invoices Management & 1-Click WhatsApp...")
-            page.goto("http://127.0.0.1:8080/public_invoices.html", wait_until="domcontentloaded")
-            time.sleep(2.0)
-            page.screenshot(path=f"screenshots/{prefix}_03_invoices_table.png")
+            # Type Account Number
+            acc_num = page.locator("#settingsAccountNumber")
+            if acc_num.is_visible():
+                acc_num.click()
+                acc_num.fill("1056046651")
+                time.sleep(0.8)
 
-            # Click Create Invoice
-            try:
-                create_btn = page.locator("button:has-text('Create Invoice')").first
-                if create_btn.is_visible():
-                    create_btn.click(force=True)
-                    time.sleep(2.5)
-                    page.screenshot(path=f"screenshots/{prefix}_04_create_invoice_modal.png")
-                    close_btn = page.locator("#invoiceModal button:has-text('Cancel'), #invoiceModal .fa-times").first
-                    if close_btn.is_visible():
-                        close_btn.click(force=True)
-                        time.sleep(1.0)
-            except Exception as e:
-                print(f"    (Scene 2 note: {e})")
-
-            # Highlight WhatsApp button
-            try:
-                wa_btn = page.locator("button[title*='WhatsApp'], button:has(.fa-whatsapp)").first
-                if wa_btn.is_visible():
-                    wa_btn.hover()
-                    time.sleep(2.5)
-            except Exception as e:
-                print(f"    (Scene 2 WA note: {e})")
-
-            # SCENE 3: 4 PDF Templates & Live Preview
-            print("▶ [3/6] PDF Templates & Live Executive Preview...")
-            page.goto("http://127.0.0.1:8080/public_settings.html", wait_until="domcontentloaded")
+            page.screenshot(path=f"screenshots/{prefix}_02_settings_banking.png")
             time.sleep(1.5)
+        except Exception as e:
+            print(f"  ! Settings note: {e}")
 
-            try:
-                # Scroll to PDF Template selector
-                smooth_scroll(page, 0, 300, step=25, delay=0.03)
+        # ---------------------------------------------------------
+        # SCENE 3: Side Menu Overview
+        # ---------------------------------------------------------
+        print("▶ [3/8] Navigation Menu: Overview of business tools...")
+        try:
+            menu_btn = page.locator("#menu-button, button:has(.fa-bars)").first
+            if menu_btn.is_visible():
+                menu_btn.click(force=True)
+                time.sleep(2.5) # Let viewer absorb menu items
+                page.screenshot(path=f"screenshots/{prefix}_03_menu_overview.png")
+        except Exception as e:
+            print(f"  ! Menu note: {e}")
+
+        # ---------------------------------------------------------
+        # SCENE 4: Clients & Adding New Client
+        # ---------------------------------------------------------
+        print("▶ [4/8] Clients: Adding new client with registration & contact...")
+        page.goto("http://127.0.0.1:8080/public_clients.html", wait_until="domcontentloaded")
+        time.sleep(2.0)
+        page.screenshot(path=f"screenshots/{prefix}_04_clients_list.png")
+
+        try:
+            add_client_btn = page.locator("button:has-text('Add Client')").first
+            if add_client_btn.is_visible():
+                add_client_btn.click(force=True)
                 time.sleep(1.5)
 
-                # Select Executive template and click Preview
-                tpl_select = page.locator("#settingsPdfTemplate")
-                if tpl_select.is_visible():
-                    tpl_select.select_option("Executive")
-                    time.sleep(1.5)
+                # Type client details
+                c_company = page.locator("#drawer-cl-company")
+                if c_company.is_visible():
+                    c_company.fill("Khumalo Logistics (Pty) Ltd")
+                    time.sleep(0.6)
 
-                preview_btn = page.locator("button:has-text('Preview')").first
-                if preview_btn.is_visible():
-                    try:
-                        with page.expect_popup(timeout=2500) as popup_info:
-                            preview_btn.click(force=True)
-                        popup_page = popup_info.value
-                        time.sleep(2.5)
-                        popup_page.screenshot(path=f"screenshots/{prefix}_05_executive_pdf_preview.png")
-                        popup_page.close()
-                    except Exception:
-                        time.sleep(2.5)
-                        page.screenshot(path=f"screenshots/{prefix}_05_executive_pdf_preview.png")
-                        swal_close = page.locator(".swal2-close")
-                        if swal_close.is_visible():
-                            swal_close.click(force=True)
-                            time.sleep(1.0)
-            except Exception as e:
-                print(f"    (Scene 3 note: {e})")
+                c_contact = page.locator("#drawer-cl-contact")
+                if c_contact.is_visible():
+                    c_contact.fill("Sarah Jenkins")
+                    time.sleep(0.6)
 
-            # SCENE 4: Bank Statement CSV Upload & Auto-Reconcile
-            print("▶ [4/6] Bank Statement CSV Import & Reconciliation...")
-            page.goto("http://127.0.0.1:8080/public_csv-upload.html", wait_until="domcontentloaded")
-            time.sleep(2.0)
-            page.screenshot(path=f"screenshots/{prefix}_06_csv_upload.png")
+                c_email = page.locator("#drawer-cl-email")
+                if c_email.is_visible():
+                    c_email.fill("billing@khumalologistics.co.za")
+                    time.sleep(0.6)
 
-            smooth_scroll(page, 0, 400, step=25, delay=0.03)
-            time.sleep(2.5)
+                page.screenshot(path=f"screenshots/{prefix}_05_add_client_modal.png")
 
-            # SCENE 5: Financials & Advanced Tax/Filing Drawer
-            print("▶ [5/6] Financials & Advanced Tax/Filing (SARS VAT201 & CIPC)...")
-            page.goto("http://127.0.0.1:8080/public_financials.html", wait_until="domcontentloaded")
-            time.sleep(2.0)
+                # Close client drawer
+                close_btn = page.locator("button:has-text('Cancel'), #clientDrawerModal .fa-times").first
+                if close_btn.is_visible():
+                    close_btn.click(force=True)
+                    time.sleep(1.0)
+        except Exception as e:
+            print(f"  ! Client note: {e}")
 
-            # Open Advanced Tax & Filing Drawer via JS execution for 100% stability
-            try:
-                page.evaluate("if (typeof financialsManager !== 'undefined' && financialsManager.openAdvancedDrawer) { financialsManager.openAdvancedDrawer(); } else { const b = document.querySelector('button[onclick*=\"openAdvancedDrawer\"]'); if (b) b.click(); }")
-                time.sleep(3.0) # Allow drawer slide animation
-                page.screenshot(path=f"screenshots/{prefix}_07_sars_cipc_drawer.png")
-                smooth_scroll(page, 0, 250, step=25, delay=0.03)
+        # ---------------------------------------------------------
+        # SCENE 5: Invoices, 4 PDF Style Previews & WhatsApp
+        # ---------------------------------------------------------
+        print("▶ [5/8] Invoices: Creating invoice & previewing 4 PDF styles...")
+        page.goto("http://127.0.0.1:8080/public_invoices.html", wait_until="domcontentloaded")
+        time.sleep(2.0)
+        page.screenshot(path=f"screenshots/{prefix}_06_invoices_table.png")
+
+        # Open Create Invoice
+        try:
+            create_inv_btn = page.locator("button:has-text('Create Invoice')").first
+            if create_inv_btn.is_visible():
+                create_inv_btn.click(force=True)
                 time.sleep(2.0)
-            except Exception as e:
-                print(f"    (Scene 5 note: {e})")
+                page.screenshot(path=f"screenshots/{prefix}_07_create_invoice.png")
 
-            # SCENE 6: Dashboard Revenue & CTA
-            print("▶ [6/6] Dashboard Analytics & Call to Action...")
-            page.goto("http://127.0.0.1:8080/public_dashboard.html", wait_until="domcontentloaded")
-            time.sleep(2.0)
-            page.screenshot(path=f"screenshots/{prefix}_08_dashboard_analytics.png")
+                # Close invoice modal
+                close_inv = page.locator("#invoiceModal button:has-text('Cancel'), #invoiceModal .fa-times").first
+                if close_inv.is_visible():
+                    close_inv.click(force=True)
+                    time.sleep(1.0)
+        except Exception as e:
+            print(f"  ! Invoice create note: {e}")
 
-            smooth_scroll(page, 0, 350, step=25, delay=0.03)
+        # Preview PDF Styles: Corporate, Creative, and Executive
+        print("  → Previewing PDF template styles live on screen...")
+        try:
+            # 1. Preview Corporate
+            page.evaluate("if (typeof pdfEngine !== 'undefined') pdfEngine.previewSample('Corporate');")
             time.sleep(3.0)
+            page.screenshot(path=f"screenshots/{prefix}_08_pdf_corporate.png")
+            page.evaluate("if (typeof Swal !== 'undefined') Swal.close();")
+            time.sleep(0.8)
 
-            print("✓ Walkthrough actions completed successfully!")
-            context.close()
-            browser.close()
+            # 2. Preview Creative
+            page.evaluate("if (typeof pdfEngine !== 'undefined') pdfEngine.previewSample('Creative');")
+            time.sleep(3.0)
+            page.screenshot(path=f"screenshots/{prefix}_09_pdf_creative.png")
+            page.evaluate("if (typeof Swal !== 'undefined') Swal.close();")
+            time.sleep(0.8)
 
-    finally:
-        server.terminate()
+            # 3. Preview Executive
+            page.evaluate("if (typeof pdfEngine !== 'undefined') pdfEngine.previewSample('Executive');")
+            time.sleep(3.5)
+            page.screenshot(path=f"screenshots/{prefix}_10_pdf_executive.png")
+            page.evaluate("if (typeof Swal !== 'undefined') Swal.close();")
+            time.sleep(1.0)
+        except Exception as e:
+            print(f"  ! PDF preview note: {e}")
 
-    # Find the recorded raw video
-    raw_webms = glob.glob(f"output_videos/{prefix}_raw/*.webm")
-    if raw_webms:
-        raw_video = max(raw_webms, key=os.path.getctime)
-        dest_raw = f"output_videos/{prefix}_raw.webm"
+        # Hover over WhatsApp button
+        try:
+            wa_btn = page.locator("button[title*='WhatsApp'], button:has(.fa-whatsapp)").first
+            if wa_btn.is_visible():
+                wa_btn.hover()
+                time.sleep(2.0)
+        except Exception as e:
+            pass
+
+        # ---------------------------------------------------------
+        # SCENE 6: Bank Statement CSV Upload & Auto-Reconcile
+        # ---------------------------------------------------------
+        print("▶ [6/8] Bank CSV Upload: Showing Capitec/FNB reconciliation...")
+        page.goto("http://127.0.0.1:8080/public_csv-upload.html", wait_until="domcontentloaded")
+        time.sleep(2.0)
+        page.screenshot(path=f"screenshots/{prefix}_11_csv_upload_dropzone.png")
+
+        # Simulate statement parsed and view populated
+        try:
+            page.evaluate("""
+                const empty = document.getElementById('reconcile-empty-state');
+                const split = document.getElementById('reconcile-split-view');
+                if (empty) empty.classList.add('hidden');
+                if (split) split.classList.remove('hidden');
+            """)
+            time.sleep(2.5)
+            page.screenshot(path=f"screenshots/{prefix}_12_reconcile_parsed_view.png")
+
+            # Click Save to Ledger
+            save_ledger_btn = page.locator("#recon-top-save-btn, button:has-text('Save to Ledger')").first
+            if save_ledger_btn.is_visible():
+                save_ledger_btn.hover()
+                time.sleep(1.5)
+        except Exception as e:
+            print(f"  ! CSV reconcile note: {e}")
+
+        # ---------------------------------------------------------
+        # SCENE 7: Financials & Advanced Tax/Filing Drawer (SARS & CIPC)
+        # ---------------------------------------------------------
+        print("▶ [7/8] Financials: SARS VAT201 & CIPC Annual Return Drawer...")
+        page.goto("http://127.0.0.1:8080/public_financials.html", wait_until="domcontentloaded")
+        time.sleep(2.0)
+        page.screenshot(path=f"screenshots/{prefix}_13_financials_ledger.png")
+
+        # Open Advanced Tax & Filing Drawer via JS
+        try:
+            page.evaluate("""
+                if (typeof financialsManager !== 'undefined' && financialsManager.openAdvancedDrawer) {
+                    financialsManager.openAdvancedDrawer();
+                } else {
+                    const b = document.querySelector('button[onclick*="openAdvancedDrawer"]');
+                    if (b) b.click();
+                }
+            """)
+            time.sleep(3.5) # Let drawer slide out cleanly
+            page.screenshot(path=f"screenshots/{prefix}_14_advanced_tax_drawer.png")
+
+            # Scroll smoothly inside drawer to show CIPC tier & VAT calculations
+            smooth_scroll(page, 0, 300, step=20, delay=0.03)
+            time.sleep(2.5)
+        except Exception as e:
+            print(f"  ! Financials tax drawer note: {e}")
+
+        # ---------------------------------------------------------
+        # SCENE 8: Wrap-up & Call to Action
+        # ---------------------------------------------------------
+        print("▶ [8/8] Wrap-up: Returning to Dashboard & Final CTA...")
+        page.goto("http://127.0.0.1:8080/public_dashboard.html", wait_until="domcontentloaded")
+        time.sleep(2.0)
+        smooth_scroll(page, 0, 400, step=25, delay=0.03)
+        time.sleep(3.5)
+        page.screenshot(path=f"screenshots/{prefix}_15_final_cta.png")
+
+        print(f"✓ [{mode.upper()}] Walkthrough recording completed!")
+        
+        # Capture video object before closing context
+        video_handle = page.video
+        page.close()
+        context.close()
+        browser.close()
+
+    # Wait for Playwright to fully flush and finalize the WebM video to disk
+    video_path = video_handle.path() if video_handle else None
+    dest_raw = f"output_videos/{prefix}_raw.webm"
+
+    print(f"  Waiting for video flush: {video_path}...")
+    for _ in range(40):
+        if video_path and os.path.exists(video_path) and os.path.getsize(video_path) > 10000:
+            break
+        time.sleep(0.5)
+
+    if video_path and os.path.exists(video_path):
         if os.path.exists(dest_raw):
             os.remove(dest_raw)
-        os.rename(raw_video, dest_raw)
+        os.rename(video_path, dest_raw)
+        size_mb = os.path.getsize(dest_raw) / (1024 * 1024)
+        print(f"✓ Saved raw {mode} video to: {dest_raw} ({size_mb:.2f} MB)")
         return dest_raw
+
+    # Fallback search if path was different
+    raw_files = glob.glob(f"{raw_dir}/*.webm")
+    if raw_files:
+        largest = max(raw_files, key=os.path.getsize)
+        if os.path.getsize(largest) > 10000:
+            if os.path.exists(dest_raw):
+                os.remove(dest_raw)
+            os.rename(largest, dest_raw)
+            return dest_raw
+
+    print(f"  ! Warning: Could not find raw video for {mode}")
     return None
 
 def merge_video_audio(video_file, audio_file, output_mp4):
-    """Merges video and synthesized voiceover with FFmpeg into high quality MP4."""
+    """Merges video and synthesized voiceover with FFmpeg into crystal-clear MP4."""
     print(f"\n[FFmpeg] Rendering final MP4: {output_mp4}...")
     if not os.path.exists(video_file):
         print(f"  ! Error: Video file not found: {video_file}")
@@ -433,22 +574,40 @@ def main():
     os.makedirs("output_videos", exist_ok=True)
     os.makedirs("screenshots", exist_ok=True)
 
-    # 1. Generate Voiceover Track
-    audio_track = generate_voiceovers(voice=args.voice)
+    # Launch single local HTTP server for the entire walkthrough run
+    print("\n[Server] Starting local server bound to 127.0.0.1:8080...")
+    server = subprocess.Popen([sys.executable, "-m", "http.server", "8080", "--bind", "127.0.0.1"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    
+    # Wait until server is definitely responding
+    for _ in range(30):
+        try:
+            with urllib.request.urlopen("http://127.0.0.1:8080/public_dashboard.html", timeout=1) as resp:
+                if resp.status == 200:
+                    break
+        except Exception:
+            time.sleep(0.2)
 
-    # 2. Record Desktop
-    if args.viewports in ["both", "desktop"]:
-        desktop_raw = record_session(mode="desktop")
-        if desktop_raw:
-            merge_video_audio(desktop_raw, audio_track, "output_videos/dtech_marketing_desktop.mp4")
+    try:
+        # 1. Synthesize Voiceover Track
+        audio_track = generate_voiceovers(voice=args.voice)
 
-    # 3. Record Mobile
-    if args.viewports in ["both", "mobile"]:
-        mobile_raw = record_session(mode="mobile")
-        if mobile_raw:
-            merge_video_audio(mobile_raw, audio_track, "output_videos/dtech_marketing_mobile.mp4")
+        # 2. Record Desktop Walkthrough
+        if args.viewports in ["both", "desktop"]:
+            desktop_raw = record_session(mode="desktop")
+            if desktop_raw:
+                merge_video_audio(desktop_raw, audio_track, "output_videos/dtech_marketing_desktop.mp4")
 
-    print("\n🎉 All marketing walkthrough videos generated successfully!")
+        # 3. Record Mobile Walkthrough
+        if args.viewports in ["both", "mobile"]:
+            mobile_raw = record_session(mode="mobile")
+            if mobile_raw:
+                merge_video_audio(mobile_raw, audio_track, "output_videos/dtech_marketing_mobile.mp4")
+
+    finally:
+        server.terminate()
+        print("[Server] Local HTTP server terminated cleanly.")
+
+    print("\n🎉 Walkthrough video generation complete!")
     print("Files ready in output_videos/:")
     for f in glob.glob("output_videos/*.mp4"):
         print(f"  • {f} ({os.path.getsize(f) / (1024 * 1024):.2f} MB)")
