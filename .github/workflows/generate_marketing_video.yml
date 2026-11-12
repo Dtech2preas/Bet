@@ -28,6 +28,7 @@ on:
     paths:
       - 'record_walkthrough.py'
       - '.github/workflows/generate_marketing_video.yml'
+      - 'demo/**'
 
 jobs:
   render-marketing-videos:

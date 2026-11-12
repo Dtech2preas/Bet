@@ -1,0 +1,1129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>D-TECH Business Portal - Showcase</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="../output.css" rel="stylesheet"/>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
+    <style>
+        body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
+        .tab-section { display: none; }
+        .tab-section.active { display: block; animation: fadeIn 0.35s ease-in-out; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(4px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .drawer-backdrop { transition: opacity 0.3s ease; }
+        .drawer-panel { transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1); }
+        #virtual-cursor {
+            pointer-events: none;
+            position: fixed;
+            z-index: 999999;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: rgba(37, 99, 235, 0.85);
+            border: 2.5px solid #ffffff;
+            box-shadow: 0 0 12px rgba(37, 99, 235, 0.6), 0 2px 4px rgba(0,0,0,0.2);
+            transform: translate(-50%, -50%);
+            transition: width 0.15s, height 0.15s, background-color 0.15s;
+        }
+        #virtual-cursor.cursor-click {
+            width: 24px;
+            height: 24px;
+            background: rgba(16, 185, 129, 0.9);
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-900 min-h-screen flex flex-col relative overflow-x-hidden antialiased">
+
+    <!-- Virtual Cursor for authentic screen-recording -->
+    <div id="virtual-cursor" style="left: -100px; top: -100px;"></div>
+
+    <!-- Topbar -->
+    <header class="bg-white border-b border-gray-200 h-16 flex items-center justify-between px-4 sm:px-6 sticky top-0 z-40 shadow-sm">
+        <div class="flex items-center space-x-3">
+            <button id="menu-button" onclick="toggleNavMenu()" class="w-10 h-10 inline-flex items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-700 hover:bg-gray-100 transition shadow-sm">
+                <i class="fas fa-bars text-lg text-gray-700"></i>
+            </button>
+            <div class="flex items-center space-x-2">
+                <span class="font-bold text-lg text-blue-600 tracking-tight">D-TECH</span>
+                <span class="text-xs font-semibold px-2 py-0.5 bg-blue-50 text-blue-700 rounded-full border border-blue-200">PORTAL</span>
+            </div>
+            <span class="hidden sm:inline-block text-gray-300">|</span>
+            <span id="current-section-title" class="hidden sm:inline-block text-sm font-semibold text-gray-600">Dashboard</span>
+        </div>
+
+        <div class="flex items-center space-x-3">
+            <div class="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5">
+                <div class="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-bold">AI</div>
+                <span class="text-xs font-medium text-gray-700 hidden sm:inline">Apex Innovations</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Side Navigation Menu (Dropdown / Drawer) -->
+    <div id="nav-dropdown" class="fixed inset-0 z-50 hidden">
+        <div class="fixed inset-0 bg-black/40 backdrop-blur-sm transition-opacity" onclick="toggleNavMenu()"></div>
+        <div class="fixed left-0 top-0 bottom-0 w-72 bg-white shadow-2xl z-50 flex flex-col p-5 transform transition-transform duration-300">
+            <div class="flex items-center justify-between pb-4 border-b border-gray-100">
+                <div class="flex items-center space-x-2">
+                    <span class="font-extrabold text-xl text-blue-600">D-TECH</span>
+                    <span class="text-xs bg-blue-100 text-blue-800 font-bold px-2 py-0.5 rounded">SUITE</span>
+                </div>
+                <button onclick="toggleNavMenu()" class="text-gray-400 hover:text-gray-600 p-1">
+                    <i class="fas fa-times text-lg"></i>
+                </button>
+            </div>
+
+            <nav class="mt-4 space-y-1.5 flex-1">
+                <button onclick="switchTab('dashboard')" class="nav-item w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-medium text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition">
+                    <i class="fas fa-chart-pie w-5 text-blue-600"></i> Dashboard
+                </button>
+                <button onclick="switchTab('settings')" class="nav-item w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-medium text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition">
+                    <i class="fas fa-sliders-h w-5 text-gray-500"></i> Business Settings
+                </button>
+                <button onclick="switchTab('clients')" class="nav-item w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-medium text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition">
+                    <i class="fas fa-users w-5 text-indigo-500"></i> Clients
+                </button>
+                <button onclick="switchTab('invoices')" class="nav-item w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-medium text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition">
+                    <i class="fas fa-file-invoice-dollar w-5 text-emerald-500"></i> Invoices &amp; PDF Styles
+                </button>
+                <button onclick="switchTab('csv-upload')" class="nav-item w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-medium text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition">
+                    <i class="fas fa-file-csv w-5 text-amber-500"></i> Bank CSV Reconciliation
+                </button>
+                <button onclick="switchTab('financials')" class="nav-item w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-medium text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition">
+                    <i class="fas fa-calculator w-5 text-purple-500"></i> SARS &amp; CIPC Financials
+                </button>
+            </nav>
+
+            <div class="pt-4 border-t border-gray-100 text-xs text-gray-500 text-center">
+                <span>The D-TECH Ecosystem (Pty) Ltd</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN CONTENT AREA -->
+    <main class="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
+
+        <!-- ============================================================== -->
+        <!-- SECTION 1: DASHBOARD -->
+        <!-- ============================================================== -->
+        <section id="section-dashboard" class="tab-section active space-y-6">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900">Business Dashboard</h1>
+                    <p class="text-sm text-gray-500 mt-1">Real-time revenue, cashflow, and active billing metrics.</p>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="switchTab('invoices')" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium shadow-sm transition flex items-center gap-2">
+                        <i class="fas fa-plus text-xs"></i> New Invoice
+                    </button>
+                </div>
+            </div>
+
+            <!-- KPI Cards -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Total Revenue</span>
+                        <span class="w-8 h-8 rounded-lg bg-green-50 text-green-600 flex items-center justify-center text-sm"><i class="fas fa-arrow-trend-up"></i></span>
+                    </div>
+                    <div class="mt-3">
+                        <span class="text-2xl font-extrabold text-gray-900">R 148,500.00</span>
+                        <span class="text-xs text-green-600 font-medium ml-2">+18.4% this month</span>
+                    </div>
+                </div>
+
+                <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Cashflow In</span>
+                        <span class="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center text-sm"><i class="fas fa-money-bill-wave"></i></span>
+                    </div>
+                    <div class="mt-3">
+                        <span class="text-2xl font-extrabold text-gray-900">R 98,200.00</span>
+                        <span class="text-xs text-gray-500 ml-2">Capitec Business</span>
+                    </div>
+                </div>
+
+                <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Outstanding Invoices</span>
+                        <span class="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center text-sm"><i class="fas fa-clock"></i></span>
+                    </div>
+                    <div class="mt-3">
+                        <span class="text-2xl font-extrabold text-gray-900">R 16,100.00</span>
+                        <span class="text-xs text-amber-600 font-medium ml-2">1 pending</span>
+                    </div>
+                </div>
+
+                <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Active Clients</span>
+                        <span class="w-8 h-8 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center text-sm"><i class="fas fa-users"></i></span>
+                    </div>
+                    <div class="mt-3">
+                        <span class="text-2xl font-extrabold text-gray-900">14 Clients</span>
+                        <span class="text-xs text-purple-600 font-medium ml-2">100% active</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Visual Flow Grid -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="lg:col-span-2 bg-white p-6 rounded-xl border border-gray-200 shadow-sm space-y-4">
+                    <h3 class="font-bold text-gray-900 text-base">Monthly Cash Flow &amp; Income Performance</h3>
+                    <div class="h-44 bg-gradient-to-b from-blue-50/50 to-white rounded-lg border border-dashed border-blue-200 flex items-end p-4 gap-4">
+                        <div class="flex-1 flex flex-col items-center gap-2">
+                            <div class="w-full bg-blue-300 rounded-t h-20"></div>
+                            <span class="text-xs text-gray-500">Aug</span>
+                        </div>
+                        <div class="flex-1 flex flex-col items-center gap-2">
+                            <div class="w-full bg-blue-400 rounded-t h-28"></div>
+                            <span class="text-xs text-gray-500">Sep</span>
+                        </div>
+                        <div class="flex-1 flex flex-col items-center gap-2">
+                            <div class="w-full bg-blue-500 rounded-t h-32"></div>
+                            <span class="text-xs text-gray-500">Oct</span>
+                        </div>
+                        <div class="flex-1 flex flex-col items-center gap-2">
+                            <div class="w-full bg-blue-600 rounded-t h-40"></div>
+                            <span class="text-xs font-bold text-blue-700">Nov</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm space-y-4">
+                    <h3 class="font-bold text-gray-900 text-base">Recent Activity</h3>
+                    <div class="space-y-3 text-sm">
+                        <div class="flex items-center justify-between pb-2 border-b border-gray-100">
+                            <div>
+                                <p class="font-semibold text-gray-900">Khumalo Logistics</p>
+                                <p class="text-xs text-gray-500">INV-2026-042 Paid</p>
+                            </div>
+                            <span class="text-green-600 font-bold">+R 21,275</span>
+                        </div>
+                        <div class="flex items-center justify-between pb-2 border-b border-gray-100">
+                            <div>
+                                <p class="font-semibold text-gray-900">Cape Horizon Media</p>
+                                <p class="text-xs text-gray-500">INV-2026-043 Issued</p>
+                            </div>
+                            <span class="text-amber-600 font-bold">R 16,100</span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="font-semibold text-gray-900">Capitec Bank Statement</p>
+                                <p class="text-xs text-gray-500">Auto-Reconciled</p>
+                            </div>
+                            <span class="text-blue-600 font-bold">5 Items</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- SECTION 2: SETTINGS -->
+        <!-- ============================================================== -->
+        <section id="section-settings" class="tab-section space-y-6">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900">Business Settings</h1>
+                <p class="text-sm text-gray-500 mt-1">Configure company profile, branding, and verified banking details.</p>
+            </div>
+
+            <div class="bg-white rounded-xl border border-gray-200 p-6 shadow-sm max-w-3xl space-y-6">
+                <!-- Company Profile -->
+                <div>
+                    <h3 class="text-sm font-bold text-gray-900 uppercase tracking-wider text-blue-600 mb-3">Company Profile</h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 mb-1">Business Name *</label>
+                            <input id="settingsBusinessName" type="text" value="Apex Innovations (Pty) Ltd" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium focus:ring-2 focus:ring-blue-500 focus:outline-none"/>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 mb-1">Company Reg Number</label>
+                            <input type="text" value="2024/782910/07" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"/>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 mb-1">Billing Email</label>
+                            <input id="settingsEmail" type="email" value="billing@apexinnovations.co.za" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"/>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 mb-1">Contact Phone</label>
+                            <input type="text" value="+27 82 123 4567" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"/>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Banking Details -->
+                <div class="pt-4 border-t border-gray-100">
+                    <h3 class="text-sm font-bold text-gray-900 uppercase tracking-wider text-blue-600 mb-3">Verified Banking Details</h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 mb-1">Bank Name</label>
+                            <select id="settingsBank" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                                <option value="Capitec" selected>Capitec Business</option>
+                                <option value="FNB">FNB (First National Bank)</option>
+                                <option value="Standard Bank">Standard Bank</option>
+                                <option value="Nedbank">Nedbank</option>
+                                <option value="Absa">Absa</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 mb-1">Account Holder</label>
+                            <input type="text" value="Apex Innovations (Pty) Ltd" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"/>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 mb-1">Account Number</label>
+                            <input id="settingsAccountNumber" type="text" value="1056046651" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono font-medium focus:ring-2 focus:ring-blue-500 focus:outline-none"/>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 mb-1">Branch Code</label>
+                            <input type="text" value="450105" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono focus:ring-2 focus:ring-blue-500 focus:outline-none"/>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="pt-4 border-t border-gray-100 flex justify-end">
+                    <button type="button" onclick="showToast('Settings saved successfully!')" class="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm rounded-lg shadow-sm transition">
+                        <i class="fas fa-check mr-1.5"></i> Save Business Details
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- SECTION 3: CLIENTS -->
+        <!-- ============================================================== -->
+        <section id="section-clients" class="tab-section space-y-6">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900">Clients Directory</h1>
+                    <p class="text-sm text-gray-500 mt-1">Manage active corporate clients, billing contacts, and VAT details.</p>
+                </div>
+                <button onclick="openClientDrawer()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold shadow-sm transition flex items-center gap-2">
+                    <i class="fas fa-plus text-xs"></i> Add Client
+                </button>
+            </div>
+
+            <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Company</th>
+                                <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Contact Person</th>
+                                <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Email</th>
+                                <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Phone</th>
+                                <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="clients-tbody" class="bg-white divide-y divide-gray-200 text-sm">
+                            <tr>
+                                <td class="px-6 py-4 font-bold text-gray-900">Khumalo Logistics (Pty) Ltd</td>
+                                <td class="px-6 py-4 text-gray-600">Sarah Jenkins</td>
+                                <td class="px-6 py-4 text-gray-600 font-mono text-xs">billing@khumalologistics.co.za</td>
+                                <td class="px-6 py-4 text-gray-600 font-mono text-xs">+27 82 123 4567</td>
+                                <td class="px-6 py-4"><span class="px-2.5 py-1 bg-green-50 text-green-700 rounded-full text-xs font-bold">Active</span></td>
+                            </tr>
+                            <tr>
+                                <td class="px-6 py-4 font-bold text-gray-900">Cape Horizon Media</td>
+                                <td class="px-6 py-4 text-gray-600">Mark Van Der Merwe</td>
+                                <td class="px-6 py-4 text-gray-600 font-mono text-xs">accounts@capehorizon.co.za</td>
+                                <td class="px-6 py-4 text-gray-600 font-mono text-xs">+27 71 987 6543</td>
+                                <td class="px-6 py-4"><span class="px-2.5 py-1 bg-green-50 text-green-700 rounded-full text-xs font-bold">Active</span></td>
+                            </tr>
+                            <tr>
+                                <td class="px-6 py-4 font-bold text-gray-900">Zululand Engineering</td>
+                                <td class="px-6 py-4 text-gray-600">Sipho Dlamini</td>
+                                <td class="px-6 py-4 text-gray-600 font-mono text-xs">sipho@zululand-eng.co.za</td>
+                                <td class="px-6 py-4 text-gray-600 font-mono text-xs">+27 84 555 8899</td>
+                                <td class="px-6 py-4"><span class="px-2.5 py-1 bg-green-50 text-green-700 rounded-full text-xs font-bold">Active</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- SECTION 4: INVOICES -->
+        <!-- ============================================================== -->
+        <section id="section-invoices" class="tab-section space-y-6">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900">Invoices &amp; PDF Styles</h1>
+                    <p class="text-sm text-gray-500 mt-1">Generate professional invoices, share via WhatsApp, and pick executive PDF themes.</p>
+                </div>
+                <div class="flex items-center gap-2">
+                    <!-- Template Style Selector Button -->
+                    <div class="flex items-center gap-1.5 bg-white border border-gray-300 rounded-lg px-3 py-2 shadow-sm text-xs font-semibold">
+                        <i class="fas fa-palette text-blue-600"></i>
+                        <span class="text-gray-500">Style:</span>
+                        <select id="invoiceStyleSelect" onchange="previewSelectedStyle(this.value)" class="bg-transparent border-0 font-bold text-gray-900 focus:ring-0 p-0 text-xs cursor-pointer">
+                            <option value="Executive">Executive (Elite High-Contrast)</option>
+                            <option value="Corporate">Corporate (Enterprise Banner)</option>
+                            <option value="Creative">Creative (Modern Minimalist)</option>
+                            <option value="Standard">Standard (Classic)</option>
+                        </select>
+                        <button type="button" onclick="previewSelectedStyle(document.getElementById('invoiceStyleSelect').value)" class="ml-1 text-blue-600 hover:text-blue-800 p-0.5" title="Preview PDF Style">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </div>
+
+                    <button onclick="openInvoiceDrawer()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold shadow-sm transition flex items-center gap-2">
+                        <i class="fas fa-plus text-xs"></i> Create Invoice
+                    </button>
+                </div>
+            </div>
+
+            <!-- Invoices Table -->
+            <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Invoice #</th>
+                                <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Client</th>
+                                <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Date</th>
+                                <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Amount</th>
+                                <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Status</th>
+                                <th class="px-6 py-3 text-right text-xs font-bold text-gray-500 uppercase tracking-wider">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="invoices-tbody" class="bg-white divide-y divide-gray-200 text-sm">
+                            <tr>
+                                <td class="px-6 py-4 font-mono font-bold text-gray-900">INV-2026-042</td>
+                                <td class="px-6 py-4 font-medium text-gray-800">Khumalo Logistics (Pty) Ltd</td>
+                                <td class="px-6 py-4 text-gray-500 text-xs">10 Nov 2026</td>
+                                <td class="px-6 py-4 font-bold text-gray-900">R 21,275.00</td>
+                                <td class="px-6 py-4"><span class="px-2.5 py-1 bg-green-50 text-green-700 rounded-full text-xs font-bold">Paid</span></td>
+                                <td class="px-6 py-4 text-right space-x-2">
+                                    <button onclick="previewSelectedStyle('Executive')" class="text-gray-500 hover:text-blue-600 p-1" title="View PDF"><i class="fas fa-file-pdf text-base"></i></button>
+                                    <button onclick="showToast('Invoice sent to WhatsApp!')" class="text-emerald-600 hover:text-emerald-700 p-1" title="Share via WhatsApp"><i class="fab fa-whatsapp text-lg"></i></button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="px-6 py-4 font-mono font-bold text-gray-900">INV-2026-043</td>
+                                <td class="px-6 py-4 font-medium text-gray-800">Cape Horizon Media</td>
+                                <td class="px-6 py-4 text-gray-500 text-xs">11 Nov 2026</td>
+                                <td class="px-6 py-4 font-bold text-gray-900">R 16,100.00</td>
+                                <td class="px-6 py-4"><span class="px-2.5 py-1 bg-amber-50 text-amber-700 rounded-full text-xs font-bold">Unpaid</span></td>
+                                <td class="px-6 py-4 text-right space-x-2">
+                                    <button onclick="previewSelectedStyle('Executive')" class="text-gray-500 hover:text-blue-600 p-1" title="View PDF"><i class="fas fa-file-pdf text-base"></i></button>
+                                    <button onclick="showToast('Invoice sent to WhatsApp!')" class="text-emerald-600 hover:text-emerald-700 p-1" title="Share via WhatsApp"><i class="fab fa-whatsapp text-lg"></i></button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- SECTION 5: BANK CSV UPLOAD -->
+        <!-- ============================================================== -->
+        <section id="section-csv-upload" class="tab-section space-y-6">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900">Bank Statement Reconciliation</h1>
+                <p class="text-sm text-gray-500 mt-1">Upload CSV statements to auto-categorize expenses, match unpaid invoices, and reconcile in bulk.</p>
+            </div>
+
+            <!-- Empty Dropzone State -->
+            <div id="reconcile-empty-state" class="bg-white rounded-2xl border-2 border-dashed border-gray-300 p-8 sm:p-12 text-center hover:border-blue-500 transition-colors cursor-pointer group" onclick="simulateCSVUpload()">
+                <div class="w-16 h-16 mx-auto rounded-full bg-blue-50 text-blue-600 flex items-center justify-center text-3xl group-hover:scale-110 transition-transform mb-4">
+                    <i class="fas fa-cloud-arrow-up"></i>
+                </div>
+                <h3 class="text-lg font-bold text-gray-900 mb-2">Drop your bank CSV statement here</h3>
+                <p class="text-xs sm:text-sm text-gray-500 max-w-lg mx-auto mb-6">Or click to browse. We automatically detect South African bank statement formats, auto-categorize expenses, and match invoices.</p>
+                <div class="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-blue-600 text-white font-medium text-sm shadow-md group-hover:bg-blue-700 transition">
+                    <i class="fas fa-folder-open"></i> Upload Bank Statement CSV
+                </div>
+
+                <div class="mt-8 pt-6 border-t border-gray-100">
+                    <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Supported South African Bank Formats</p>
+                    <div class="flex flex-wrap justify-center gap-2 text-xs">
+                        <span class="px-3 py-1 rounded-full bg-blue-50 text-blue-700 font-bold border border-blue-200">Capitec (.csv)</span>
+                        <span class="px-3 py-1 rounded-full bg-amber-50 text-amber-700 font-bold border border-amber-200">FNB (.csv)</span>
+                        <span class="px-3 py-1 rounded-full bg-blue-50 text-blue-800 font-bold border border-blue-200">Standard Bank (.csv)</span>
+                        <span class="px-3 py-1 rounded-full bg-green-50 text-green-700 font-bold border border-green-200">Nedbank (.csv)</span>
+                        <span class="px-3 py-1 rounded-full bg-red-50 text-red-700 font-bold border border-red-200">Absa (.csv)</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Parsed Review View (Shown after upload simulation) -->
+            <div id="reconcile-split-view" class="hidden space-y-4">
+                <div class="bg-white border border-gray-200 rounded-xl p-5 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <div>
+                        <h3 class="text-base font-bold text-gray-900 flex items-center gap-2">
+                            <span class="w-8 h-8 rounded-lg bg-green-50 text-green-600 inline-flex items-center justify-center text-sm"><i class="fas fa-check-circle"></i></span>
+                            Capitec Statement Parsed (5 Transactions)
+                        </h3>
+                        <p class="text-xs text-gray-500 mt-1">4 items auto-categorized into general ledger. 1 invoice match confirmed.</p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button type="button" onclick="showToast('All items saved directly to ledger!')" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-bold rounded-lg shadow-sm flex items-center gap-1.5" id="recon-top-save-btn">
+                            <i class="fas fa-check-double"></i> Save to Ledger
+                        </button>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                    <table class="min-w-full divide-y divide-gray-200 text-sm">
+                        <thead class="bg-gray-50 text-xs font-bold text-gray-500 uppercase">
+                            <tr>
+                                <th class="px-6 py-3 text-left">Date</th>
+                                <th class="px-6 py-3 text-left">Description</th>
+                                <th class="px-6 py-3 text-left">Category</th>
+                                <th class="px-6 py-3 text-right">Amount</th>
+                                <th class="px-6 py-3 text-center">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-200">
+                            <tr>
+                                <td class="px-6 py-3 text-xs text-gray-500">02 Nov</td>
+                                <td class="px-6 py-3 font-medium text-gray-900">Khumalo Logistics - Ref INV-2026-042</td>
+                                <td class="px-6 py-3"><span class="px-2 py-0.5 bg-blue-50 text-blue-700 text-xs font-semibold rounded">Sales / Services</span></td>
+                                <td class="px-6 py-3 text-right font-bold text-green-600">+R 21,275.00</td>
+                                <td class="px-6 py-3 text-center"><span class="text-xs text-green-600 font-bold">Auto-Matched</span></td>
+                            </tr>
+                            <tr>
+                                <td class="px-6 py-3 text-xs text-gray-500">04 Nov</td>
+                                <td class="px-6 py-3 font-medium text-gray-900">Cloud Infrastructure Hosting</td>
+                                <td class="px-6 py-3"><span class="px-2 py-0.5 bg-gray-100 text-gray-700 text-xs font-semibold rounded">Hosting &amp; Software</span></td>
+                                <td class="px-6 py-3 text-right font-bold text-gray-900">-R 3,450.00</td>
+                                <td class="px-6 py-3 text-center"><span class="text-xs text-blue-600 font-bold">Categorized</span></td>
+                            </tr>
+                            <tr>
+                                <td class="px-6 py-3 text-xs text-gray-500">08 Nov</td>
+                                <td class="px-6 py-3 font-medium text-gray-900">Office High-Speed Fiber</td>
+                                <td class="px-6 py-3"><span class="px-2 py-0.5 bg-gray-100 text-gray-700 text-xs font-semibold rounded">Telecommunications</span></td>
+                                <td class="px-6 py-3 text-right font-bold text-gray-900">-R 999.00</td>
+                                <td class="px-6 py-3 text-center"><span class="text-xs text-blue-600 font-bold">Categorized</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- SECTION 6: FINANCIALS -->
+        <!-- ============================================================== -->
+        <section id="section-financials" class="tab-section space-y-6">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900">Financials &amp; Tax Overview</h1>
+                    <p class="text-sm text-gray-500 mt-1">General ledger, income statements, and SARS/CIPC automated returns.</p>
+                </div>
+                <button onclick="openTaxDrawer()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-semibold shadow-sm transition flex items-center gap-2">
+                    <i class="fas fa-calculator"></i> Advanced Tax &amp; Filing
+                </button>
+            </div>
+
+            <!-- Financial Summary Cards -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
+                    <span class="text-xs font-bold text-gray-500 uppercase tracking-wider">Gross Operating Income</span>
+                    <div class="mt-2 text-2xl font-extrabold text-green-600">R 148,500.00</div>
+                    <span class="text-xs text-gray-500">Total revenue YTD</span>
+                </div>
+                <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
+                    <span class="text-xs font-bold text-gray-500 uppercase tracking-wider">Operating Expenses</span>
+                    <div class="mt-2 text-2xl font-extrabold text-red-600">R 42,800.00</div>
+                    <span class="text-xs text-gray-500">Allowable business expenses</span>
+                </div>
+                <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
+                    <span class="text-xs font-bold text-gray-500 uppercase tracking-wider">Net Profit</span>
+                    <div class="mt-2 text-2xl font-extrabold text-blue-600">R 105,700.00</div>
+                    <span class="text-xs text-gray-500">Profit before tax (71.2% margin)</span>
+                </div>
+            </div>
+
+            <!-- Ledger Table -->
+            <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center">
+                    <h3 class="font-bold text-gray-900 text-sm">General Ledger Entries</h3>
+                    <span class="text-xs bg-gray-100 text-gray-600 font-semibold px-2.5 py-1 rounded">Nov 2026</span>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200 text-sm">
+                        <thead class="bg-gray-50 text-xs font-bold text-gray-500 uppercase">
+                            <tr>
+                                <th class="px-6 py-3 text-left">Date</th>
+                                <th class="px-6 py-3 text-left">Description</th>
+                                <th class="px-6 py-3 text-left">Category</th>
+                                <th class="px-6 py-3 text-left">Type</th>
+                                <th class="px-6 py-3 text-right">Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-200">
+                            <tr>
+                                <td class="px-6 py-3 text-xs text-gray-500">10 Nov 2026</td>
+                                <td class="px-6 py-3 font-medium text-gray-900">Client Payment - Khumalo Logistics (INV-2026-042)</td>
+                                <td class="px-6 py-3"><span class="px-2 py-0.5 bg-blue-50 text-blue-700 text-xs font-semibold rounded">Sales</span></td>
+                                <td class="px-6 py-3"><span class="text-green-600 font-bold text-xs">Income</span></td>
+                                <td class="px-6 py-3 text-right font-bold text-green-600">+R 21,275.00</td>
+                            </tr>
+                            <tr>
+                                <td class="px-6 py-3 text-xs text-gray-500">04 Nov 2026</td>
+                                <td class="px-6 py-3 font-medium text-gray-900">Cloud Hosting &amp; Server Infra</td>
+                                <td class="px-6 py-3"><span class="px-2 py-0.5 bg-gray-100 text-gray-700 text-xs font-semibold rounded">Hosting</span></td>
+                                <td class="px-6 py-3"><span class="text-red-600 font-bold text-xs">Expense</span></td>
+                                <td class="px-6 py-3 text-right font-bold text-red-600">-R 3,450.00</td>
+                            </tr>
+                            <tr>
+                                <td class="px-6 py-3 text-xs text-gray-500">08 Nov 2026</td>
+                                <td class="px-6 py-3 font-medium text-gray-900">Office High-Speed Fiber</td>
+                                <td class="px-6 py-3"><span class="px-2 py-0.5 bg-gray-100 text-gray-700 text-xs font-semibold rounded">Internet</span></td>
+                                <td class="px-6 py-3"><span class="text-red-600 font-bold text-xs">Expense</span></td>
+                                <td class="px-6 py-3 text-right font-bold text-red-600">-R 999.00</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- ============================================================== -->
+    <!-- SLIDE DRAWER 1: CLIENT DRAWER -->
+    <!-- ============================================================== -->
+    <div id="clientDrawer" class="fixed inset-0 z-50 hidden">
+        <div class="fixed inset-0 bg-black/40 backdrop-blur-sm" onclick="closeClientDrawer()"></div>
+        <div class="fixed right-0 top-0 bottom-0 w-full max-w-md bg-white shadow-2xl z-50 flex flex-col p-6 transform transition-transform duration-300">
+            <div class="flex items-center justify-between pb-4 border-b border-gray-100">
+                <h3 class="font-bold text-lg text-gray-900">Add New Client</h3>
+                <button onclick="closeClientDrawer()" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times text-lg"></i></button>
+            </div>
+            <div class="py-4 space-y-4 flex-1 overflow-y-auto">
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">Company Name *</label>
+                    <input id="drawer-cl-company" type="text" placeholder="e.g. Khumalo Logistics (Pty) Ltd" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"/>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">Primary Contact Person</label>
+                    <input id="drawer-cl-contact" type="text" placeholder="e.g. Sarah Jenkins" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"/>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">Billing Email *</label>
+                    <input id="drawer-cl-email" type="email" placeholder="billing@khumalologistics.co.za" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"/>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">Phone Number</label>
+                    <input id="drawer-cl-phone" type="text" placeholder="+27 82 123 4567" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"/>
+                </div>
+            </div>
+            <div class="pt-4 border-t border-gray-100 flex justify-end gap-2">
+                <button onclick="closeClientDrawer()" class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium">Cancel</button>
+                <button id="saveClientBtn" onclick="saveClientDemo()" class="px-5 py-2 bg-blue-600 text-white rounded-lg text-sm font-bold shadow-sm">Save Client</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================== -->
+    <!-- SLIDE DRAWER: NEW INVOICE -->
+    <!-- ============================================================== -->
+    <div id="invoiceDrawer" class="fixed inset-0 z-50 hidden">
+        <div class="fixed inset-0 bg-black/40 backdrop-blur-sm" onclick="closeInvoiceDrawer()"></div>
+        <div class="fixed right-0 top-0 bottom-0 w-full max-w-lg bg-white shadow-2xl z-50 flex flex-col p-6 transform transition-transform duration-300 overflow-y-auto">
+            <div class="flex items-center justify-between pb-4 border-b border-gray-100">
+                <div class="flex items-center gap-2">
+                    <span class="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center"><i class="fas fa-file-invoice-dollar"></i></span>
+                    <div>
+                        <h3 class="font-bold text-lg text-gray-900">Create New Invoice</h3>
+                        <p class="text-xs text-gray-500">Auto-calculate VAT, deposits, and select executive PDF style</p>
+                    </div>
+                </div>
+                <button onclick="closeInvoiceDrawer()" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times text-lg"></i></button>
+            </div>
+            <div class="py-4 space-y-4 flex-1">
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">Select Client *</label>
+                    <select id="drawer-inv-client" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                        <option value="Khumalo Logistics (Pty) Ltd" selected>Khumalo Logistics (Pty) Ltd</option>
+                        <option value="Cape Horizon Media">Cape Horizon Media</option>
+                        <option value="Zululand Engineering">Zululand Engineering</option>
+                    </select>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 mb-1">Invoice Number</label>
+                        <input id="drawer-inv-num" type="text" value="INV-2026-044" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono focus:ring-2 focus:ring-blue-500 focus:outline-none"/>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 mb-1">Due Date</label>
+                        <input type="date" value="2026-11-28" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"/>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">Service Description</label>
+                    <input id="drawer-inv-desc" type="text" value="Enterprise Cloud Architecture & SARS Module" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"/>
+                </div>
+                <div class="bg-gray-50 p-4 rounded-xl border border-gray-200 space-y-2 text-xs">
+                    <div class="flex justify-between text-gray-600">
+                        <span>Subtotal (Excl. VAT):</span>
+                        <span class="font-mono font-semibold text-gray-900">R 18,500.00</span>
+                    </div>
+                    <div class="flex justify-between text-gray-600">
+                        <span>Standard VAT (15%):</span>
+                        <span class="font-mono font-semibold text-gray-900">R 2,775.00</span>
+                    </div>
+                    <div class="pt-2 border-t border-gray-200 flex justify-between font-bold text-sm text-gray-900">
+                        <span>Total Due (Incl. VAT):</span>
+                        <span class="font-mono text-blue-600">R 21,275.00</span>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">Select PDF Template Theme</label>
+                    <select id="drawer-inv-theme" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-semibold focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                        <option value="Executive" selected>Executive (Elite High-Contrast)</option>
+                        <option value="Corporate">Corporate (Enterprise Banner)</option>
+                        <option value="Creative">Creative (Modern Minimalist)</option>
+                        <option value="Standard">Standard (Classic)</option>
+                    </select>
+                </div>
+            </div>
+            <div class="pt-4 border-t border-gray-100 flex justify-end gap-2">
+                <button onclick="closeInvoiceDrawer()" class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium">Cancel</button>
+                <button id="saveInvoiceBtn" onclick="saveInvoiceDemo()" class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-bold shadow-sm flex items-center gap-1.5">
+                    <i class="fas fa-check"></i> Issue &amp; Save Invoice
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================== -->
+    <!-- SLIDE DRAWER 2: ADVANCED TAX & FILING (SARS & CIPC) -->
+    <!-- ============================================================== -->
+    <div id="advancedTaxDrawer" class="fixed inset-0 z-50 hidden">
+        <div class="fixed inset-0 bg-black/40 backdrop-blur-sm" onclick="closeTaxDrawer()"></div>
+        <div class="fixed right-0 top-0 bottom-0 w-full max-w-xl bg-white shadow-2xl z-50 flex flex-col p-6 transform transition-transform duration-300 overflow-y-auto">
+            <div class="flex items-center justify-between pb-4 border-b border-gray-100">
+                <div class="flex items-center gap-2">
+                    <span class="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center"><i class="fas fa-calculator"></i></span>
+                    <div>
+                        <h3 class="font-bold text-lg text-gray-900">Advanced Tax &amp; Annual Filing</h3>
+                        <p class="text-xs text-gray-500">SARS VAT201 &amp; CIPC Annual Return Calculator</p>
+                    </div>
+                </div>
+                <button onclick="closeTaxDrawer()" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times text-lg"></i></button>
+            </div>
+
+            <div class="py-4 space-y-6 flex-1">
+                <!-- SARS VAT 201 Return Card -->
+                <div class="bg-indigo-50/60 border border-indigo-200 rounded-xl p-5 space-y-3">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-bold text-indigo-900 uppercase tracking-wider flex items-center gap-1.5">
+                            <i class="fas fa-landmark text-indigo-600"></i> SARS VAT201 Return (15%)
+                        </span>
+                        <span class="text-xs bg-indigo-200/60 text-indigo-800 font-bold px-2 py-0.5 rounded">Standard Period</span>
+                    </div>
+                    <div class="space-y-2 text-xs">
+                        <div class="flex justify-between text-gray-700">
+                            <span>Standard 15% Output Tax (Sales):</span>
+                            <span class="font-bold font-mono text-gray-900">R 22,275.00</span>
+                        </div>
+                        <div class="flex justify-between text-gray-700">
+                            <span>Allowable Input Tax (Expenses):</span>
+                            <span class="font-bold font-mono text-gray-900">-R 6,420.00</span>
+                        </div>
+                        <div class="pt-2 border-t border-indigo-200 flex justify-between font-bold text-sm text-indigo-900">
+                            <span>Net VAT Payable to SARS:</span>
+                            <span class="font-mono text-indigo-700">R 15,855.00</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CIPC Annual Return Helper Card -->
+                <div class="bg-gray-50 border border-gray-200 rounded-xl p-5 space-y-3">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center gap-1.5">
+                            <i class="fas fa-certificate text-blue-600"></i> CIPC Annual Return Helper
+                        </span>
+                        <span class="text-xs bg-gray-200 text-gray-700 font-bold px-2 py-0.5 rounded">Tier 1</span>
+                    </div>
+                    <div class="space-y-2 text-xs">
+                        <div class="flex justify-between text-gray-700">
+                            <span>Declared Turnover:</span>
+                            <span class="font-bold font-mono text-gray-900">R 148,500.00</span>
+                        </div>
+                        <div class="flex justify-between text-gray-700">
+                            <span>CIPC Turnover Tier Fee:</span>
+                            <span class="font-bold font-mono text-blue-600">R 100.00</span>
+                        </div>
+                        <div class="flex justify-between text-gray-700">
+                            <span>Est. 27% Company Income Tax:</span>
+                            <span class="font-bold font-mono text-gray-900">R 28,539.00</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 1-Click Accountant Export Button -->
+                <div class="pt-2">
+                    <button type="button" onclick="showToast('Accountant CSV exported successfully!')" class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm rounded-xl shadow-md transition flex items-center justify-center gap-2">
+                        <i class="fas fa-file-csv"></i> 1-Click Accountant CSV Export
+                    </button>
+                    <p class="text-center text-xs text-gray-400 mt-2">Export formatted for South African Tax Practitioners &amp; Bookkeepers.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================== -->
+    <!-- MODAL 3: 4 PDF TEMPLATE STYLES SHOWCASE -->
+    <!-- ============================================================== -->
+    <div id="pdfPreviewModal" class="fixed inset-0 z-50 hidden">
+        <div class="fixed inset-0 bg-black/60 backdrop-blur-sm" onclick="closePdfPreview()"></div>
+        <div class="fixed inset-4 sm:inset-10 lg:inset-x-32 lg:inset-y-12 bg-white rounded-2xl shadow-2xl z-50 flex flex-col overflow-hidden">
+            <div class="px-6 py-3.5 bg-gray-900 text-white flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <span class="text-xs bg-blue-600 px-2.5 py-1 rounded font-bold uppercase tracking-wider" id="previewBadge">Executive Style</span>
+                    <span class="text-sm font-medium text-gray-300">Live Invoice PDF Preview</span>
+                </div>
+                <button onclick="closePdfPreview()" class="text-gray-400 hover:text-white"><i class="fas fa-times text-lg"></i></button>
+            </div>
+
+            <!-- PDF Template Preview Container -->
+            <div class="flex-1 p-6 overflow-y-auto bg-gray-100 flex items-center justify-center" id="pdfPreviewContent">
+                <!-- Rendered dynamically -->
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================== -->
+    <!-- TERMS & CONDITIONS BANNER -->
+    <!-- ============================================================== -->
+    <div id="termsBanner" class="fixed bottom-0 inset-x-0 z-40 bg-white border-t border-gray-200 p-4 sm:p-5 shadow-2xl transition-transform duration-300 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div class="flex items-center gap-3 text-sm text-gray-700">
+            <span class="w-9 h-9 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center flex-shrink-0"><i class="fas fa-shield-halved text-base"></i></span>
+            <p>By using this portal, you accept our <a href="#" class="underline font-semibold text-blue-600">POPIA &amp; Financial Terms of Service</a>.</p>
+        </div>
+        <div class="flex items-center gap-2 flex-shrink-0">
+            <button type="button" onclick="dismissTerms()" class="px-4 py-2 border border-gray-300 rounded-lg text-xs font-semibold text-gray-600 hover:bg-gray-50">Decline</button>
+            <button id="acceptTermsBtn" type="button" onclick="dismissTerms()" class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold shadow-sm">Accept</button>
+        </div>
+    </div>
+
+    <!-- TOAST NOTIFICATION -->
+    <div id="demoToast" class="fixed top-20 right-6 z-50 bg-gray-900 text-white px-4 py-2.5 rounded-lg shadow-xl text-xs font-semibold hidden items-center gap-2 transition-all">
+        <i class="fas fa-check-circle text-green-400"></i> <span id="toastMsg">Action completed!</span>
+    </div>
+
+    <!-- JAVASCRIPT LOGIC -->
+    <script>
+        function toggleNavMenu() {
+            document.getElementById('nav-dropdown').classList.toggle('hidden');
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-section').forEach(sec => sec.classList.remove('active'));
+            const target = document.getElementById('section-' + tabId);
+            if (target) target.classList.add('active');
+
+            const titleMap = {
+                'dashboard': 'Dashboard',
+                'settings': 'Business Settings',
+                'clients': 'Clients Directory',
+                'invoices': 'Invoices & PDF Styles',
+                'csv-upload': 'Bank CSV Reconciliation',
+                'financials': 'SARS & CIPC Financials'
+            };
+            document.getElementById('current-section-title').textContent = titleMap[tabId] || 'Dashboard';
+            document.getElementById('nav-dropdown').classList.add('hidden');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function dismissTerms() {
+            const b = document.getElementById('termsBanner');
+            b.classList.add('translate-y-full');
+            setTimeout(() => b.remove(), 350);
+        }
+
+        function showToast(msg) {
+            const t = document.getElementById('demoToast');
+            document.getElementById('toastMsg').textContent = msg;
+            t.classList.remove('hidden');
+            t.classList.add('flex');
+            setTimeout(() => {
+                t.classList.add('hidden');
+                t.classList.remove('flex');
+            }, 2500);
+        }
+
+        // Virtual Cursor Smooth Tracker
+        window.addEventListener('mousemove', (e) => {
+            const c = document.getElementById('virtual-cursor');
+            if (c) {
+                c.style.left = e.clientX + 'px';
+                c.style.top = e.clientY + 'px';
+            }
+        });
+        window.addEventListener('mousedown', () => {
+            const c = document.getElementById('virtual-cursor');
+            if (c) c.classList.add('cursor-click');
+        });
+        window.addEventListener('mouseup', () => {
+            const c = document.getElementById('virtual-cursor');
+            if (c) c.classList.remove('cursor-click');
+        });
+
+        // Clients
+        function openClientDrawer() { document.getElementById('clientDrawer').classList.remove('hidden'); }
+        function closeClientDrawer() { document.getElementById('clientDrawer').classList.add('hidden'); }
+        function saveClientDemo() {
+            const company = document.getElementById('drawer-cl-company').value || 'Khumalo Logistics (Pty) Ltd';
+            const contact = document.getElementById('drawer-cl-contact').value || 'Sarah Jenkins';
+            const email = document.getElementById('drawer-cl-email').value || 'billing@khumalologistics.co.za';
+            const phone = document.getElementById('drawer-cl-phone').value || '+27 82 123 4567';
+
+            const tbody = document.getElementById('clients-tbody');
+            if (tbody) {
+                const tr = document.createElement('tr');
+                tr.className = 'bg-blue-50/40 animate-pulse';
+                tr.innerHTML = `
+                    <td class="px-6 py-4 font-bold text-gray-900">${company}</td>
+                    <td class="px-6 py-4 text-gray-600">${contact}</td>
+                    <td class="px-6 py-4 text-gray-600 font-mono text-xs">${email}</td>
+                    <td class="px-6 py-4 text-gray-600 font-mono text-xs">${phone}</td>
+                    <td class="px-6 py-4"><span class="px-2.5 py-1 bg-green-50 text-green-700 rounded-full text-xs font-bold">Active</span></td>
+                `;
+                tbody.prepend(tr);
+                setTimeout(() => tr.classList.remove('bg-blue-50/40', 'animate-pulse'), 1500);
+            }
+
+            closeClientDrawer();
+            showToast('New client saved: ' + company);
+        }
+
+        // Invoices
+        function openInvoiceDrawer() { document.getElementById('invoiceDrawer').classList.remove('hidden'); }
+        function closeInvoiceDrawer() { document.getElementById('invoiceDrawer').classList.add('hidden'); }
+        function saveInvoiceDemo() {
+            const invNum = document.getElementById('drawer-inv-num').value || 'INV-2026-044';
+            const client = document.getElementById('drawer-inv-client').value || 'Khumalo Logistics (Pty) Ltd';
+
+            const tbody = document.getElementById('invoices-tbody');
+            if (tbody) {
+                const tr = document.createElement('tr');
+                tr.className = 'bg-blue-50/40 animate-pulse';
+                tr.innerHTML = `
+                    <td class="px-6 py-4 font-mono font-bold text-gray-900">${invNum}</td>
+                    <td class="px-6 py-4 font-medium text-gray-800">${client}</td>
+                    <td class="px-6 py-4 text-gray-500 text-xs">Today</td>
+                    <td class="px-6 py-4 font-bold text-gray-900">R 21,275.00</td>
+                    <td class="px-6 py-4"><span class="px-2.5 py-1 bg-green-50 text-green-700 rounded-full text-xs font-bold">Issued</span></td>
+                    <td class="px-6 py-4 text-right space-x-2">
+                        <button onclick="previewSelectedStyle('Executive')" class="text-gray-500 hover:text-blue-600 p-1" title="View PDF"><i class="fas fa-file-pdf text-base"></i></button>
+                        <button onclick="showToast('Invoice sent to WhatsApp!')" class="text-emerald-600 hover:text-emerald-700 p-1" title="Share via WhatsApp"><i class="fab fa-whatsapp text-lg"></i></button>
+                    </td>
+                `;
+                tbody.prepend(tr);
+                setTimeout(() => tr.classList.remove('bg-blue-50/40', 'animate-pulse'), 1500);
+            }
+
+            closeInvoiceDrawer();
+            showToast('Invoice ' + invNum + ' created & ready!');
+        }
+
+        // Tax Drawer
+        function openTaxDrawer() { document.getElementById('advancedTaxDrawer').classList.remove('hidden'); }
+        function closeTaxDrawer() { document.getElementById('advancedTaxDrawer').classList.add('hidden'); }
+
+        // CSV Upload Simulation
+        function simulateCSVUpload() {
+            document.getElementById('reconcile-empty-state').classList.add('hidden');
+            document.getElementById('reconcile-split-view').classList.remove('hidden');
+            showToast('Capitec CSV parsed: 5 items reconciled!');
+        }
+
+        // 4 PDF Template Styles Showcase
+        function previewSelectedStyle(style) {
+            const modal = document.getElementById('pdfPreviewModal');
+            const badge = document.getElementById('previewBadge');
+            const content = document.getElementById('pdfPreviewContent');
+            badge.textContent = style + ' Style';
+
+            let previewHtml = '';
+
+            if (style === 'Corporate') {
+                previewHtml = `
+                    <div class="w-full max-w-xl bg-white shadow-xl rounded-lg overflow-hidden border border-gray-200">
+                        <div class="bg-blue-600 text-white p-5 flex justify-between items-center">
+                            <div>
+                                <h2 class="text-xl font-bold">Apex Innovations (Pty) Ltd</h2>
+                                <p class="text-xs text-blue-100">Reg: 2024/782910/07</p>
+                            </div>
+                            <div class="text-right">
+                                <h3 class="text-xl font-bold tracking-wider">INVOICE</h3>
+                                <p class="text-xs text-blue-100">Ref: INV-2026-042</p>
+                            </div>
+                        </div>
+                        <div class="p-6 space-y-4">
+                            <div class="grid grid-cols-2 gap-4">
+                                <div class="bg-gray-50 p-3 rounded border text-xs">
+                                    <p class="font-bold text-gray-700">PREPARED FOR:</p>
+                                    <p class="font-bold text-gray-900 text-sm">Khumalo Logistics (Pty) Ltd</p>
+                                    <p class="text-gray-500">Attn: Sarah Jenkins</p>
+                                </div>
+                                <div class="bg-gray-50 p-3 rounded border text-xs">
+                                    <p class="font-bold text-gray-700">DETAILS:</p>
+                                    <p class="text-gray-600">Due: 24 Nov 2026</p>
+                                    <p class="text-gray-600">Terms: 50% Deposit</p>
+                                </div>
+                            </div>
+                            <table class="w-full text-xs border border-gray-200">
+                                <thead class="bg-blue-50 text-blue-900 font-bold border-b">
+                                    <tr><th class="p-2 text-left">Description</th><th class="p-2 text-right">Total</th></tr>
+                                </thead>
+                                <tbody>
+                                    <tr class="border-b"><td class="p-2 font-medium">Enterprise Cloud Architecture</td><td class="p-2 text-right">R 12,500.00</td></tr>
+                                    <tr><td class="p-2 font-medium">Automated Tax &amp; SARS Module</td><td class="p-2 text-right">R 6,000.00</td></tr>
+                                </tbody>
+                            </table>
+                            <div class="text-right pt-2 border-t">
+                                <span class="text-sm font-bold text-gray-900">Total Due (Incl. VAT): R 21,275.00</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } else if (style === 'Creative') {
+                previewHtml = `
+                    <div class="w-full max-w-xl bg-white shadow-xl rounded-lg overflow-hidden border border-gray-200 p-8 space-y-5">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <h2 class="text-2xl font-black text-gray-900">Apex Innovations</h2>
+                                <div class="w-12 h-1 bg-blue-600 mt-1"></div>
+                            </div>
+                            <div class="text-right">
+                                <span class="text-2xl font-black text-blue-600">INVOICE</span>
+                                <p class="text-xs text-gray-400 font-mono">INV-2026-042</p>
+                            </div>
+                        </div>
+                        <div class="pt-4 grid grid-cols-2 gap-6 text-xs">
+                            <div>
+                                <p class="text-gray-400 font-bold uppercase tracking-wider">PREPARED FOR</p>
+                                <p class="font-bold text-gray-900 text-sm mt-0.5">Khumalo Logistics</p>
+                                <p class="text-gray-500">sarah@khumalologistics.co.za</p>
+                            </div>
+                            <div>
+                                <p class="text-gray-400 font-bold uppercase tracking-wider">ISSUE DATE</p>
+                                <p class="font-medium text-gray-800 mt-0.5">10 November 2026</p>
+                            </div>
+                        </div>
+                        <div class="pt-4 border-t border-gray-100">
+                            <div class="flex justify-between py-2 text-xs border-b border-gray-100">
+                                <span class="font-medium text-gray-900">Enterprise Cloud Architecture</span>
+                                <span class="font-mono font-bold">R 12,500.00</span>
+                            </div>
+                            <div class="flex justify-between py-2 text-xs border-b border-gray-100">
+                                <span class="font-medium text-gray-900">Automated Tax &amp; SARS Module</span>
+                                <span class="font-mono font-bold">R 6,000.00</span>
+                            </div>
+                        </div>
+                        <div class="text-right pt-3">
+                            <p class="text-xs text-gray-400">Total Due</p>
+                            <p class="text-2xl font-black text-blue-600">R 21,275.00</p>
+                        </div>
+                    </div>
+                `;
+            } else if (style === 'Standard') {
+                previewHtml = `
+                    <div class="w-full max-w-xl bg-white shadow-xl rounded-lg overflow-hidden border border-gray-300 p-8 space-y-4">
+                        <div class="flex justify-between items-start border-b pb-4">
+                            <div>
+                                <h2 class="text-xl font-bold text-gray-800">Apex Innovations (Pty) Ltd</h2>
+                                <p class="text-xs text-gray-500">Reg: 2024/782910/07 | Cape Town, South Africa</p>
+                            </div>
+                            <div class="text-right">
+                                <h3 class="text-lg font-bold text-gray-700">TAX INVOICE</h3>
+                                <p class="text-xs text-gray-500 font-mono">INV-2026-042</p>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 text-xs py-2">
+                            <div>
+                                <span class="text-gray-500 font-semibold">Billed To:</span>
+                                <p class="font-bold text-gray-800">Khumalo Logistics (Pty) Ltd</p>
+                            </div>
+                            <div class="text-right">
+                                <span class="text-gray-500 font-semibold">Date:</span>
+                                <p class="text-gray-700">10 November 2026</p>
+                            </div>
+                        </div>
+                        <table class="w-full text-xs border-t border-b border-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr><th class="p-2 text-left font-bold text-gray-600">Item</th><th class="p-2 text-right font-bold text-gray-600">Price</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr><td class="p-2 text-gray-700">Enterprise Cloud Architecture</td><td class="p-2 text-right font-mono">R 12,500.00</td></tr>
+                                <tr><td class="p-2 text-gray-700">Automated Tax &amp; SARS Module</td><td class="p-2 text-right font-mono">R 6,000.00</td></tr>
+                            </tbody>
+                        </table>
+                        <div class="text-right pt-2 font-bold text-sm text-gray-900">
+                            Total Due: R 21,275.00
+                        </div>
+                    </div>
+                `;
+            } else {
+                // Executive (Default)
+                previewHtml = `
+                    <div class="w-full max-w-xl bg-white shadow-xl rounded-lg overflow-hidden border border-gray-200">
+                        <div class="h-1.5 bg-blue-600"></div>
+                        <div class="p-6 space-y-4">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <h2 class="text-lg font-extrabold text-gray-900">Apex Innovations (Pty) Ltd</h2>
+                                    <p class="text-xs text-gray-500 font-mono">Reg: 2024/782910/07</p>
+                                </div>
+                                <div class="bg-gray-900 text-white px-4 py-1.5 rounded-lg text-center shadow-sm">
+                                    <span class="text-xs font-bold tracking-widest uppercase">INVOICE</span>
+                                </div>
+                            </div>
+                            <div class="bg-gray-50/80 border border-gray-200 rounded-xl p-4 grid grid-cols-2 gap-4 text-xs">
+                                <div>
+                                    <span class="text-blue-600 font-bold uppercase tracking-wider text-[10px]">BILLED TO</span>
+                                    <p class="font-bold text-gray-900 text-sm mt-0.5">Khumalo Logistics</p>
+                                    <p class="text-gray-500">Attn: Sarah Jenkins</p>
+                                </div>
+                                <div>
+                                    <span class="text-blue-600 font-bold uppercase tracking-wider text-[10px]">PAYMENT &amp; TERMS</span>
+                                    <p class="text-gray-700 font-medium mt-0.5">Capitec Business (1056046651)</p>
+                                    <p class="text-gray-500">Due: 24 Nov 2026 (50% Deposit)</p>
+                                </div>
+                            </div>
+                            <table class="w-full text-xs">
+                                <thead class="bg-gray-900 text-white font-semibold">
+                                    <tr><th class="p-2.5 text-left rounded-l">Description</th><th class="p-2.5 text-right rounded-r">Amount</th></tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-100">
+                                    <tr><td class="p-2.5 font-medium text-gray-800">Enterprise Cloud Architecture</td><td class="p-2.5 text-right font-mono font-bold">R 12,500.00</td></tr>
+                                    <tr><td class="p-2.5 font-medium text-gray-800">Automated Tax &amp; SARS Module</td><td class="p-2.5 text-right font-mono font-bold">R 6,000.00</td></tr>
+                                </tbody>
+                            </table>
+                            <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 flex justify-between items-center text-xs">
+                                <span class="font-bold text-blue-900">Total Amount Due (Incl. VAT)</span>
+                                <span class="text-lg font-black font-mono text-blue-700">R 21,275.00</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            content.innerHTML = previewHtml;
+            modal.classList.remove('hidden');
+        }
+
+            content.innerHTML = previewHtml;
+            modal.classList.remove('hidden');
+        }
+
+        function closePdfPreview() {
+            document.getElementById('pdfPreviewModal').classList.add('hidden');
+        }
+    </script>
+</body>
+</html>
