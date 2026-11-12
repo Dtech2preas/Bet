@@ -160,6 +160,26 @@ def hold_for_sync(start_time, target_duration):
     if remaining > 0:
         time.sleep(remaining)
 
+def safe_switch_tab(page, tab_id):
+    """Safely transitions between SPA views with error handling and button fallback."""
+    try:
+        page.evaluate(f"if (typeof switchTab === 'function') switchTab('{tab_id}');")
+    except Exception as e:
+        print(f"  ! safe_switch_tab({tab_id}) note: {e}")
+        try:
+            btn = page.locator(f"button.nav-item[onclick*=\"{tab_id}\"]").first
+            if btn.is_visible():
+                btn.click(force=True)
+        except Exception:
+            pass
+
+def safe_eval(page, script):
+    """Safely executes JavaScript without halting playback."""
+    try:
+        page.evaluate(script)
+    except Exception as e:
+        print(f"  ! safe_eval note: {e}")
+
 def record_session(mode="desktop", scene_durations=None):
     """Executes the synchronized Playwright walkthrough against the static demo SPA."""
     if scene_durations is None:
@@ -233,7 +253,7 @@ def record_session(mode="desktop", scene_durations=None):
         t0 = time.time()
         target_s2 = scene_durations.get("scene2_settings", 12.0)
 
-        page.evaluate("switchTab('settings')")
+        safe_switch_tab(page, 'settings')
         time.sleep(0.8)
 
         try:
@@ -309,7 +329,7 @@ def record_session(mode="desktop", scene_durations=None):
         t0 = time.time()
         target_s4 = scene_durations.get("scene4_clients", 10.0)
 
-        page.evaluate("switchTab('clients')")
+        safe_switch_tab(page, 'clients')
         time.sleep(1.0)
         page.screenshot(path=f"screenshots/{prefix}_04_clients_list.png")
 
@@ -353,7 +373,7 @@ def record_session(mode="desktop", scene_durations=None):
         t0 = time.time()
         target_s5 = scene_durations.get("scene5_invoices", 18.0)
 
-        page.evaluate("switchTab('invoices')")
+        safe_switch_tab(page, 'invoices')
         time.sleep(1.0)
         page.screenshot(path=f"screenshots/{prefix}_06_invoices_table.png")
 
@@ -378,24 +398,24 @@ def record_session(mode="desktop", scene_durations=None):
         print("  → Previewing Corporate, Creative, and Executive PDF styles...")
         try:
             # Corporate Style
-            page.evaluate("previewSelectedStyle('Corporate')")
+            safe_eval(page, "previewSelectedStyle('Corporate')")
             time.sleep(3.2)
             page.screenshot(path=f"screenshots/{prefix}_08_pdf_corporate.png")
-            page.evaluate("closePdfPreview()")
+            safe_eval(page, "closePdfPreview()")
             time.sleep(0.5)
 
             # Creative Style
-            page.evaluate("previewSelectedStyle('Creative')")
+            safe_eval(page, "previewSelectedStyle('Creative')")
             time.sleep(3.2)
             page.screenshot(path=f"screenshots/{prefix}_09_pdf_creative.png")
-            page.evaluate("closePdfPreview()")
+            safe_eval(page, "closePdfPreview()")
             time.sleep(0.5)
 
             # Executive Style
-            page.evaluate("previewSelectedStyle('Executive')")
+            safe_eval(page, "previewSelectedStyle('Executive')")
             time.sleep(3.8)
             page.screenshot(path=f"screenshots/{prefix}_10_pdf_executive.png")
-            page.evaluate("closePdfPreview()")
+            safe_eval(page, "closePdfPreview()")
             time.sleep(0.6)
         except Exception as e:
             print(f"  ! PDF preview note: {e}")
@@ -419,7 +439,7 @@ def record_session(mode="desktop", scene_durations=None):
         t0 = time.time()
         target_s6 = scene_durations.get("scene6_csv_upload", 16.0)
 
-        page.evaluate("switchTab('csv-upload')")
+        safe_switch_tab(page, 'csv-upload')
         time.sleep(1.0)
         page.screenshot(path=f"screenshots/{prefix}_11_csv_upload_dropzone.png")
 
@@ -453,7 +473,7 @@ def record_session(mode="desktop", scene_durations=None):
         t0 = time.time()
         target_s7 = scene_durations.get("scene7_financials_tax", 15.0)
 
-        page.evaluate("switchTab('financials')")
+        safe_switch_tab(page, 'financials')
         time.sleep(1.2)
         page.screenshot(path=f"screenshots/{prefix}_13_financials_ledger.png")
 
@@ -483,8 +503,8 @@ def record_session(mode="desktop", scene_durations=None):
         t0 = time.time()
         target_s8 = scene_durations.get("scene8_cta", 9.0)
 
-        page.evaluate("closeTaxDrawer()")
-        page.evaluate("switchTab('dashboard')")
+        safe_eval(page, "closeTaxDrawer()")
+        safe_switch_tab(page, 'dashboard')
         time.sleep(1.2)
         smooth_scroll(page, 0, 300, step=20, delay=0.03)
         time.sleep(1.5)
