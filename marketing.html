@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en-ZA">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="A straightforward, affordable business portal for South African small businesses. Manage clients, quotes, invoices, payments and financials in one place.">
+    <meta name="theme-color" content="#f6f8fc">
+    <title>D-TECH Business Portal | Less admin. More business.</title>
+    <style>
+        :root {
+            color-scheme: light;
+            --ink: #14213d;
+            --muted: #64748b;
+            --blue: #2563eb;
+            --blue-dark: #1747b3;
+            --line: #e5eaf2;
+            --paper: #fff;
+            --wash: #f6f8fc;
+            --green: #15966a;
+            font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        }
+        * { box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+        body { margin: 0; color: var(--ink); background: var(--paper); line-height: 1.6; }
+        a { color: inherit; text-decoration: none; }
+        button, a { -webkit-tap-highlight-color: transparent; }
+        .wrap { width: min(1120px, calc(100% - 40px)); margin-inline: auto; }
+        .topbar { height: 76px; display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+        .brand { display: inline-flex; align-items: center; gap: 10px; font-size: 15px; font-weight: 800; letter-spacing: -.03em; }
+        .brand-mark { width: 36px; height: 36px; display: grid; place-items: center; border-radius: 11px; background: var(--blue); color: white; font-size: 16px; }
+        .brand small { display: block; color: var(--muted); font-size: 10px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
+        .nav-links { display: flex; align-items: center; gap: 27px; color: #475569; font-size: 13px; font-weight: 650; }
+        .nav-links a:hover { color: var(--blue); }
+        .button { display: inline-flex; min-height: 44px; align-items: center; justify-content: center; gap: 9px; padding: 0 18px; border: 1px solid transparent; border-radius: 10px; background: var(--blue); color: #fff; font-size: 13px; font-weight: 750; transition: background .2s, transform .2s; }
+        .button:hover { background: var(--blue-dark); transform: translateY(-1px); }
+        .button.secondary { border-color: var(--line); background: white; color: var(--ink); }
+        .button.secondary:hover { background: var(--wash); }
+        .hero { overflow: hidden; background: radial-gradient(ellipse at 82% 55%, #e8f0ff 0, transparent 37%), linear-gradient(180deg, #fbfcff 0%, #fff 100%); }
+        .hero-grid { min-height: 555px; display: grid; grid-template-columns: .92fr 1.08fr; align-items: center; gap: 45px; padding-block: 62px 76px; }
+        .eyebrow { display: inline-flex; align-items: center; gap: 8px; color: var(--blue); font-size: 11px; font-weight: 800; letter-spacing: .13em; text-transform: uppercase; }
+        .eyebrow::before { width: 19px; height: 2px; content: ""; background: currentColor; }
+        h1 { max-width: 580px; margin: 18px 0 18px; font-size: clamp(42px, 5.3vw, 65px); line-height: 1.02; letter-spacing: -.065em; }
+        h1 span { color: var(--blue); }
+        .hero-copy { max-width: 475px; margin: 0; color: #58677e; font-size: 16px; }
+        .hero-actions { display: flex; flex-wrap: wrap; gap: 11px; margin-top: 28px; }
+        .hero-note { display: flex; align-items: center; gap: 8px; margin-top: 17px; color: #718096; font-size: 11px; }
+        .hero-note b { color: var(--green); }
+        .dashboard { position: relative; padding: 12px; border: 1px solid #dfe6f1; border-radius: 18px; background: #fff; box-shadow: 0 30px 70px #233c6619, 0 3px 12px #233c660d; transform: perspective(1100px) rotateY(-5deg) rotateX(2deg); }
+        .dash-top { display: flex; align-items: center; justify-content: space-between; padding: 5px 5px 12px; }
+        .dash-brand { display: flex; align-items: center; gap: 8px; font-size: 10px; font-weight: 800; }
+        .dash-brand-mark { display: grid; width: 25px; height: 25px; place-items: center; border-radius: 7px; background: #e9f0ff; color: var(--blue); font-size: 11px; }
+        .dash-user { display: flex; align-items: center; gap: 7px; color: #68758a; font-size: 9px; }
+        .avatar { display: grid; width: 24px; height: 24px; place-items: center; border-radius: 50%; background: #dce8ff; color: #2852a7; font-size: 8px; font-weight: 800; }
+        .dash-content { display: grid; grid-template-columns: 105px 1fr; min-height: 315px; overflow: hidden; border: 1px solid #edf0f5; border-radius: 11px; background: #f8fafd; }
+        .dash-side { padding: 15px 8px; border-right: 1px solid #edf0f5; background: #fff; }
+        .side-label { margin: 0 0 10px 6px; color: #a0a9b8; font-size: 7px; font-weight: 800; letter-spacing: .1em; }
+        .side-item { display: flex; align-items: center; gap: 7px; margin-bottom: 4px; padding: 7px 6px; border-radius: 6px; color: #68758a; font-size: 8px; }
+        .side-item.active { background: #edf3ff; color: #2154be; font-weight: 750; }
+        .side-dot { width: 6px; height: 6px; border-radius: 2px; background: #a8b4c7; }
+        .side-item.active .side-dot { background: var(--blue); }
+        .dash-main { padding: 16px 15px; }
+        .dash-heading { display: flex; justify-content: space-between; align-items: center; margin-bottom: 13px; }
+        .dash-heading strong { display: block; font-size: 13px; letter-spacing: -.03em; }
+        .dash-heading span { color: #8995a8; font-size: 8px; }
+        .dash-new { padding: 6px 9px; border-radius: 5px; background: var(--blue); color: white; font-size: 8px; font-weight: 700; }
+        .metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; }
+        .metric { padding: 10px 9px; border: 1px solid #edf0f5; border-radius: 7px; background: white; }
+        .metric span { display: block; color: #8894a6; font-size: 7px; }
+        .metric strong { display: block; margin-top: 4px; font-size: 12px; letter-spacing: -.04em; }
+        .metric em { color: var(--green); font-size: 7px; font-style: normal; }
+        .dash-panels { display: grid; grid-template-columns: 1.25fr .75fr; gap: 7px; margin-top: 8px; }
+        .dash-panel { min-height: 146px; padding: 11px; border: 1px solid #edf0f5; border-radius: 7px; background: white; }
+        .dash-panel h3 { margin: 0; font-size: 8px; }
+        .chart { height: 92px; display: flex; align-items: end; gap: 8px; padding: 14px 5px 0; border-bottom: 1px solid #edf0f5; background: repeating-linear-gradient(to bottom, transparent 0, transparent 22px, #f1f4f8 23px, transparent 24px); }
+        .bar { flex: 1; border-radius: 3px 3px 0 0; background: linear-gradient(180deg, #76a3ff, #3974ee); }
+        .bar:nth-child(1) { height: 32%; opacity: .58; }.bar:nth-child(2) { height: 48%; opacity: .68; }.bar:nth-child(3) { height: 42%; opacity: .78; }.bar:nth-child(4) { height: 69%; opacity: .86; }.bar:nth-child(5) { height: 58%; }.bar:nth-child(6) { height: 86%; }
+        .chart-months { display: flex; justify-content: space-between; padding-top: 5px; color: #9aa5b5; font-size: 6px; }
+        .activity { display: flex; justify-content: space-between; gap: 5px; padding: 9px 0; border-bottom: 1px solid #f0f2f6; font-size: 7px; }
+        .activity:last-child { border-bottom: 0; }.activity span { color: #8591a3; }.activity b { color: var(--green); font-size: 7px; }
+        .floating-card { position: absolute; right: -24px; bottom: -22px; display: flex; align-items: center; gap: 9px; padding: 11px 14px; border: 1px solid #e8edf5; border-radius: 11px; background: white; box-shadow: 0 12px 30px #233c661a; }
+        .floating-icon { display: grid; width: 29px; height: 29px; place-items: center; border-radius: 8px; background: #e7f8ef; color: var(--green); font-size: 13px; font-weight: 900; }
+        .floating-card strong { display: block; font-size: 9px; }.floating-card span { display: block; color: #7c899d; font-size: 8px; }
+        .local-strip { border-block: 1px solid var(--line); background: #fff; }
+        .local-items { display: flex; min-height: 76px; align-items: center; justify-content: space-between; gap: 18px; }
+        .local-items p { margin: 0; color: #738096; font-size: 11px; }
+        .local-tag { display: flex; align-items: center; gap: 8px; color: #44536b; font-size: 10px; font-weight: 700; white-space: nowrap; }
+        .local-tag i { color: var(--blue); font-style: normal; font-size: 15px; }
+        section { scroll-margin-top: 24px; }
+        .section { padding-block: 93px; }
+        .section.soft { background: var(--wash); }
+        .section-head { max-width: 640px; margin-bottom: 34px; }
+        .section-head h2 { margin: 12px 0 9px; font-size: clamp(29px, 3vw, 40px); line-height: 1.12; letter-spacing: -.05em; }
+        .section-head p { margin: 0; color: var(--muted); font-size: 14px; }
+        .feature-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 13px; }
+        .feature { min-height: 190px; padding: 22px; border: 1px solid var(--line); border-radius: 13px; background: #fff; }
+        .feature-icon { display: grid; width: 38px; height: 38px; place-items: center; margin-bottom: 18px; border-radius: 10px; background: #edf3ff; color: var(--blue); font-size: 16px; font-weight: 800; }
+        .feature:nth-child(3n+2) .feature-icon { background: #e9f8f1; color: #15845f; }
+        .feature:nth-child(3n) .feature-icon { background: #fff4e8; color: #b76a14; }
+        .feature h3 { margin: 0 0 7px; font-size: 15px; letter-spacing: -.02em; }
+        .feature p { margin: 0; color: var(--muted); font-size: 12px; }
+        .workflow { display: grid; grid-template-columns: repeat(3, 1fr); gap: 25px; counter-reset: step; }
+        .step { position: relative; padding: 22px; border: 1px solid var(--line); border-radius: 13px; background: white; counter-increment: step; }
+        .step::before { display: grid; width: 32px; height: 32px; place-items: center; margin-bottom: 15px; border-radius: 50%; background: #edf3ff; color: var(--blue); content: "0" counter(step); font-size: 10px; font-weight: 850; }
+        .step h3 { margin: 0 0 7px; font-size: 15px; }
+        .step p { margin: 0; color: var(--muted); font-size: 12px; }
+        .sa-callout { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 28px; padding: 30px; border: 1px solid #dbe7ff; border-radius: 16px; background: linear-gradient(105deg, #edf4ff, #f8faff 65%, #fff); }
+        .sa-callout h3 { margin: 0 0 7px; font-size: 20px; letter-spacing: -.04em; }
+        .sa-callout p { max-width: 680px; margin: 0; color: #5f6e84; font-size: 12px; }
+        .sa-stamp { display: grid; width: 68px; height: 68px; place-items: center; border: 1px solid #d6e3ff; border-radius: 50%; background: white; color: var(--blue); font-size: 26px; }
+        .pricing-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; align-items: stretch; }
+        .price-card { display: flex; flex-direction: column; padding: 23px; border: 1px solid var(--line); border-radius: 14px; background: white; }
+        .price-card.popular { border: 2px solid #4880f2; box-shadow: 0 12px 34px #2c5fc215; }
+        .price-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+        .price-top h3 { margin: 0; font-size: 17px; }
+        .popular-label { padding: 4px 8px; border-radius: 99px; background: #edf3ff; color: var(--blue); font-size: 8px; font-weight: 850; letter-spacing: .06em; text-transform: uppercase; }
+        .price-desc { min-height: 34px; margin: 7px 0 17px; color: var(--muted); font-size: 11px; }
+        .price { margin-bottom: 4px; font-size: 34px; font-weight: 850; letter-spacing: -.06em; }
+        .price small { color: var(--muted); font-size: 11px; font-weight: 500; letter-spacing: 0; }
+        .price-note { margin: 0 0 14px; color: #8792a3; font-size: 9px; }
+        .price-list { flex: 1; margin: 12px 0 22px; padding: 0; list-style: none; }
+        .price-list li { display: flex; gap: 8px; padding: 6px 0; color: #526176; font-size: 10px; }
+        .check { color: var(--green); font-weight: 900; }
+        .price-card .button { width: 100%; }
+        .faq-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+        details { padding: 18px 19px; border: 1px solid var(--line); border-radius: 11px; background: #fff; }
+        summary { cursor: pointer; font-size: 12px; font-weight: 750; }
+        details p { margin: 11px 0 0; color: var(--muted); font-size: 11px; }
+        .final-cta { padding-block: 68px; background: #14213d; color: white; text-align: center; }
+        .final-cta h2 { margin: 0 0 10px; font-size: clamp(29px, 4vw, 43px); letter-spacing: -.05em; }
+        .final-cta p { max-width: 560px; margin: 0 auto 23px; color: #c3ccda; font-size: 13px; }
+        .final-cta .button { background: white; color: #173d89; }
+        footer { padding-block: 23px; background: #101b32; color: #aeb9ca; }
+        .footer-inner { display: flex; align-items: center; justify-content: space-between; gap: 20px; font-size: 10px; }
+        footer p { margin: 0; }
+        .disclaimer { max-width: 690px; color: #8e9bb0; text-align: right; }
+        @media (max-width: 850px) {
+            .hero-grid { grid-template-columns: 1fr; gap: 38px; padding-block: 53px 70px; }
+            .hero-copy { max-width: 590px; }.dashboard { max-width: 620px; width: 100%; margin-inline: auto; transform: none; }
+            .feature-grid { grid-template-columns: repeat(2, 1fr); }
+            .local-items { flex-wrap: wrap; justify-content: center; padding-block: 17px; }
+            .local-items p { width: 100%; text-align: center; }
+        }
+        @media (max-width: 600px) {
+            .wrap { width: min(100% - 30px, 1120px); }
+            .topbar { height: 66px; }.nav-links { gap: 12px; }.nav-links a:not(.button) { display: none; }.nav-links .button { min-height: 39px; padding-inline: 12px; font-size: 11px; }
+            .hero-grid { padding-top: 45px; }.hero-copy { font-size: 14px; }h1 { font-size: 45px; }
+            .dashboard { padding: 8px; border-radius: 13px; }.dash-content { grid-template-columns: 76px 1fr; min-height: 270px; }.dash-side { padding: 12px 5px; }.side-item { gap: 4px; padding-inline: 4px; font-size: 7px; }.dash-main { padding: 11px 8px; }.metric { padding: 8px 6px; }.metric strong { font-size: 10px; }.dash-panel { min-height: 130px; padding: 8px; }.dash-panels { grid-template-columns: 1.1fr .9fr; }.floating-card { right: -2px; bottom: -27px; }
+            .local-tag { font-size: 9px; }.section { padding-block: 65px; }.feature-grid,.workflow,.pricing-grid,.faq-grid { grid-template-columns: 1fr; }.feature { min-height: auto; }.sa-callout { grid-template-columns: 1fr; padding: 22px; }.sa-stamp { display: none; }.price-desc { min-height: auto; }
+            .footer-inner { align-items: flex-start; flex-direction: column; }.disclaimer { text-align: left; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; }
+        }
+    </style>
+</head>
+<body>
+    <header class="wrap topbar">
+        <a class="brand" href="#top" aria-label="D-TECH Business Portal home">
+            <span class="brand-mark" aria-hidden="true">D</span>
+            <span>D-TECH <small>Business Portal</small></span>
+        </a>
+        <nav class="nav-links" aria-label="Main navigation">
+            <a href="#features">Features</a>
+            <a href="#pricing">Pricing</a>
+            <a href="#questions">FAQs</a>
+            <a class="button" href="index.html#login-section">Sign in / sign up <span aria-hidden="true">→</span></a>
+        </nav>
+    </header>
+
+    <main id="top">
+        <section class="hero" aria-labelledby="hero-title">
+            <div class="wrap hero-grid">
+                <div>
+                    <span class="eyebrow">Built for South African business</span>
+                    <h1 id="hero-title">Less admin.<br><span>More business.</span></h1>
+                    <p class="hero-copy">Keep clients, quotes, invoices, payments and business financials together in one straightforward portal. Start free, then add the tools your business needs.</p>
+                    <div class="hero-actions">
+                        <a class="button" href="index.html#login-section">Sign in or create an account <span aria-hidden="true">→</span></a>
+                        <a class="button secondary" href="#features">Explore features</a>
+                    </div>
+                    <p class="hero-note"><b aria-hidden="true">✓</b> Free plan available · Prices in rand · Upgrade when you’re ready</p>
+                </div>
+                <div class="dashboard" role="img" aria-label="Illustrative preview of the business dashboard, with revenue, cashflow, outstanding invoices and recent activity">
+                    <div class="dash-top">
+                        <div class="dash-brand"><span class="dash-brand-mark">D</span> D-TECH <span style="color:#9aa5b5;font-weight:600">/ Business Portal</span></div>
+                        <div class="dash-user"><span class="avatar">AB</span> Apex Business</div>
+                    </div>
+                    <div class="dash-content">
+                        <aside class="dash-side" aria-hidden="true">
+                            <p class="side-label">WORKSPACE</p>
+                            <div class="side-item active"><i class="side-dot"></i> Dashboard</div>
+                            <div class="side-item"><i class="side-dot"></i> Clients</div>
+                            <div class="side-item"><i class="side-dot"></i> Products</div>
+                            <div class="side-item"><i class="side-dot"></i> Quotations</div>
+                            <div class="side-item"><i class="side-dot"></i> Invoices</div>
+                            <div class="side-item"><i class="side-dot"></i> Payments</div>
+                            <div class="side-item"><i class="side-dot"></i> Financials</div>
+                        </aside>
+                        <div class="dash-main" aria-hidden="true">
+                            <div class="dash-heading"><div><strong>Business dashboard</strong><span>Your business at a glance</span></div><div class="dash-new">＋ New invoice</div></div>
+                            <div class="metrics">
+                                <div class="metric"><span>Total revenue</span><strong>R 148,500</strong><em>↑ This month</em></div>
+                                <div class="metric"><span>Cashflow in</span><strong>R 98,200</strong><em>Current period</em></div>
+                                <div class="metric"><span>Outstanding</span><strong>R 16,100</strong><em>1 invoice</em></div>
+                            </div>
+                            <div class="dash-panels">
+                                <div class="dash-panel"><h3>Cashflow &amp; income</h3><div class="chart"><i class="bar"></i><i class="bar"></i><i class="bar"></i><i class="bar"></i><i class="bar"></i><i class="bar"></i></div><div class="chart-months"><span>JUN</span><span>JUL</span><span>AUG</span><span>SEP</span><span>OCT</span><span>NOV</span></div></div>
+                                <div class="dash-panel"><h3>Recent activity</h3><div class="activity"><span>Invoice paid</span><b>+R 21,275</b></div><div class="activity"><span>Quote issued</span><b style="color:#bc7b20">R 16,100</b></div><div class="activity"><span>New client</span><b style="color:#3168cc">Added</b></div></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="floating-card"><span class="floating-icon" aria-hidden="true">✓</span><div><strong>Your business, in one view</strong><span>A quick look at the numbers that matter</span></div></div>
+                </div>
+            </div>
+        </section>
+
+        <div class="local-strip">
+            <div class="wrap local-items">
+                <p>Practical tools for the way local businesses work</p>
+                <div class="local-tag"><i aria-hidden="true">R</i> Rand-based plans</div>
+                <div class="local-tag"><i aria-hidden="true">▤</i> VAT-ready documents</div>
+                <div class="local-tag"><i aria-hidden="true">↻</i> South African bank CSV imports</div>
+                <div class="local-tag"><i aria-hidden="true">☼</i> Works on mobile screens</div>
+            </div>
+        </div>
+
+        <section class="section" id="features" aria-labelledby="features-title">
+            <div class="wrap">
+                <div class="section-head">
+                    <span class="eyebrow">The work, in one place</span>
+                    <h2 id="features-title">From first quote to paid invoice.</h2>
+                    <p>Bring day-to-day customer and money admin into one organised workspace, without a complicated setup.</p>
+                </div>
+                <div class="feature-grid">
+                    <article class="feature"><div class="feature-icon" aria-hidden="true">◎</div><h3>Client records</h3><p>Keep company details, contacts, addresses, VAT information and notes together. Find client records when you need them.</p></article>
+                    <article class="feature"><div class="feature-icon" aria-hidden="true">▦</div><h3>Products &amp; services</h3><p>Maintain a reusable catalogue of your products, services, descriptions and pricing.</p></article>
+                    <article class="feature"><div class="feature-icon" aria-hidden="true">✎</div><h3>Quotations</h3><p>Prepare itemised quotes with dates, discounts and VAT details, then keep track of their status.</p></article>
+                    <article class="feature"><div class="feature-icon" aria-hidden="true">▤</div><h3>Invoices &amp; PDFs</h3><p>Create professional invoices, track payment status and download or share polished PDF documents.</p></article>
+                    <article class="feature"><div class="feature-icon" aria-hidden="true">R</div><h3>Payments &amp; receipts</h3><p>Record payments against your business activity and generate a PDF receipt when you need one.</p></article>
+                    <article class="feature"><div class="feature-icon" aria-hidden="true">⇄</div><h3>Bank CSV reconciliation</h3><p>Import supported South African bank statement CSVs, review suggested categories and invoice matches, and reconcile transactions.</p></article>
+                    <article class="feature"><div class="feature-icon" aria-hidden="true">⌁</div><h3>Financial overview</h3><p>See revenue, cashflow, outstanding invoices and recent activity in a single dashboard.</p></article>
+                    <article class="feature"><div class="feature-icon" aria-hidden="true">▧</div><h3>SARS &amp; CIPC reports</h3><p>Premium financial tools include reports and exports to help organise business information for SARS and CIPC-related work.</p></article>
+                    <article class="feature"><div class="feature-icon" aria-hidden="true">✧</div><h3>Your business identity</h3><p>Add your business details, logo and brand colour to supported documents. Choose PDF styles on eligible plans.</p></article>
+                    <article class="feature"><div class="feature-icon" aria-hidden="true">▣</div><h3>Contracts &amp; software licences</h3><p>Keep client agreements and software licence records alongside your customer and product information.</p></article>
+                    <article class="feature"><div class="feature-icon" aria-hidden="true">⇩</div><h3>Data exports</h3><p>Download available records and reports in CSV or Excel-friendly formats for your own follow-up.</p></article>
+                    <article class="feature"><div class="feature-icon" aria-hidden="true">◐</div><h3>Comfortable to use</h3><p>Use a responsive interface on desktop or mobile, with dark mode available when you prefer it.</p></article>
+                </div>
+            </div>
+        </section>
+
+        <section class="section soft" aria-labelledby="how-title">
+            <div class="wrap">
+                <div class="section-head">
+                    <span class="eyebrow">Straightforward from day one</span>
+                    <h2 id="how-title">Get organised in three steps.</h2>
+                    <p>Start with the essentials. Add more detail and features as your business grows.</p>
+                </div>
+                <div class="workflow">
+                    <article class="step"><h3>Set up your business</h3><p>Create an account, add your business details and choose your starting plan.</p></article>
+                    <article class="step"><h3>Add clients &amp; services</h3><p>Build your client list and product catalogue so you can create documents without starting from scratch.</p></article>
+                    <article class="step"><h3>Manage the workflow</h3><p>Prepare quotes, send invoices, record payments and review your business overview as work moves along.</p></article>
+                </div>
+                <div class="sa-callout" style="margin-top:24px">
+                    <div><h3>Made with South African businesses in mind.</h3><p>Plans are displayed in rand. Business profiles include local VAT and registration details; financial tools include SARS/CIPC-oriented reports, and CSV import supports several South African bank statement formats. You stay in control of reviewing your records and getting professional tax or accounting advice where needed.</p></div>
+                    <div class="sa-stamp" aria-hidden="true">ZA</div>
+                </div>
+            </div>
+        </section>
+
+        <section class="section" id="pricing" aria-labelledby="pricing-title">
+            <div class="wrap">
+                <div class="section-head">
+                    <span class="eyebrow">Start small. Grow into it.</span>
+                    <h2 id="pricing-title">A plan for your next step.</h2>
+                    <p>Try the essentials for free, then upgrade when you want more room or advanced financial tools.</p>
+                </div>
+                <div class="pricing-grid">
+                    <article class="price-card">
+                        <div class="price-top"><h3>Free</h3></div>
+                        <p class="price-desc">A simple way to get started.</p>
+                        <div class="price">R0 <small>/ month</small></div>
+                        <p class="price-note">No subscription fee</p>
+                        <ul class="price-list">
+                            <li><span class="check">✓</span> Up to 5 clients and 5 products</li>
+                            <li><span class="check">✓</span> Up to 10 invoices and quotes per month</li>
+                            <li><span class="check">✓</span> D-TECH watermark on PDFs</li>
+                            <li><span class="check">✓</span> Explore before upgrading</li>
+                        </ul>
+                        <a class="button secondary" href="index.html#login-section">Sign in or sign up</a>
+                    </article>
+                    <article class="price-card popular">
+                        <div class="price-top"><h3>Pro</h3><span class="popular-label">Popular</span></div>
+                        <p class="price-desc">More room for a growing business.</p>
+                        <div class="price">R49 <small>/ month</small></div>
+                        <p class="price-note">Displayed monthly rate</p>
+                        <ul class="price-list">
+                            <li><span class="check">✓</span> Up to 50 clients and 50 products</li>
+                            <li><span class="check">✓</span> Unlimited invoices and quotes</li>
+                            <li><span class="check">✓</span> Contracts and software licences</li>
+                            <li><span class="check">✓</span> Custom logo and colours on PDFs</li>
+                            <li><span class="check">✓</span> No D-TECH watermark</li>
+                        </ul>
+                        <a class="button" href="index.html#login-section">Sign in or sign up</a>
+                    </article>
+                    <article class="price-card">
+                        <div class="price-top"><h3>Business / Premium</h3></div>
+                        <p class="price-desc">Advanced financial tools and more capacity.</p>
+                        <div class="price">R129 <small>/ month</small></div>
+                        <p class="price-note">Displayed monthly rate</p>
+                        <ul class="price-list">
+                            <li><span class="check">✓</span> Unlimited clients, products, invoices and quotes</li>
+                            <li><span class="check">✓</span> Contracts and software licences</li>
+                            <li><span class="check">✓</span> Bank statement CSV import and category rules</li>
+                            <li><span class="check">✓</span> SARS/CIPC financial reports</li>
+                            <li><span class="check">✓</span> Custom PDF templates and CSV/Excel exports</li>
+                            <li><span class="check">✓</span> No D-TECH watermark</li>
+                        </ul>
+                        <a class="button secondary" href="index.html#login-section">Sign in or sign up</a>
+                    </article>
+                </div>
+                <p style="margin:15px 0 0;color:#7a8799;font-size:10px">Prices shown are the monthly rates currently displayed in the portal. Quarterly and yearly billing options are available; confirm the applicable amount and terms in the portal before subscribing.</p>
+            </div>
+        </section>
+
+        <section class="section soft" id="questions" aria-labelledby="questions-title">
+            <div class="wrap">
+                <div class="section-head">
+                    <span class="eyebrow">Good to know</span>
+                    <h2 id="questions-title">A few common questions.</h2>
+                </div>
+                <div class="faq-grid">
+                    <details><summary>Who is the portal for?</summary><p>It is designed for small businesses and service providers who want one place for client records, products, quotes, invoices and payments. SaaS businesses can also organise software products, licences and agreements.</p></details>
+                    <details><summary>Can I start without paying?</summary><p>Yes. The Free plan is R0 per month and includes capped client, product and monthly quote/invoice allowances. Paid features and higher limits are available on Pro and Business/Premium.</p></details>
+                    <details><summary>Does it connect directly to my bank?</summary><p>No direct bank connection is advertised. The financial tools support importing bank statement CSV files; you can review suggested matches and categories before reconciling.</p></details>
+                    <details><summary>Does it file tax returns for me?</summary><p>No. SARS/CIPC-oriented reports help organise financial information; they are not a tax filing service or a substitute for advice from a qualified tax or accounting professional.</p></details>
+                    <details><summary>Can I put my own brand on documents?</summary><p>Pro and Business/Premium plans support custom logo and brand colours on PDFs. Custom PDF templates are listed as a Business/Premium feature.</p></details>
+                    <details><summary>How do I check current billing terms?</summary><p>The portal offers monthly, three-month and yearly billing selections. Check the subscription page for the current price and terms for the billing interval you choose.</p></details>
+                </div>
+            </div>
+        </section>
+
+        <section class="final-cta">
+            <div class="wrap">
+                <h2>Make room for the work that matters.</h2>
+                <p>Bring the everyday business admin together, and get started on the plan that suits you now.</p>
+                <a class="button" href="index.html#login-section">Sign in or create an account <span aria-hidden="true">→</span></a>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="wrap footer-inner">
+            <p>© 2026 THE D-TECH ECOSYSTEM. All rights reserved.</p>
+            <p class="disclaimer">Feature availability and plan limits depend on your selected subscription. Financial and tax-related reports are organisational tools, not tax advice or official filing services. Confirm current pricing and terms in the portal.</p>
+        </div>
+    </footer>
+</body>
+</html>
